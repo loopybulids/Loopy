@@ -1,0 +1,51 @@
+# ---- dependencies ----
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# ---- build output ----
+dist/
+build/
+.next/
+out/
+**/dist/
+**/.next/
+
+# ---- env / secrets ----
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ---- database (local SQLite dev) ----
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+backend/prisma/dev.db*
+
+# ---- logs ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- caches / tooling ----
+.cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+
+# ---- editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp

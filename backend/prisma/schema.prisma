@@ -1,0 +1,146 @@
+// Loopy data model — based on PRD §13.
+// Dev uses SQLite for zero-infra local runs. To go to Postgres (PRD spec):
+//   1. change provider below to "postgresql"
+//   2. set DATABASE_URL to your Postgres connection string
+//   3. (optional) convert the JSON-string `images` field to Json and the
+//      status/role/condition strings to native enums.
+// Amounts are stored as integer rupees to keep money math exact.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  phone     String?  @unique
+  role      String   @default("buyer") // buyer | seller | admin
+  createdAt DateTime @default(now())
+
+  seller       Seller?
+  ordersBought Order[] @relation("BuyerOrders")
+}
+
+model Seller {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  storeName   String
+  username    String   @unique
+  description String?
+  bannerUrl   String?
+  logoUrl     String?
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+  city        String?
+  kycStatus   String   @default("approved") // pending | approved | rejected
+  createdAt   DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  products Product[]
+  orders   Order[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  sellerId    String
+  title       String
+  slug        String
+  description String?
+  price       Int // rupees
+  condition   String   @default("Good") // Like new | Good | Fair
+  size        String?
+  brand       String?
+  category    String?
+  images      String   @default("[]") // JSON array of URLs (string for SQLite)
+  quantity    Int      @default(1) // one-of-one items default to 1
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  seller     Seller      @relation(fields: [sellerId], references: [id])
+  orderItems OrderItem[]
+
+  @@index([sellerId])
+}
+
+model Order {
+  id               String   @id @default(cuid())
+  buyerId          String?
+  sellerId         String
+  buyerName        String?
+  buyerPhone       String?
+  address          String?
+  totalAmount      Int
+  itemsAmount      Int
+  commissionAmount Int
+  shippingCharge   Int
+  // PendingPayment | Paid | Accepted | Shipped | Delivered | Completed
+  // | Cancelled | Disputed | Refunded
+  status           String   @default("PendingPayment")
+  razorpayOrderId  String?
+  paymentId        String?
+  awbNumber        String?
+  createdAt        DateTime @default(now())
+
+  buyer  User?       @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller Seller      @relation(fields: [sellerId], references: [id])
+  items  OrderItem[]
+
+  @@index([sellerId])
+  @@index([buyerId])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  title     String
+  unitPrice Int
+  quantity  Int    @default(1)
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  sellerId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
+}
+
+model Dispute {
+  id          String    @id @default(cuid())
+  orderId     String
+  sellerId    String
+  buyerName   String?
+  issueType   String    @default("Not as described")
+  description String?
+  status      String    @default("open") // open | refunded | released
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  @@index([status])
+}
+
+model Payout {
+  id        String   @id @default(cuid())
+  sellerId  String
+  amount    Int
+  status    String   @default("requested") // requested | paid
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
+}
