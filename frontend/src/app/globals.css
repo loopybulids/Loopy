@@ -2,46 +2,117 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
+:root { color-scheme: light; }
 
-body {
-  background: #f6f4f0;
-  color: #171520;
-  -webkit-font-smoothing: antialiased;
-}
+* { -webkit-font-smoothing: antialiased; }
+body { background: #f6f5f0; color: #0e2a47; }
+
+::selection { background: #86efac; color: #0e2a47; }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition active:scale-[.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition-all duration-200 active:scale-[.97];
   }
-  .btn-pri {
-    @apply btn text-white;
-    background: linear-gradient(180deg, #6155e6, #4b3fd6);
-    box-shadow: 0 12px 24px rgba(75, 63, 214, 0.32);
+  .btn-navy { @apply btn bg-navy text-white hover:bg-navy-700; box-shadow: 0 10px 24px -8px rgba(14,42,71,.5); }
+  .btn-green { @apply btn bg-green text-white hover:brightness-110; box-shadow: 0 10px 24px -8px rgba(21,120,74,.55); }
+  .btn-mint { @apply btn bg-green-mint text-navy hover:brightness-105; box-shadow: 0 10px 24px -10px rgba(134,239,172,.9); }
+  .btn-ghost { @apply btn bg-white text-navy border border-line hover:border-navy/30; }
+  .btn-outline { @apply btn bg-transparent text-navy border border-navy/20 hover:bg-navy hover:text-white; }
+
+  .card { @apply rounded-2xl border border-line bg-white shadow-card; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold; }
+  .chip-green { @apply chip bg-green-soft text-green; }
+  .chip-navy { @apply chip text-navy; background: rgba(14, 42, 71, 0.08); }
+  .chip-amber { @apply chip text-amber; background: #FBF1DC; }
+  .chip-rose { @apply chip text-rose; background: #FCEAE8; }
+
+  /* the green protection ribbon under the nav */
+  .protect-bar {
+    @apply flex items-center justify-center gap-2 text-[12.5px] font-semibold text-white;
+    background: linear-gradient(90deg, #15784A, #1E9E63);
   }
-  .btn-grn {
-    @apply btn text-white;
-    background: linear-gradient(180deg, #27ad6f, #1e9e63);
-    box-shadow: 0 12px 24px rgba(30, 158, 99, 0.28);
-  }
-  .btn-gh {
-    @apply btn bg-white text-ink border border-line;
-  }
-  .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold;
-  }
-  .card {
-    @apply rounded-[20px] border border-line bg-white shadow-card;
-  }
-  .trustline {
-    @apply flex items-center gap-2 text-[12px];
-    color: #6a5f4b;
+  .protect-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-green-soft px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-wide text-green;
   }
 }
 
-/* hide scrollbars on horizontal chip rows */
-.no-sb::-webkit-scrollbar {
-  display: none;
+@layer utilities {
+  .font-display { font-family: var(--font-jakarta), var(--font-inter), sans-serif; }
+  .text-balance { text-wrap: balance; }
+  .shimmer-text {
+    background: linear-gradient(100deg, #1E9E63 20%, #86EFAC 40%, #1E9E63 60%);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 3s linear infinite;
+  }
+  .no-sb::-webkit-scrollbar { display: none; }
+  .glass { background: rgba(255,255,255,.7); backdrop-filter: blur(14px); }
+
+  /* ───────── BUYER world: editorial · glassy · vibrant ───────── */
+  /* Frosted glass card with a soft inner highlight + lift on hover. */
+  .glass-card {
+    background: rgba(255,255,255,.55);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgba(255,255,255,.6);
+    box-shadow: 0 18px 50px -20px rgba(14,42,71,.28), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .glass-panel {
+    background: rgba(255,255,255,.42);
+    backdrop-filter: blur(22px) saturate(135%);
+    -webkit-backdrop-filter: blur(22px) saturate(135%);
+    border: 1px solid rgba(255,255,255,.55);
+  }
+  /* Vibrant editorial gradient text. */
+  .vivid-text {
+    background: linear-gradient(105deg, #15784A 0%, #22C55E 38%, #0E2A47 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  /* Animated aurora blobs behind buyer hero/sections. */
+  .aurora-blob { filter: blur(60px); opacity: .55; border-radius: 9999px; }
+  .grain { background-image: radial-gradient(rgba(14,42,71,.04) 1px, transparent 1px); background-size: 4px 4px; }
+
+  /* ───────── SELLER world: dark · sharp · data-dense SaaS ───────── */
+  .seller-bg { background: #0A1828; color: #E6ECF5; }
+  .seller-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  /* Sharp, low-radius panels with a hairline border — SaaS feel. */
+  .s-card {
+    background: rgba(255,255,255,.035);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.04) inset;
+  }
+  .s-card-glow { box-shadow: 0 0 0 1px rgba(34,197,94,.25), 0 18px 50px -24px rgba(34,197,94,.35); }
+  .s-input {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+    color: #E6ECF5;
+    border-radius: 10px;
+  }
+  .s-input::placeholder { color: rgba(230,236,245,.4); }
+  .s-input:focus { outline: none; border-color: rgba(34,197,94,.7); box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+  .s-muted { color: #8A98AD; }
+  .s-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-5 py-3 text-sm font-bold transition-all duration-150 active:scale-[.98];
+    background: #22C55E; color: #07140A;
+    box-shadow: 0 12px 30px -12px rgba(34,197,94,.6);
+  }
+  .s-btn:hover { filter: brightness(1.08); }
+  .s-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-5 py-3 text-sm font-bold transition-all duration-150;
+    background: rgba(255,255,255,.05); color: #E6ECF5; border: 1px solid rgba(255,255,255,.12);
+  }
+  .s-btn-ghost:hover { background: rgba(255,255,255,.1); }
+}
+
+html { scroll-behavior: smooth; }
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }

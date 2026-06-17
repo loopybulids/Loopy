@@ -2,67 +2,67 @@ import { getStoreSSR } from '@/lib/server-api';
 import StoreNav from '@/components/StoreNav';
 import ProductCard from '@/components/ProductCard';
 import ApiDown from '@/components/ApiDown';
-import { Check, Shield } from '@/components/icons';
+import { Clock, Share, Star, Verified } from '@/components/icons';
 
-// Server-rendered: products are in the HTML on first paint (PRD: SSR storefront).
+export const dynamic = 'force-dynamic';
+
 export default async function StorePage({ params }: { params: { username: string } }) {
   const store = await getStoreSSR(params.username);
   if (!store) return <ApiDown what="This store" />;
+  const cats = ['All Items', 'Outerwear', 'Denim', 'Accessories', 'Knitwear'];
 
   return (
-    <main className="min-h-screen bg-cream">
+    <main className="relative min-h-screen overflow-hidden bg-paper">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="aurora-blob animate-aurora absolute -left-24 -top-24 h-[40vw] w-[40vw] bg-green-mint" />
+        <div className="aurora-blob animate-aurora absolute right-[-10%] top-[6%] h-[34vw] w-[34vw] bg-green-600/60" style={{ animationDelay: '-6s' }} />
+        <div className="absolute inset-0 grain" />
+      </div>
       <StoreNav />
-
-      {/* hero */}
-      <div className="relative h-[300px] overflow-hidden bg-[#2a2018]">
-        {store.bannerUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={store.bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(20,14,10,.1)] via-[rgba(20,14,10,.3)] to-[rgba(20,14,10,.78)]" />
-        <div className="absolute inset-x-6 bottom-7 z-10 flex items-end gap-5 text-white sm:inset-x-10">
-          <div className="h-[78px] w-[78px] flex-none overflow-hidden rounded-full border-[3px] border-white/90 shadow-lg">
-            {store.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={store.logoUrl} alt="" className="h-full w-full object-cover" />
-            )}
+      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+        {/* profile card */}
+        <div className="glass-card flex flex-col items-start gap-4 rounded-3xl p-6 sm:flex-row sm:items-center">
+          <div className="relative">
+            <div className="h-[76px] w-[76px] overflow-hidden rounded-full bg-gradient-to-br from-green-mint to-green-600 ring-4 ring-white/70 shadow-card">
+              {store.logoUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={store.logoUrl} alt="" className="h-full w-full object-cover" />}
+            </div>
+            <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-green-600 text-white shadow"><Verified size={12} /></span>
           </div>
           <div className="flex-1">
-            <div className="text-[10.5px] font-bold uppercase tracking-[.26em] text-white/80">Curated vintage · {store.city}</div>
-            <h1 className="mt-2 font-serif text-[40px] font-semibold leading-none tracking-tight">{store.storeName}</h1>
-            <div className="mt-2.5 flex items-center gap-2 text-[13px] text-white/90">
-              <span className="inline-flex items-center gap-1 font-bold">
-                <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-indigo"><Check size={11} /></span>Verified
-              </span>
-              <span className="opacity-50">·</span>
-              <span className="text-amber">★</span> {store.rating} ({store.ratingCount})
-              <span className="opacity-50">·</span> ships in 2 days
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-[26px] font-extrabold text-navy">{store.storeName}</h1>
+              <span className="chip-amber"><Clock size={12} /> NEXT DROP: 2D 14H</span>
+            </div>
+            <p className="mt-1 text-[13.5px] text-muted">{store.description}</p>
+            <div className="mt-2.5 flex gap-6 text-[13px]">
+              <div><span className="font-bold text-navy">{store.ratingCount >= 1000 ? (store.ratingCount / 1000).toFixed(1) + 'k' : store.ratingCount}+</span> <span className="text-muted">Followers</span></div>
+              <div><span className="font-bold text-navy">{store.rating}/5</span> <span className="text-muted">Rating</span></div>
+              <div><span className="font-bold text-navy">{store.products.length}+</span> <span className="text-muted">Listed</span></div>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="btn-green !cursor-default !px-3.5 !py-2.5 text-[13px]"><Verified size={15} /> Verified Curator</span>
+            <button className="btn-navy !px-5 !py-2.5 text-[13px]">Follow</button>
+            <button className="grid h-10 w-10 place-items-center rounded-full border border-white/60 bg-white/70 text-navy backdrop-blur transition-colors hover:text-green-600"><Share size={16} /></button>
+          </div>
         </div>
-      </div>
 
-      {/* trust line */}
-      <div className="trustline border-b border-[#EBE2D2] bg-[#F4EEE3] px-6 py-3 sm:px-10">
-        <Shield size={17} className="text-trust" />
-        <span><b className="text-[#2c271d]">Protected by Loopy.</b> Your payment is held in escrow until you confirm delivery — managed shipping &amp; returns on every order.</span>
-      </div>
-
-      {/* products */}
-      <div className="flex items-center px-6 pb-1 pt-6 sm:px-10">
-        <div className="flex items-center gap-2 font-serif text-[19px] tracking-tight">
-          <span className="h-[7px] w-[7px] rounded-full bg-coral shadow-[0_0_0_3px_rgba(255,107,94,.22)]" />
-          New drop · {store.products.length} pieces
+        {/* filters */}
+        <div className="mt-7 flex items-center gap-2 overflow-x-auto no-sb">
+          {cats.map((c, i) => (
+            <button key={c} className={`chip whitespace-nowrap !px-4 !py-2 text-[12.5px] transition-colors ${i === 0 ? 'bg-navy text-white' : 'border border-white/60 bg-white/70 text-muted backdrop-blur hover:text-navy'}`}>{c}</button>
+          ))}
+          <div className="ml-auto hidden items-center gap-1.5 whitespace-nowrap text-[12.5px] text-muted sm:flex">Sort by: <b className="text-navy">Recently Added</b></div>
         </div>
-        <div className="ml-auto hidden gap-5 text-[12.5px] font-semibold text-faint sm:flex">
-          <a className="text-ink underline-offset-4">All</a><a>Dresses</a><a>Outerwear</a><a>Bags</a>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-x-5 gap-y-8 px-6 pb-16 pt-4 sm:px-10 md:grid-cols-3 lg:grid-cols-4">
-        {store.products.map((p: any, i: number) => (
-          <ProductCard key={p.id} product={p} index={i} />
-        ))}
+        {/* grid */}
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {store.products.map((p: any, i: number) => <ProductCard key={p.id} product={p} index={i} />)}
+        </div>
+
+        <div className="mt-9 flex justify-center">
+          <button className="btn-outline">Load More Curated Items</button>
+        </div>
       </div>
     </main>
   );

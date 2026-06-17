@@ -6,6 +6,12 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class SellersController {
   constructor(private sellers: SellersService) {}
 
+  // Public discover — list all approved stores for the Shop page
+  @Get()
+  discover() {
+    return this.sellers.discover();
+  }
+
   // Public storefront (PRD §11 /s/[sellerUsername])
   @Get(':username')
   getStore(@Param('username') username: string) {

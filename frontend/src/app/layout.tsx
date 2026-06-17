@@ -1,19 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter, Fraunces } from 'next/font/google';
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-fraunces' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 
 export const metadata: Metadata = {
-  title: 'Loopy — Thrift, protected',
-  description: 'Social-commerce thrift marketplace with built-in buyer protection.',
+  title: 'Loopy — Your thrift store, protected end-to-end',
+  description: 'Turn your Instagram DMs into a real storefront with built-in escrow protection. The most trusted way to thrift in India.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
-      <body className="font-sans">{children}</body>
+    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }

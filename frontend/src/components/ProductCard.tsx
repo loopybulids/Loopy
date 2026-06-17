@@ -1,40 +1,41 @@
+'use client';
 import Link from 'next/link';
+import { motion } from '@/components/motion';
 import { rupees } from '@/lib/api';
-import { Heart } from './icons';
+import { Heart, Shield } from './icons';
 
-const grad = ['from-[#C9BCFF] to-[#7B61FF]', 'from-[#3a4254] to-[#1f2533]', 'from-[#FFC2A8] to-[#FF6B5E]', 'from-[#B7F5D6] to-[#34C98A]', 'from-[#FCE5A8] to-[#F1B33B]', 'from-[#F7C8E8] to-[#B57BE8]'];
+const grad = ['from-[#caa07a] to-[#6b4a2f]', 'from-[#9fb4c9] to-[#3a4a5e]', 'from-[#d9c7a0] to-[#9c7d4a]', 'from-[#c7b8d6] to-[#7a5e94]'];
 
 export default function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
   const img = product.images?.[0];
   const sold = product.quantity < 1;
   return (
-    <Link href={`/product/${product.id}`} className="group block">
-      <div className={`relative aspect-[4/5] overflow-hidden rounded-[4px] bg-gradient-to-br ${grad[index % grad.length]}`}>
-        {img && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt={product.title} className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] ${sold ? 'grayscale brightness-90' : ''}`} />
-        )}
-        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[rgba(112,72,36,.05)] to-[rgba(112,72,36,.13)] mix-blend-multiply" />
-        <span className="absolute left-3 top-3 font-serif text-[12px] tracking-wide text-white mix-blend-difference">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        {sold ? (
-          <span className="absolute inset-0 grid place-items-center">
-            <span className="rounded-full bg-[rgba(23,19,27,.78)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white">Just sold</span>
-          </span>
-        ) : (
-          <>
-            <span className="absolute right-3 top-3 rounded-full border border-white/65 px-2 py-[3px] text-[9px] font-bold uppercase tracking-wider text-white">1 of 1</span>
-            <span className="absolute bottom-3 right-3 grid h-[34px] w-[34px] place-items-center rounded-full bg-white/95 text-ink shadow"><Heart size={16} /></span>
-          </>
-        )}
-      </div>
-      <div className="mt-3 text-[9.5px] font-bold uppercase tracking-[.16em] text-muted">{product.brand || 'Thrifted'}</div>
-      <div className="mt-0.5 font-serif text-[16px] leading-tight tracking-tight">{product.title}</div>
-      <div className="mt-1.5 flex items-baseline justify-between">
-        <span className={`text-[14.5px] font-bold ${sold ? 'text-faint line-through' : ''}`}>{rupees(product.price)}</span>
-        <span className="text-[11px] text-muted">{sold ? 'Sold out' : `${product.size || ''} · ${product.condition}`}</span>
-      </div>
-    </Link>
+    <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}>
+      <Link href={`/product/${product.id}`} className="group block overflow-hidden rounded-3xl">
+        <div className={`relative aspect-[4/5] overflow-hidden rounded-3xl bg-gradient-to-br ${grad[index % grad.length]} shadow-card transition-shadow duration-500 group-hover:shadow-lift`}>
+          {img && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={img} alt={product.title} className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 ${sold ? 'grayscale' : ''}`} onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+          )}
+          {/* soft bottom scrim for legibility of the floating info card */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-navy/35 to-transparent" />
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-green/90 px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-wide text-white shadow backdrop-blur"><Shield size={11} /> Loopy Protected</span>
+          <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/80 text-navy shadow backdrop-blur-md transition-transform duration-300 group-hover:scale-110 group-hover:text-rose"><Heart size={15} /></span>
+          {sold && <span className="absolute inset-0 grid place-items-center bg-navy/45 backdrop-blur-[2px]"><span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-navy shadow">Sold out</span></span>}
+
+          {/* floating frosted info card */}
+          <div className="absolute inset-x-2.5 bottom-2.5">
+            <div className="glass-card rounded-2xl p-3.5">
+              <div className="truncate text-[13.5px] font-semibold text-navy">{product.title}</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="font-display text-[16px] font-extrabold text-navy">{rupees(product.price)}</span>
+                <span className="truncate text-[11px] text-muted">{product.size} · {product.condition}</span>
+              </div>
+              <div className="mt-2.5 rounded-xl bg-navy/0 py-2 text-center text-[12.5px] font-bold text-green transition-all duration-300 group-hover:bg-navy group-hover:text-white">View Details</div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   );
 }

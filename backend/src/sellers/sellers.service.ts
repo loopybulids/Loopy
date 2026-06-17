@@ -16,6 +16,21 @@ function safeParse(s: string): string[] {
 export class SellersService {
   constructor(private prisma: PrismaService) {}
 
+  // All approved stores with a few preview products, for the Shop page.
+  async discover() {
+    const sellers = await this.prisma.seller.findMany({
+      where: { kycStatus: 'approved' },
+      include: { products: { where: { isActive: true }, take: 4, orderBy: { createdAt: 'desc' } } },
+      orderBy: { ratingCount: 'desc' },
+    });
+    return sellers.map((s) => ({
+      id: s.id, storeName: s.storeName, username: s.username, description: s.description,
+      bannerUrl: s.bannerUrl, logoUrl: s.logoUrl, rating: s.rating, ratingCount: s.ratingCount,
+      city: s.city, productCount: s.products.length,
+      preview: s.products.map(shapeProduct),
+    }));
+  }
+
   async getStore(username: string) {
     const seller = await this.prisma.seller.findUnique({
       where: { username },

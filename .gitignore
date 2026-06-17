@@ -42,6 +42,10 @@ pnpm-debug.log*
 next-env.d.ts
 coverage/
 
+# ---- local working media (not part of the app) ----
+Assests/
+Assets/
+
 # ---- editor / OS ----
 .vscode/
 .idea/

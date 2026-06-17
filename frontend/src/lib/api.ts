@@ -37,8 +37,8 @@ export const api = {
   // auth
   login: (phone: string) =>
     req<any>(`/auth/login`, { method: 'POST', body: JSON.stringify({ phone }) }),
-  verify: (phone: string, code: string) =>
-    req<any>(`/auth/verify`, { method: 'POST', body: JSON.stringify({ phone, code }) }),
+  verify: (phone: string, code: string, name?: string) =>
+    req<any>(`/auth/verify`, { method: 'POST', body: JSON.stringify({ phone, code, ...(name ? { name } : {}) }) }),
 
   // order actions
   deliverOrder: (id: string) => req<any>(`/orders/${id}/deliver`, { method: 'POST' }),
