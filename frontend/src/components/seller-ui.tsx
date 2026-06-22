@@ -47,8 +47,8 @@ export function Panel({ title, action, children, className = '' }: { title?: str
 /* Empty-state block for sections with no data yet. */
 export function Empty({ icon, title, hint, action }: { icon: ReactNode; title: string; hint: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line px-6 py-14 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-green-soft text-green-600 ring-1 ring-green/15">{icon}</span>
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-line px-6 py-14 text-center">
+      <span className="grid h-14 w-14 place-items-center rounded-lg bg-green-soft text-green-600 ring-1 ring-green/15">{icon}</span>
       <h3 className="mt-4 font-display text-[17px] font-bold text-navy">{title}</h3>
       <p className="mt-1.5 max-w-sm text-[13.5px] text-muted">{hint}</p>
       {action && <div className="mt-5">{action}</div>}
