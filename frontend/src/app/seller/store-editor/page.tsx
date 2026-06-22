@@ -46,9 +46,9 @@ export default function StoreEditor() {
   if (!config) return <p className="py-10 text-center text-[13px] text-faint">Loading store editor…</p>;
 
   return (
-    <div className="-mx-5 -my-6 flex h-[calc(100vh-69px)] flex-col sm:-mx-8 sm:-my-8">
+    <div className="-mx-5 -my-6 flex flex-col sm:-mx-8 sm:-my-8 lg:h-[calc(100vh-69px)]">
       {/* toolbar */}
-      <div className="flex items-center gap-3 border-b border-line bg-white px-4 py-3 sm:px-6">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line bg-white px-4 py-3 sm:px-6">
         <div>
           <h1 className="font-display text-[16px] font-extrabold text-navy">Store Editor</h1>
           <p className="text-[12px] text-faint">Customize your storefront, then publish.</p>
@@ -64,9 +64,9 @@ export default function StoreEditor() {
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* sections list */}
-        <aside className="w-52 shrink-0 overflow-y-auto border-r border-line bg-white p-3">
+        <aside className="order-1 w-full shrink-0 border-b border-line bg-white p-3 lg:w-52 lg:border-b-0 lg:border-r lg:overflow-y-auto">
           <div className="px-2 pb-2 text-[11px] font-bold uppercase tracking-wide text-faint">Page Sections</div>
           {SECTION_ORDER.map((s) => {
             const on = active === s.key;
@@ -78,10 +78,10 @@ export default function StoreEditor() {
                 {toggleable && (
                   <button
                     onClick={() => set(s.key as keyof StoreConfig, 'enabled', !sec.enabled)}
-                    className={`relative h-4 w-7 shrink-0 rounded-full transition-colors ${sec.enabled ? 'bg-green' : 'bg-line'}`}
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${sec.enabled ? 'bg-green' : 'bg-line'}`}
                     title={sec.enabled ? 'Visible' : 'Hidden'}
                   >
-                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${sec.enabled ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-card transition-transform ${sec.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                   </button>
                 )}
               </div>
@@ -90,14 +90,14 @@ export default function StoreEditor() {
         </aside>
 
         {/* live preview */}
-        <main className="min-w-0 flex-1 overflow-y-auto bg-paper p-4">
+        <main className="order-3 min-w-0 flex-1 bg-paper p-4 lg:order-2 lg:overflow-y-auto">
           <div className={`mx-auto overflow-hidden rounded-lg border border-line shadow-card transition-all ${previewWidth}`}>
             <StorePreview config={config} products={products} storeName={storeName} />
           </div>
         </main>
 
         {/* field editor */}
-        <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-white p-5">
+        <aside className="order-2 w-full shrink-0 border-t border-line bg-white p-5 lg:order-3 lg:w-80 lg:border-t-0 lg:border-l lg:overflow-y-auto">
           <Fields active={active} config={config} set={set} setConfig={setConfig} storeName={storeName} />
         </aside>
       </div>

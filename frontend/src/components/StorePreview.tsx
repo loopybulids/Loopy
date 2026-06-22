@@ -86,12 +86,12 @@ export default function StorePreview({
         <section id="products" className="px-5 py-12 sm:px-8">
           <h2 className="text-center font-display text-[30px] font-extrabold">{c.productTabs.heading}</h2>
           {c.productTabs.sub && <p className="mt-1 text-center text-[14px] text-muted">{c.productTabs.sub}</p>}
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <div className="no-sb mt-6 flex justify-start gap-2 overflow-x-auto px-1 sm:flex-wrap sm:justify-center">
             {c.productTabs.tabs.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className="rounded-lg px-4 py-2 text-[13px] font-bold transition-colors"
+                className="shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-[13px] font-bold transition-colors"
                 style={tab === t ? { background: accent, color: '#fff' } : { background: '#fff', color: '#5B6577', border: '1px solid #E8E6DE' }}
               >
                 {t}
