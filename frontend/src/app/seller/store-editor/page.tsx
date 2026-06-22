@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { StoreConfig, SECTION_ORDER, withDefaults } from '@/lib/store-config';
 import StorePreview from '@/components/StorePreview';
+import MediaInput from '@/components/MediaInput';
 import { Check } from '@/components/icons';
 
 type SectionKey = (typeof SECTION_ORDER)[number]['key'];
@@ -153,22 +154,30 @@ function Fields({ active, config, set, setConfig, storeName }: {
           <Text label="Hero headline" value={config.hero.headline} onChange={(v) => set('hero', 'headline', v)} />
           <Area label="Hero subtext" value={config.hero.subtext} onChange={(v) => set('hero', 'subtext', v)} />
           <Text label="CTA button label" value={config.hero.ctaLabel} onChange={(v) => set('hero', 'ctaLabel', v)} />
-          <Text label="Background image URL (optional)" value={config.hero.imageUrl} onChange={(v) => set('hero', 'imageUrl', v)} />
+          <div className="mt-4">
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Background image / video (optional)</label>
+            <div className="mt-1.5">
+              <MediaInput value={config.hero.imageUrl} onChange={(v) => set('hero', 'imageUrl', v)} />
+            </div>
+          </div>
         </>
       )}
 
       {active === 'banners' && (
         <>
           {config.banners.images.map((src, i) => (
-            <div key={i} className="mt-2 flex gap-2">
-              <input className="c-input" placeholder="Image URL" value={src} onChange={(e) => {
-                const images = [...config.banners.images]; images[i] = e.target.value;
+            <div key={i} className="mt-3 rounded-lg border border-line p-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-[12px] font-bold uppercase tracking-wide text-faint">Banner {i + 1}</span>
+                <button className="text-[12px] font-semibold text-rose" onClick={() => {
+                  const images = config.banners.images.filter((_, j) => j !== i);
+                  setConfig((c) => c ? { ...c, banners: { ...c.banners, images } } : c);
+                }}>Remove</button>
+              </div>
+              <MediaInput value={src} onChange={(v) => {
+                const images = [...config.banners.images]; images[i] = v;
                 setConfig((c) => c ? { ...c, banners: { ...c.banners, images } } : c);
               }} />
-              <button className="rounded-md px-2 text-rose" onClick={() => {
-                const images = config.banners.images.filter((_, j) => j !== i);
-                setConfig((c) => c ? { ...c, banners: { ...c.banners, images } } : c);
-              }}>✕</button>
             </div>
           ))}
           <button className="btn-ghost mt-2 w-full py-2 text-[13px]" onClick={() => {

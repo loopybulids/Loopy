@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { StoreConfig, HERO_BG } from '@/lib/store-config';
+import { StoreConfig, HERO_BG, isVideo } from '@/lib/store-config';
 import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
@@ -56,9 +56,15 @@ export default function StorePreview({
 
       {/* hero */}
       {c.hero.enabled && (
-        <section className={`relative px-5 py-16 text-center sm:px-8 ${HERO_BG[c.theme.heroBg]}`}>
+        <section className={`relative overflow-hidden px-5 py-16 text-center sm:px-8 ${HERO_BG[c.theme.heroBg]}`}>
           {c.hero.imageUrl && (
-            <img src={c.hero.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-30" />
+            <div className="absolute inset-0">
+              {isVideo(c.hero.imageUrl)
+                ? <video src={c.hero.imageUrl} className="h-full w-full object-cover" muted loop autoPlay playsInline />
+                : <img src={c.hero.imageUrl} alt="" className="h-full w-full object-cover" />}
+              {/* readability overlay so hero text stays legible over the media */}
+              <div className="absolute inset-0 bg-white/55" />
+            </div>
           )}
           <div className="relative mx-auto max-w-2xl">
             {c.hero.eyebrow && <p className="text-[14px] font-bold" style={{ color: accent }}>✨ {c.hero.eyebrow} ✨</p>}
@@ -77,7 +83,9 @@ export default function StorePreview({
       {c.banners.enabled && c.banners.images.filter(Boolean).length > 0 && (
         <section className="grid gap-3 px-5 py-6 sm:px-8 md:grid-cols-2">
           {c.banners.images.filter(Boolean).map((src, i) => (
-            <img key={i} src={src} alt="" className="h-48 w-full rounded-lg object-cover" />
+            isVideo(src)
+              ? <video key={i} src={src} className="h-48 w-full rounded-lg object-cover" muted loop autoPlay playsInline />
+              : <img key={i} src={src} alt="" className="h-48 w-full rounded-lg object-cover" />
           ))}
         </section>
       )}

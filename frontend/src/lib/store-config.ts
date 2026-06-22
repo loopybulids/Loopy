@@ -100,6 +100,12 @@ export function withDefaults(storeName: string, saved?: Partial<StoreConfig> | n
   };
 }
 
+/* Detect whether a media URL/data-URL is a video so the renderer picks <video> vs <img>. */
+export function isVideo(url?: string): boolean {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url) || url.startsWith('data:video');
+}
+
 export const HERO_BG: Record<StoreConfig['theme']['heroBg'], string> = {
   mint: 'bg-gradient-to-b from-green-mint/40 to-paper',
   navy: 'bg-navy text-white',
