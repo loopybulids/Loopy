@@ -1,6 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterDto } from './dto';
 
 // In MVP scaffold OTPs live in memory. In production this is Redis with a
 // short TTL (PRD §12 Auth). A master code keeps local demos friction-free.
@@ -44,5 +46,73 @@ export class AuthService {
       accessToken: token,
       user: { id: user.id, name: user.name, role: user.role, sellerId: seller?.id || null },
     };
+  }
+
+  // ───────── email + password seller auth (PRD §Authentication) ─────────
+
+  private slugify(s: string) {
+    return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '').slice(0, 24) || 'store';
+  }
+
+  private async uniqueUsername(base: string) {
+    let candidate = this.slugify(base);
+    let n = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (await this.prisma.seller.findUnique({ where: { username: candidate } })) {
+      n += 1;
+      candidate = `${this.slugify(base)}${n}`;
+    }
+    return candidate;
+  }
+
+  private async issueSession(userId: string, name: string | null, role: string, sellerId: string | null) {
+    const token = await this.jwt.signAsync({ sub: userId, role, sellerId });
+    return { accessToken: token, user: { id: userId, name, role, sellerId } };
+  }
+
+  async register(dto: RegisterDto) {
+    const email = dto.email.toLowerCase().trim();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) throw new ConflictException('An account with this email already exists');
+
+    const username = await this.uniqueUsername(dto.username || dto.storeName);
+    const hash = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: { email, name: dto.name, password: hash, role: 'seller' },
+    });
+
+    const seller = await this.prisma.seller.create({
+      data: {
+        userId: user.id,
+        storeName: dto.storeName,
+        username,
+        kycStatus: 'approved', // auto-approved in MVP so the store is usable immediately
+      },
+    });
+
+    return this.issueSession(user.id, user.name, user.role, seller.id);
+  }
+
+  async changePassword(userId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new ConflictException('Password must be at least 6 characters');
+    }
+    const hash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { password: hash } });
+    return { ok: true };
+  }
+
+  async loginEmail(email: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    if (!user || !user.password) throw new UnauthorizedException('Invalid email or password');
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) throw new UnauthorizedException('Invalid email or password');
+
+    const seller = await this.prisma.seller.findUnique({ where: { userId: user.id } });
+    return this.issueSession(user.id, user.name, user.role, seller?.id || null);
   }
 }

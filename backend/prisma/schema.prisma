@@ -11,7 +11,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,6 +20,7 @@ model User {
   name      String?
   email     String?  @unique
   phone     String?  @unique
+  password  String?  // bcrypt hash — set for email/password sellers
   role      String   @default("buyer") // buyer | seller | admin
   createdAt DateTime @default(now())
 

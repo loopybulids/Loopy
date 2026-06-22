@@ -64,7 +64,10 @@ export class SellersService {
   }
 
   async getMe(sellerId: string) {
-    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId } });
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+      include: { user: { select: { email: true, name: true } } },
+    });
     if (!seller) throw new NotFoundException('Seller not found');
     return seller;
   }

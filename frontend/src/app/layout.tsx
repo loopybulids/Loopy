@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 
 export const metadata: Metadata = {
-  title: 'Loopy — Your thrift store, protected end-to-end',
-  description: 'Turn your Instagram DMs into a real storefront with built-in escrow protection. The most trusted way to thrift in India.',
+  title: 'Loopy — Turn Instagram DMs & WhatsApp chats into orders',
+  description: 'Convert conversations into sales with instant checkout links, automated order management and shipping workflows — all from one dashboard.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -37,7 +37,19 @@ interface AuthState {
   busy: boolean;
   hydrate: () => void;
   signIn: (role: Role, name: string) => Promise<void>;
+  loginEmail: (email: string, password: string) => Promise<void>;
+  register: (body: { name: string; email: string; password: string; storeName: string }) => Promise<void>;
   signOut: () => void;
+}
+
+// Persist a session response (accessToken + user) the same way across flows.
+function persistSession(r: any, role: Role, fallbackName: string) {
+  const display = r.user?.name?.trim() || fallbackName;
+  localStorage.setItem('loopy_token', r.accessToken);
+  localStorage.setItem('loopy_user', JSON.stringify(r.user));
+  localStorage.setItem('loopy_role', role);
+  localStorage.setItem('loopy_name', display);
+  return display;
 }
 
 // A stable buyer phone so the same shopper keeps their orders between sessions.
@@ -87,6 +99,30 @@ export const useAuth = create<AuthState>((set, get) => ({
       localStorage.setItem('loopy_role', role);
       localStorage.setItem('loopy_name', display);
       set({ ready: true, role, user: r.user, name: display, busy: false });
+    } catch (e) {
+      set({ busy: false });
+      throw e;
+    }
+  },
+
+  loginEmail: async (email, password) => {
+    set({ busy: true });
+    try {
+      const r = await api.loginEmail(email, password);
+      const display = persistSession(r, 'seller', 'Your Store');
+      set({ ready: true, role: 'seller', user: r.user, name: display, busy: false });
+    } catch (e) {
+      set({ busy: false });
+      throw e;
+    }
+  },
+
+  register: async (body) => {
+    set({ busy: true });
+    try {
+      const r = await api.registerSeller(body);
+      const display = persistSession(r, 'seller', body.storeName || 'Your Store');
+      set({ ready: true, role: 'seller', user: r.user, name: display, busy: false });
     } catch (e) {
       set({ busy: false });
       throw e;

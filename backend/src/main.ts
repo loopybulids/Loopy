@@ -13,8 +13,10 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: false }),
   );
 
+  // In dev, reflect any origin so the app works from localhost AND the LAN IP
+  // (e.g. http://192.168.x.x:3000). Set CORS_ORIGIN to lock this down in prod.
   app.enableCors({
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true,
     credentials: true,
   });
 

@@ -1,7 +1,54 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic, Tilt } from '@/components/motion';
-import { ArrowRight, Bag, Bolt, Loop, ShieldLock, Sparkle, Star, Store, Truck, Verified } from '@/components/icons';
+import {
+  ArrowRight, Bolt, Check, Clock, Heart, Loop, Plus, Share,
+  ShieldLock, Star, Store, Truck, Verified, Wallet,
+} from '@/components/icons';
+
+/* ──────────────────────────────────────────────────────────────
+   DM2Order-style marketing landing — built on Loopy's design system.
+   Sections: nav · hero+flow · stats · problem · solution · features
+   · testimonials · pricing · faq · footer
+   ────────────────────────────────────────────────────────────── */
+
+const SOLUTIONS = [
+  { icon: <Share size={20} />, t: 'Chat to order', d: 'Turn any DM into a structured order in seconds.' },
+  { icon: <Bolt size={20} />, t: 'Instant checkout links', d: 'Pre-filled carts your customer pays in one tap.' },
+  { icon: <Store size={20} />, t: 'Centralized dashboard', d: 'Every order, payment and shipment in one place.' },
+  { icon: <ShieldLock size={20} />, t: 'Automated notifications', d: 'Order, payment and delivery updates on autopilot.' },
+  { icon: <Truck size={20} />, t: 'Shipping management', d: 'Generate labels and track every shipment live.' },
+  { icon: <Star size={20} />, t: 'Analytics', d: 'Revenue, conversion and product insights at a glance.' },
+];
+
+const FEATURES = [
+  { icon: <Clock size={22} />, t: 'Order management', pts: ['All orders in one queue', 'Live status updates', 'Full order timeline', 'Customer history'] },
+  { icon: <Share size={22} />, t: 'Checkout links', pts: ['One-click checkout links', 'Pre-filled carts', 'Variant & quantity ready', 'Faster purchasing'] },
+  { icon: <Heart size={22} />, t: 'Customer management', pts: ['Customer database', 'Purchase history', 'Spend & AOV metrics', 'Segmentation'] },
+  { icon: <Truck size={22} />, t: 'Shipping management', pts: ['Shipment tracking', 'Fulfillment workflow', 'Courier integrations', 'Returns handling'] },
+  { icon: <Star size={22} />, t: 'Analytics', pts: ['Revenue tracking', 'Sales insights', 'Best/worst sellers', 'Customer LTV'] },
+  { icon: <Wallet size={22} />, t: 'Payments', pts: ['UPI & cards', 'Net banking & wallets', 'Cash on delivery', 'International payments'] },
+];
+
+const TESTIMONIALS = [
+  { name: 'Riya Mehta', store: '@vintagefinds.in', quote: 'I used to lose half my DMs. Now every chat becomes a paid order — my revenue doubled in two months.', growth: '+118% revenue', avatar: 'bg-rose' },
+  { name: 'Arjun Nair', store: '@thesneakerloop', quote: 'Checkout links killed the payment chasing. Customers pay instantly and I ship the same day.', growth: '+74% orders', avatar: 'bg-navy-600' },
+  { name: 'Sana Kapoor', store: '@sanas.closet', quote: 'One dashboard for orders, payments and shipping. It finally feels like a real business, not a side hustle.', growth: '+2.3x AOV', avatar: 'bg-green-500' },
+];
+
+const FAQS = [
+  { q: 'How does turning a DM into an order work?', a: 'You pick the product, quantity and variant from your catalog, and Loopy generates a checkout link with the cart pre-filled. You paste it into the chat, your customer pays, and the order appears in your dashboard automatically.' },
+  { q: 'Do I need a website already?', a: 'No. Loopy gives you a hosted storefront at loopy.com/s/yourname the moment you sign up. You can add a custom domain later on the Pro plan.' },
+  { q: 'Which payment methods are supported?', a: 'UPI, credit & debit cards, net banking, wallets and cash on delivery. International payments are available on Pro.' },
+  { q: 'How do payouts work?', a: 'Payments are collected securely and settled to your bank account on a rolling schedule. You can track available, pending and settled balances from the payouts dashboard.' },
+  { q: 'Can I manage inventory and variants?', a: 'Yes — track stock per product and per variant (size, colour, material), get low-stock alerts, and prevent overselling automatically.' },
+  { q: 'How is shipping handled?', a: 'Generate labels and track shipments from the dashboard, with integrations for Shiprocket, Delhivery and Blue Dart. Customers get automatic tracking updates.' },
+  { q: 'Will my customers be notified automatically?', a: 'Yes. Order confirmation, payment confirmation, shipment updates and delivery confirmations go out over email, SMS and WhatsApp.' },
+  { q: 'Is there a free plan?', a: 'Yes, the Free plan includes a storefront, unlimited products and orders, checkout links and basic analytics — no card required.' },
+  { q: 'Can I use my own brand and domain?', a: 'On Pro you get a custom homepage, branding controls (logo, fonts, colours) and a custom domain with automatic SSL.' },
+  { q: 'Do you support Instagram and WhatsApp directly?', a: 'Checkout links work in any chat today. Deeper Instagram and WhatsApp Business API integrations are on our near-term roadmap.' },
+];
 
 export default function Landing() {
   return (
@@ -10,90 +57,117 @@ export default function Landing() {
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="aurora-blob animate-aurora absolute -left-24 -top-24 h-[42vw] w-[42vw] bg-green-mint" />
         <div className="aurora-blob animate-aurora absolute right-[-10%] top-[8%] h-[34vw] w-[34vw] bg-green-600/70" style={{ animationDelay: '-6s' }} />
-        <div className="aurora-blob animate-aurora absolute bottom-[-12%] left-[28%] h-[36vw] w-[36vw] bg-navy/30" style={{ animationDelay: '-11s' }} />
+        <div className="aurora-blob animate-aurora absolute bottom-[-12%] left-[28%] h-[36vw] w-[36vw] bg-navy/20" style={{ animationDelay: '-11s' }} />
         <div className="absolute inset-0 grain" />
       </div>
 
       {/* ───── top bar ───── */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
+      <header className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-5 sm:px-8">
         <div className="flex items-center gap-2 font-display text-[26px] font-extrabold tracking-tight">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-green-mint"><Loop size={20} /></span>
           Loopy
         </div>
-        <nav className="flex items-center gap-2 text-sm font-semibold">
-          <Link href="/login" className="rounded-full px-4 py-2 text-navy/80 transition-colors hover:bg-white/60 hover:text-navy">Shop in</Link>
-          <Link href="/seller/login" className="rounded-full bg-navy px-4 py-2 text-white transition-transform hover:scale-[1.03]">Seller in</Link>
+        <nav className="hidden items-center gap-1 text-[15px] font-semibold text-navy/75 md:flex">
+          <a href="#how" className="rounded-full px-3 py-2 transition-colors hover:text-navy">How it works</a>
+          <a href="#features" className="rounded-full px-3 py-2 transition-colors hover:text-navy">Features</a>
+          <a href="#faq" className="rounded-full px-3 py-2 transition-colors hover:text-navy">FAQ</a>
         </nav>
+        <div className="ml-auto flex items-center gap-2">
+          <Link href="/seller/login" className="rounded-full px-4 py-2.5 text-[14px] font-semibold text-navy/80 transition-colors hover:bg-white/60 hover:text-navy">Log in</Link>
+          <Link href="/seller/login" className="rounded-full bg-navy px-5 py-2.5 text-[14px] font-bold text-white transition-transform hover:scale-[1.03]">Start Selling</Link>
+        </div>
       </header>
 
       {/* ───── hero ───── */}
-      <section className="mx-auto max-w-6xl px-5 pb-8 pt-10 text-center sm:px-8 sm:pt-16">
-        <Reveal>
-          <span className="protect-pill mx-auto"><ShieldLock size={12} /> Verified Integrity Social Commerce</span>
-        </Reveal>
-        <h1 className="mx-auto mt-6 max-w-4xl font-display text-[42px] font-extrabold leading-[1.04] tracking-tight sm:text-[68px]">
-          <WordReveal text="Thrift you can" />{' '}
-          <span className="vivid-text"><WordReveal text="actually trust." delay={0.35} /></span>
-        </h1>
-        <Reveal delay={0.2}>
-          <p className="mx-auto mt-6 max-w-xl text-balance text-[16px] leading-relaxed text-muted sm:text-[18px]">
-            One platform, two worlds. Discover one-of-one pieces as a shopper, or turn your
-            closet into a store as a seller — every order held in escrow until it lands.
-          </p>
-        </Reveal>
-
-        {/* ───── the two worlds: role choice ───── */}
-        <Stagger className="mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-2" gap={0.14}>
-          {/* SHOPPER — light · glassy · vibrant */}
-          <StaggerItem>
-            <Tilt max={8}>
-              <div className="glass-card group relative flex h-full flex-col items-start overflow-hidden rounded-3xl p-7 text-left">
-                <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-green-mint/50 blur-2xl transition-transform duration-500 group-hover:scale-125" />
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-green-600 shadow-card"><Bag size={22} /></span>
-                <h2 className="mt-5 font-display text-[24px] font-extrabold text-navy">I&apos;m a Shopper</h2>
-                <p className="mt-2 text-[14px] leading-relaxed text-muted">
-                  Browse curated, authenticated finds from verified stores. Buy with full
-                  buyer protection — your money is safe until you confirm delivery.
-                </p>
-                <ul className="mt-4 space-y-1.5 text-[13px] font-semibold text-navy/80">
-                  <li className="flex items-center gap-2"><Verified size={15} className="text-green-600" /> Authenticity checked</li>
-                  <li className="flex items-center gap-2"><ShieldLock size={15} className="text-green-600" /> Escrow-protected checkout</li>
-                  <li className="flex items-center gap-2"><Truck size={15} className="text-green-600" /> Managed, tracked shipping</li>
-                </ul>
-                <Magnetic className="mt-6 w-full">
-                  <Link href="/login" className="btn-green w-full justify-center group-hover:brightness-110">
-                    Start shopping <ArrowRight size={16} />
-                  </Link>
-                </Magnetic>
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-6 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-8">
+        <div className="text-left">
+          <Reveal>
+            <span className="protect-pill"><ShieldLock size={12} /> The most trusted way to thrift in India</span>
+          </Reveal>
+          <h1 className="mt-6 max-w-xl font-display text-[44px] font-extrabold leading-[1.04] tracking-tight sm:text-[64px]">
+            <WordReveal text="Your thrift store," />{' '}
+            <span className="vivid-text"><WordReveal text="protected end-to-end" delay={0.3} /></span>
+          </h1>
+          <Reveal delay={0.2}>
+            <p className="mt-6 max-w-md text-balance text-[16px] leading-relaxed text-muted sm:text-[18px]">
+              Turn your Instagram DMs into a real storefront with built-in escrow protection.
+              No more ghosting, no more payment anxiety.
+            </p>
+          </Reveal>
+          <Reveal delay={0.32}>
+            <div className="mt-9 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <Magnetic>
+                <Link href="/seller/login" className="btn-navy">Create Your Store <ArrowRight size={16} /></Link>
+              </Magnetic>
+              <a href="#how" className="btn-ghost">How it works</a>
+            </div>
+          </Reveal>
+          <Reveal delay={0.42}>
+            <div className="mt-10 flex items-center gap-3">
+              <div className="flex -space-x-2">
+                {['bg-rose', 'bg-navy-600', 'bg-green-500', 'bg-amber'].map((c) => (
+                  <span key={c} className={`h-8 w-8 rounded-full ring-2 ring-paper ${c}`} />
+                ))}
               </div>
-            </Tilt>
-          </StaggerItem>
+              <p className="text-[14px] text-muted">
+                Trusted by <span className="font-bold text-navy">5,000+</span> thrift sellers across India
+              </p>
+            </div>
+          </Reveal>
+        </div>
 
-          {/* SELLER — dark · sharp · SaaS */}
-          <StaggerItem>
-            <Tilt max={8}>
-              <div className="seller-bg seller-grid group relative flex h-full flex-col items-start overflow-hidden rounded-3xl border border-white/10 p-7 text-left">
-                <div className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-green-500/30 blur-3xl transition-transform duration-500 group-hover:scale-125" />
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-green-500/15 text-green-500 ring-1 ring-green-500/30"><Store size={22} /></span>
-                <h2 className="mt-5 font-display text-[24px] font-extrabold text-white">I&apos;m a Seller</h2>
-                <p className="mt-2 text-[14px] leading-relaxed text-[#8A98AD]">
-                  Launch a real storefront in minutes. List items, manage orders, and get
-                  paid out fast — with a dashboard built for moving inventory.
-                </p>
-                <ul className="mt-4 space-y-1.5 text-[13px] font-semibold text-[#C7D2E0]">
-                  <li className="flex items-center gap-2"><Bolt size={15} className="text-green-500" /> List an item in seconds</li>
-                  <li className="flex items-center gap-2"><Sparkle size={15} className="text-green-500" /> Live order queue &amp; analytics</li>
-                  <li className="flex items-center gap-2"><Verified size={15} className="text-green-500" /> Instant escrow payouts</li>
-                </ul>
-                <Magnetic className="mt-6 w-full">
-                  <Link href="/seller/login" className="s-btn w-full">
-                    Open your store <ArrowRight size={16} />
-                  </Link>
-                </Magnetic>
+        {/* hero visual — the protected-order product card */}
+        <Reveal delay={0.25}>
+          <Tilt max={7}>
+            <div className="glass-card relative mx-auto w-full max-w-[420px] rounded-[28px] p-4 sm:p-5">
+              {/* seller header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600" />
+                  <div>
+                    <div className="flex items-center gap-1 font-display text-[15px] font-extrabold text-navy">
+                      @VintageFindsIn <Verified size={15} className="text-green-600" />
+                    </div>
+                    <div className="text-[12px] text-muted">Verified Seller</div>
+                  </div>
+                </div>
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-green-soft text-green-600"><Check size={15} /></span>
               </div>
-            </Tilt>
-          </StaggerItem>
-        </Stagger>
+
+              {/* product image + floating badges */}
+              <div className="relative mt-4 overflow-hidden rounded-2xl">
+                <img
+                  src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=72"
+                  alt="Classic Leather Boots"
+                  className="aspect-[4/3] w-full object-cover"
+                />
+                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-green-600 px-2.5 py-1 text-[11px] font-extrabold text-white shadow-card">
+                  <ShieldLock size={12} /> Loopy Protected
+                </span>
+                <span className="absolute -left-1 top-14 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-navy shadow-card">
+                  <Truck size={14} className="text-green-600" /> Auto label created
+                </span>
+              </div>
+
+              {/* product meta */}
+              <div className="mt-4 flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-display text-[19px] font-extrabold text-navy">Classic Leather Boots</div>
+                  <div className="mt-0.5 font-display text-[22px] font-extrabold text-navy">₹2,499</div>
+                </div>
+                <button className="btn-green shrink-0 self-center">Buy with Protection</button>
+              </div>
+
+              {/* escrow strip */}
+              <div className="relative mt-4 flex items-center gap-2 rounded-2xl bg-green-soft px-4 py-3 text-[13px] font-semibold text-green">
+                <ShieldLock size={15} /> Money held in Loopy Escrow
+                <span className="absolute -top-4 right-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-navy shadow-card">
+                  <Wallet size={14} className="text-amber" /> ₹2,499 released
+                </span>
+              </div>
+            </div>
+          </Tilt>
+        </Reveal>
       </section>
 
       {/* ───── trust stats ───── */}
@@ -101,10 +175,10 @@ export default function Landing() {
         <Reveal>
           <div className="glass-panel grid grid-cols-2 gap-6 rounded-3xl px-6 py-8 sm:grid-cols-4">
             {[
-              { to: 120000, suffix: '+', label: 'Protected orders' },
-              { to: 4.9, decimals: 1, suffix: '★', label: 'Avg store rating' },
-              { to: 100, suffix: '%', label: 'Money-back guarantee' },
-              { to: 48, suffix: 'h', label: 'Inspection window' },
+              { to: 250000, suffix: '+', label: 'Orders processed' },
+              { to: 5000, suffix: '+', label: 'Active sellers' },
+              { to: 30, suffix: 's', label: 'Chat to checkout' },
+              { to: 99.9, decimals: 1, suffix: '%', label: 'Payment uptime' },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="font-display text-[28px] font-extrabold text-navy sm:text-[34px]">
@@ -117,39 +191,150 @@ export default function Landing() {
         </Reveal>
       </section>
 
-      {/* ───── how the loop works ───── */}
-      <section className="mx-auto max-w-5xl px-5 pb-20 sm:px-8">
-        <Reveal><h3 className="text-center font-display text-[28px] font-extrabold text-navy sm:text-[36px]">How the loop closes</h3></Reveal>
-        <Stagger className="mt-10 grid gap-5 sm:grid-cols-3">
-          {[
-            { icon: <Store size={20} />, t: 'Seller lists', d: 'A verified store posts an item. It appears instantly in the shopper feed.' },
-            { icon: <ShieldLock size={20} />, t: 'Buyer pays into escrow', d: 'Money is held safely by Loopy — never sent straight to the seller.' },
-            { icon: <Star size={20} />, t: 'Delivered & released', d: 'On confirmed delivery, the seller is paid and both sides rate the loop.' },
-          ].map((s, i) => (
+      {/* ───── solution ───── */}
+      <section id="how" className="mx-auto max-w-5xl px-5 py-12 sm:px-8">
+        <Reveal>
+          <p className="text-center text-[13px] font-extrabold uppercase tracking-widest text-green-600">The solution</p>
+          <h2 className="mt-3 text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Everything organized in one place</h2>
+        </Reveal>
+        <Stagger className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {SOLUTIONS.map((s) => (
             <StaggerItem key={s.t}>
               <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="glass-card h-full rounded-2xl p-6">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy text-green-mint">{s.icon}</span>
-                  <span className="font-display text-sm font-extrabold text-faint">0{i + 1}</span>
-                </div>
-                <div className="mt-4 font-display text-[18px] font-bold text-navy">{s.t}</div>
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-navy text-green-mint">{s.icon}</span>
+                <div className="mt-4 font-display text-[17px] font-bold text-navy">{s.t}</div>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{s.d}</p>
               </motion.div>
             </StaggerItem>
           ))}
         </Stagger>
+      </section>
 
-        <Reveal delay={0.1}>
-          <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/login" className="btn-navy">Browse the marketplace <ArrowRight size={16} /></Link>
-            <Link href="/seller/login" className="btn-outline">Become a seller</Link>
+      {/* ───── feature showcase ───── */}
+      <section id="features" className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+        <Reveal>
+          <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">One platform, your whole business</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[16px] text-muted">From the first DM to delivery — every tool a social seller needs.</p>
+        </Reveal>
+        <Stagger className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => (
+            <StaggerItem key={f.t}>
+              <Tilt max={6}>
+                <div className="glass-card group relative flex h-full flex-col overflow-hidden rounded-3xl p-7">
+                  <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-green-mint/40 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-green-600 shadow-card">{f.icon}</span>
+                  <h3 className="mt-5 font-display text-[20px] font-extrabold text-navy">{f.t}</h3>
+                  <ul className="mt-4 space-y-2 text-[14px] font-semibold text-navy/80">
+                    {f.pts.map((p) => (
+                      <li key={p} className="flex items-center gap-2"><Check size={15} className="text-green-600" /> {p}</li>
+                    ))}
+                  </ul>
+                </div>
+              </Tilt>
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </section>
+
+      {/* ───── testimonials ───── */}
+      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+        <Reveal>
+          <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Sellers who closed the loop</h2>
+        </Reveal>
+        <Stagger className="mt-12 grid gap-5 lg:grid-cols-3">
+          {TESTIMONIALS.map((t) => (
+            <StaggerItem key={t.name}>
+              <div className="glass-card flex h-full flex-col rounded-3xl p-7">
+                <div className="flex items-center gap-1 text-amber">
+                  {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={16} />)}
+                </div>
+                <p className="mt-4 flex-1 text-[15px] leading-relaxed text-navy/85">“{t.quote}”</p>
+                <div className="mt-6 flex items-center gap-3">
+                  <span className={`grid h-11 w-11 place-items-center rounded-full font-display text-[15px] font-extrabold text-white ${t.avatar}`}>{t.name[0]}</span>
+                  <div>
+                    <div className="font-display text-[15px] font-bold text-navy">{t.name}</div>
+                    <div className="text-[12.5px] text-muted">{t.store}</div>
+                  </div>
+                  <span className="ml-auto chip-green">{t.growth}</span>
+                </div>
+              </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </section>
+
+      {/* ───── faq ───── */}
+      <section id="faq" className="mx-auto max-w-3xl px-5 py-16 sm:px-8">
+        <Reveal>
+          <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Frequently asked questions</h2>
+        </Reveal>
+        <div className="mt-10 space-y-3">
+          {FAQS.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
+        </div>
+      </section>
+
+      {/* ───── final CTA ───── */}
+      <section className="mx-auto max-w-5xl px-5 pb-20 sm:px-8">
+        <Reveal>
+          <div className="seller-bg seller-grid relative overflow-hidden rounded-[32px] border border-white/10 px-8 py-14 text-center">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-green-500/20 blur-3xl" />
+            <h2 className="font-display text-[30px] font-extrabold text-white sm:text-[40px]">Start turning chats into checkouts today</h2>
+            <p className="mx-auto mt-4 max-w-md text-[15px] text-[#8A98AD]">Set up your store, drop your first checkout link, and get paid — all in the next few minutes.</p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Magnetic><Link href="/seller/login" className="btn-green">Create your store <ArrowRight size={16} /></Link></Magnetic>
+              <a href="#how" className="s-btn">See how it works</a>
+            </div>
           </div>
         </Reveal>
       </section>
 
-      <footer className="border-t border-line/70 py-8 text-center text-[12.5px] text-faint">
-        © 2026 Loopy · Verified Integrity Social Commerce
+      {/* ───── footer ───── */}
+      <footer className="border-t border-line/70 bg-white/40">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2 font-display text-[22px] font-extrabold tracking-tight">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={17} /></span>
+              Loopy
+            </div>
+            <p className="mt-3 max-w-xs text-[13.5px] leading-relaxed text-muted">Conversational commerce that turns Instagram DMs and WhatsApp chats into real, protected orders.</p>
+          </div>
+          <div>
+            <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Company</div>
+            <ul className="mt-3 space-y-2 text-[14px] text-muted">
+              {['About', 'Contact', 'Pricing', 'Privacy Policy', 'Terms', 'Refund Policy'].map((l) => (
+                <li key={l}><a className="transition-colors hover:text-navy">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Follow</div>
+            <ul className="mt-3 space-y-2 text-[14px] text-muted">
+              {['Instagram', 'Facebook', 'LinkedIn', 'YouTube'].map((l) => (
+                <li key={l}><a className="transition-colors hover:text-navy">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-line/70 py-6 text-center text-[12.5px] text-faint">
+          © 2026 Loopy · Conversational commerce for social sellers
+        </div>
       </footer>
     </main>
+  );
+}
+
+/* ───── FAQ accordion item ───── */
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line bg-white/70">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+        <span className="font-display text-[15.5px] font-bold text-navy">{q}</span>
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full bg-green-soft text-green-600 transition-transform ${open ? 'rotate-45' : ''}`}><Plus size={15} /></span>
+      </button>
+      <motion.div initial={false} animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
+        <p className="px-5 pb-5 text-[14px] leading-relaxed text-muted">{a}</p>
+      </motion.div>
+    </div>
   );
 }

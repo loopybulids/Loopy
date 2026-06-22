@@ -40,6 +40,12 @@ export const api = {
   verify: (phone: string, code: string, name?: string) =>
     req<any>(`/auth/verify`, { method: 'POST', body: JSON.stringify({ phone, code, ...(name ? { name } : {}) }) }),
 
+  // email/password seller auth
+  registerSeller: (body: { name: string; email: string; password: string; storeName: string }) =>
+    req<any>(`/auth/register`, { method: 'POST', body: JSON.stringify(body) }),
+  loginEmail: (email: string, password: string) =>
+    req<any>(`/auth/login-email`, { method: 'POST', body: JSON.stringify({ email, password }) }),
+
   // order actions
   deliverOrder: (id: string) => req<any>(`/orders/${id}/deliver`, { method: 'POST' }),
   reviewOrder: (id: string, rating: number, comment: string) =>
@@ -47,7 +53,11 @@ export const api = {
   disputeOrder: (id: string, issueType: string, description: string) =>
     req<any>(`/orders/${id}/dispute`, { method: 'POST', body: JSON.stringify({ issueType, description }) }),
 
+  changePassword: (password: string) =>
+    req<any>(`/auth/change-password`, { method: 'POST', body: JSON.stringify({ password }) }),
+
   // seller (auth required)
+  myProfile: () => req<any>(`/sellers/me/profile`),
   myOrders: () => req<any[]>(`/sellers/me/orders`),
   myProducts: () => req<any[]>(`/sellers/me/products`),
   myWallet: () => req<any>(`/sellers/me/wallet`),
