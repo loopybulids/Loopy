@@ -21,11 +21,12 @@ const POLICY_ICONS = [<ShieldLock key="0" size={20} />, <Truck key="1" size={20}
  * the editor preview.
  */
 export default function StorePreview({
-  config, products = [], storeName,
+  config, products = [], storeName, mobile = false,
 }: {
   config: StoreConfig;
   products?: any[];
   storeName: string;
+  mobile?: boolean;
 }) {
   const c = config;
   const accent = c.theme.accent;
@@ -42,7 +43,7 @@ export default function StorePreview({
       {c.header.enabled && (
         <header className="flex items-center justify-between gap-4 border-b border-line bg-white px-5 py-4 sm:px-8">
           <div className="font-display text-[22px] font-extrabold tracking-tight" style={{ color: accent }}>{storeName}</div>
-          <nav className="hidden items-center gap-5 text-[14px] font-semibold text-navy/75 md:flex">
+          <nav className={`items-center gap-5 text-[14px] font-semibold text-navy/75 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
             {c.header.nav.map((n, i) => <span key={i} className="cursor-pointer hover:text-navy">{n.label}</span>)}
           </nav>
           <div className="flex items-center gap-3 text-navy/70">
@@ -99,7 +100,7 @@ export default function StorePreview({
             ))}
           </div>
 
-          <div className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className={`mx-auto mt-8 grid max-w-5xl gap-4 ${mobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}`}>
             {products.length === 0 ? (
               <p className="col-span-full py-8 text-center text-[13px] text-faint">No products yet — add some in your catalog.</p>
             ) : (
@@ -122,7 +123,7 @@ export default function StorePreview({
       {/* policies */}
       {c.policies.enabled && c.policies.items.length > 0 && (
         <section className="bg-white px-5 py-12 sm:px-8">
-          <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-3">
+          <div className={`mx-auto grid max-w-5xl gap-4 ${mobile ? 'grid-cols-1' : 'sm:grid-cols-3'}`}>
             {c.policies.items.map((p, i) => (
               <div key={i} className="rounded-lg border border-line p-6 text-center">
                 <span className="mx-auto grid h-11 w-11 place-items-center rounded-lg" style={{ background: `${accent}1a`, color: accent }}>{POLICY_ICONS[i % 3]}</span>

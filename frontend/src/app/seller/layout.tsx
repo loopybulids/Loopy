@@ -67,10 +67,10 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
     <div className="min-h-screen bg-paper text-navy">
       {/* ───── sidebar ───── */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-[248px] border-r border-line bg-white px-4 py-6 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Link href="/" className="mb-8 flex items-center gap-2 px-2 font-display text-[22px] font-extrabold tracking-tight text-navy">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={17} /></span>
+        <Link href="/" className="mb-8 flex items-center gap-2 px-2 font-display text-[18px] font-extrabold tracking-tight text-navy">
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={15} /></span>
           Loopy
-          <span className="ml-auto rounded-md bg-green-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green">Seller</span>
+          <span className="ml-auto rounded-md bg-green-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green">Seller</span>
         </Link>
 
         <nav className="space-y-1">

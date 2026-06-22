@@ -92,7 +92,7 @@ export default function StoreEditor() {
         {/* live preview */}
         <main className="order-3 min-w-0 flex-1 bg-paper p-4 lg:order-2 lg:overflow-y-auto">
           <div className={`mx-auto overflow-hidden rounded-lg border border-line shadow-card transition-all ${previewWidth}`}>
-            <StorePreview config={config} products={products} storeName={storeName} />
+            <StorePreview config={config} products={products} storeName={storeName} mobile={device === 'mobile'} />
           </div>
         </main>
 
