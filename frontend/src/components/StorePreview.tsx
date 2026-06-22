@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StoreConfig, HERO_BG } from '@/lib/store-config';
 import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
 
@@ -120,18 +120,17 @@ export default function StorePreview({
         </section>
       )}
 
-      {/* policies */}
+      {/* policies — sliding carousel on mobile, grid on desktop */}
       {c.policies.enabled && c.policies.items.length > 0 && (
         <section className="bg-white px-5 py-12 sm:px-8">
-          <div className={`mx-auto grid max-w-5xl gap-4 ${mobile ? 'grid-cols-1' : 'sm:grid-cols-3'}`}>
-            {c.policies.items.map((p, i) => (
-              <div key={i} className="rounded-lg border border-line p-6 text-center">
-                <span className="mx-auto grid h-11 w-11 place-items-center rounded-lg" style={{ background: `${accent}1a`, color: accent }}>{POLICY_ICONS[i % 3]}</span>
-                <div className="mt-3 font-display text-[15px] font-bold">{p.title}</div>
-                <p className="mt-1 text-[13px] text-muted">{p.body}</p>
-              </div>
-            ))}
+          <div className={mobile ? 'block' : 'lg:hidden'}>
+            <PolicyCarousel items={c.policies.items} accent={accent} />
           </div>
+          {!mobile && (
+            <div className="mx-auto hidden max-w-5xl gap-4 lg:grid lg:grid-cols-3">
+              {c.policies.items.map((p, i) => <PolicyCard key={i} p={p} i={i} accent={accent} />)}
+            </div>
+          )}
         </section>
       )}
 
@@ -160,6 +159,59 @@ export default function StorePreview({
       <footer className="border-t border-line bg-white py-6 text-center text-[12.5px] text-faint">
         {c.footer.text}
       </footer>
+    </div>
+  );
+}
+
+/* a single policy card */
+function PolicyCard({ p, i, accent }: { p: { title: string; body: string }; i: number; accent: string }) {
+  return (
+    <div className="h-full rounded-lg border border-line bg-white p-6 text-center">
+      <span className="mx-auto grid h-11 w-11 place-items-center rounded-lg" style={{ background: `${accent}1a`, color: accent }}>{POLICY_ICONS[i % 3]}</span>
+      <div className="mt-3 font-display text-[15px] font-bold">{p.title}</div>
+      <p className="mt-1 text-[13px] text-muted">{p.body}</p>
+    </div>
+  );
+}
+
+/* auto-advancing horizontal carousel — one card slides to the next */
+function PolicyCarousel({ items, accent }: { items: { title: string; body: string }[]; accent: string }) {
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (items.length <= 1 || paused) return;
+    const t = setInterval(() => setIdx((p) => (p + 1) % items.length), 3000);
+    return () => clearInterval(t);
+  }, [items.length, paused]);
+
+  return (
+    <div className="mx-auto max-w-sm" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <div className="overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${idx * 100}%)` }}
+        >
+          {items.map((p, i) => (
+            <div key={i} className="w-full shrink-0 px-1">
+              <PolicyCard p={p} i={i} accent={accent} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {items.length > 1 && (
+        <div className="mt-4 flex justify-center gap-1.5">
+          {items.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              className="h-2 rounded-full transition-all duration-300"
+              style={{ width: idx === i ? 20 : 8, background: accent, opacity: idx === i ? 1 : 0.35 }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
