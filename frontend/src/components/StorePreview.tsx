@@ -30,6 +30,7 @@ export default function StorePreview({
 }) {
   const c = config;
   const accent = c.theme.accent;
+  const hasHeroMedia = !!c.hero.imageUrl;
   const [tab, setTab] = useState(c.productTabs.tabs[0] || 'Featured');
 
   return (
@@ -56,22 +57,24 @@ export default function StorePreview({
 
       {/* hero */}
       {c.hero.enabled && (
-        <section className={`relative overflow-hidden px-5 py-16 text-center sm:px-8 ${HERO_BG[c.theme.heroBg]}`}>
-          {c.hero.imageUrl && (
+        <section className={`relative grid min-h-[420px] place-items-center overflow-hidden px-5 py-16 text-center sm:px-8 ${hasHeroMedia ? 'text-white' : HERO_BG[c.theme.heroBg]}`}>
+          {hasHeroMedia && (
             <div className="absolute inset-0">
               {isVideo(c.hero.imageUrl)
-                ? <video src={c.hero.imageUrl} className="h-full w-full object-cover" muted loop autoPlay playsInline />
-                : <img src={c.hero.imageUrl} alt="" className="h-full w-full object-cover" />}
-              {/* readability overlay so hero text stays legible over the media */}
-              <div className="absolute inset-0 bg-white/55" />
+                ? <video src={c.hero.imageUrl} className="absolute inset-0 h-full w-full object-cover" muted loop autoPlay playsInline />
+                : <img src={c.hero.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+              {/* dark gradient so white hero text stays legible over any photo/video */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/45" />
             </div>
           )}
           <div className="relative mx-auto max-w-2xl">
-            {c.hero.eyebrow && <p className="text-[14px] font-bold" style={{ color: accent }}>✨ {c.hero.eyebrow} ✨</p>}
-            <h1 className="mt-3 font-display text-[40px] font-extrabold leading-tight sm:text-[56px]">{c.hero.headline}</h1>
-            {c.hero.subtext && <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">{c.hero.subtext}</p>}
+            {c.hero.eyebrow && (
+              <p className="text-[14px] font-bold" style={hasHeroMedia ? { color: '#fff' } : { color: accent }}>✨ {c.hero.eyebrow} ✨</p>
+            )}
+            <h1 className={`mt-3 font-display text-[40px] font-extrabold leading-tight sm:text-[56px] ${hasHeroMedia ? 'drop-shadow' : ''}`}>{c.hero.headline}</h1>
+            {c.hero.subtext && <p className={`mx-auto mt-3 max-w-md text-[15px] ${hasHeroMedia ? 'text-white/85' : 'text-muted'}`}>{c.hero.subtext}</p>}
             {c.hero.ctaLabel && (
-              <button className="mt-6 rounded-lg px-6 py-3 text-[15px] font-bold text-white" style={{ background: accent }}>
+              <button className="mt-6 rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card" style={{ background: accent }}>
                 {c.hero.ctaLabel} 🛍
               </button>
             )}
