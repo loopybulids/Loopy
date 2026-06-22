@@ -160,6 +160,20 @@ function Fields({ active, config, set, setConfig, storeName }: {
               <MediaInput value={config.hero.imageUrl} onChange={(v) => set('hero', 'imageUrl', v)} />
             </div>
           </div>
+          {config.hero.imageUrl && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[12px] font-bold uppercase tracking-wide text-faint">Image position</label>
+                <span className="text-[11px] text-faint">{config.hero.focusY ?? 50}%</span>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button onClick={() => set('hero', 'focusY', Math.max(0, (config.hero.focusY ?? 50) - 10))} className="grid h-9 w-9 place-items-center rounded-lg bg-white text-navy ring-1 ring-line hover:bg-green-soft" title="Show higher part">↑</button>
+                <input type="range" min={0} max={100} value={config.hero.focusY ?? 50} onChange={(e) => set('hero', 'focusY', Number(e.target.value))} className="flex-1 accent-green-600" />
+                <button onClick={() => set('hero', 'focusY', Math.min(100, (config.hero.focusY ?? 50) + 10))} className="grid h-9 w-9 place-items-center rounded-lg bg-white text-navy ring-1 ring-line hover:bg-green-soft" title="Show lower part">↓</button>
+              </div>
+              <p className="mt-1.5 text-[11px] text-faint">Slide up/down to frame the part of the image you want visible.</p>
+            </div>
+          )}
         </>
       )}
 

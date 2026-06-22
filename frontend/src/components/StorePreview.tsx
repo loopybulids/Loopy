@@ -42,15 +42,35 @@ export default function StorePreview({
 
       {/* header */}
       {c.header.enabled && (
-        <header className="flex items-center justify-between gap-4 border-b border-line bg-white px-5 py-4 sm:px-8">
-          <div className="font-display text-[22px] font-extrabold tracking-tight" style={{ color: accent }}>{storeName}</div>
-          <nav className={`items-center gap-5 text-[14px] font-semibold text-navy/75 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
-            {c.header.nav.map((n, i) => <span key={i} className="cursor-pointer hover:text-navy">{n.label}</span>)}
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-line bg-white/85 px-5 py-3.5 backdrop-blur-md sm:px-8">
+          {/* brand: logo mark + name */}
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>
+              {storeName.charAt(0).toUpperCase()}
+            </span>
+            <span className="font-display text-[21px] font-extrabold tracking-tight text-navy">{storeName}</span>
+          </div>
+
+          {/* nav with animated underline */}
+          <nav className={`items-center gap-7 text-[14px] font-semibold text-navy/70 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
+            {c.header.nav.map((n, i) => (
+              <span key={i} className="group relative cursor-pointer transition-colors hover:text-navy">
+                {n.label}
+                <span className="absolute -bottom-1.5 left-0 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ background: accent }} />
+              </span>
+            ))}
           </nav>
-          <div className="flex items-center gap-3 text-navy/70">
-            {c.header.showSearch && <Search size={18} />}
-            <Heart size={18} />
-            <Bag size={18} />
+
+          {/* action icons in soft pills */}
+          <div className="flex items-center gap-1.5">
+            {c.header.showSearch && (
+              <button className="grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy"><Search size={18} /></button>
+            )}
+            <button className="grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy"><Heart size={18} /></button>
+            <button className="relative grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy">
+              <Bag size={18} />
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white" style={{ background: accent }}>0</span>
+            </button>
           </div>
         </header>
       )}
@@ -61,8 +81,8 @@ export default function StorePreview({
           {hasHeroMedia && (
             <div className="absolute inset-0">
               {isVideo(c.hero.imageUrl)
-                ? <video src={c.hero.imageUrl} className="absolute inset-0 h-full w-full object-cover" muted loop autoPlay playsInline />
-                : <img src={c.hero.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+                ? <video src={c.hero.imageUrl} className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: `50% ${c.hero.focusY ?? 50}%` }} muted loop autoPlay playsInline />
+                : <img src={c.hero.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: `50% ${c.hero.focusY ?? 50}%` }} />}
               {/* dark gradient so white hero text stays legible over any photo/video */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/45" />
             </div>

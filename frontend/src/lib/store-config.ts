@@ -15,6 +15,7 @@ export interface StoreConfig {
     subtext: string;
     ctaLabel: string;
     imageUrl: string;
+    focusY: number; // 0 (top) – 100 (bottom): vertical focus point of the bg media
   };
   banners: { enabled: boolean; images: string[] };
   productTabs: { enabled: boolean; heading: string; sub: string; tabs: string[] };
@@ -59,6 +60,7 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
       subtext: 'Curated, authenticated finds — shipped fast and protected end-to-end.',
       ctaLabel: 'Shop Now',
       imageUrl: '',
+      focusY: 50,
     },
     banners: { enabled: false, images: [] },
     productTabs: {
