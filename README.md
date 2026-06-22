@@ -4,6 +4,8 @@ Social-commerce thrift marketplace for Instagram sellers (India). Independent
 seller storefronts with built-in payments, **escrow-style buyer protection**,
 and managed shipping — _"Shopify for Instagram thrift sellers."_
 
+
+
 This repo is an **MVP scaffold** built from `Loopy_PRD_v1`. It implements the
 core buyer + seller happy path end-to-end, with payments and logistics stubbed
 behind clean seams (exactly as the PRD recommends for the 3–4 week MVP).
