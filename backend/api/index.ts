@@ -1,18 +1,16 @@
 /**
  * Vercel serverless entry for the NestJS API.
  *
- * Vercel runs functions, not a long-lived `app.listen()` server, so instead of
- * booting in main.ts we create the Nest app once (cached across warm
- * invocations) and hand each request to the underlying Express instance.
- *
- * We import the *compiled* AppModule from ../dist (built by `npm run build`)
- * because Vercel bundles functions with esbuild, which doesn't emit the
- * decorator metadata Nest's DI needs — the pre-compiled JS already has it.
+ * Vercel runs functions, not a long-lived `app.listen()` server, so we create
+ * the Nest app once (cached across warm invocations) and hand each request to
+ * the underlying Express instance. Importing from ../src lets Vercel bundle the
+ * whole app into the function in one pass (the previous ../dist approach failed
+ * because dist isn't bundled into the function at runtime).
  */
+import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-// @ts-ignore — resolved from the build output at deploy time
-import { AppModule } from '../dist/app.module';
+import { AppModule } from '../src/app.module';
 
 let cached: any;
 
