@@ -13,6 +13,15 @@ import {
    · testimonials · pricing · faq · footer
    ────────────────────────────────────────────────────────────── */
 
+// Brand logos shown in the "trusted by" row (Clearbit logo API).
+const BRANDS = [
+  { name: 'Zara', domain: 'zara.com' },
+  { name: 'H&M', domain: 'hm.com' },
+  { name: 'Levi\'s', domain: 'levi.com' },
+  { name: 'Nike', domain: 'nike.com' },
+  { name: 'Uniqlo', domain: 'uniqlo.com' },
+];
+
 const SOLUTIONS = [
   { icon: <Share size={20} />, t: 'Chat to order', d: 'Turn any DM into a structured order in seconds.' },
   { icon: <Bolt size={20} />, t: 'Instant checkout links', d: 'Pre-filled carts your customer pays in one tap.' },
@@ -105,8 +114,15 @@ export default function Landing() {
           <Reveal delay={0.42}>
             <div className="mt-10 flex items-center gap-3">
               <div className="flex -space-x-2">
-                {['bg-rose', 'bg-navy-600', 'bg-green-500', 'bg-amber'].map((c) => (
-                  <span key={c} className={`h-8 w-8 rounded-full ring-2 ring-paper ${c}`} />
+                {BRANDS.map((b) => (
+                  <span key={b.domain} className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-white shadow-card ring-2 ring-paper">
+                    <img
+                      src={`https://logo.clearbit.com/${b.domain}`}
+                      alt={b.name}
+                      className="h-full w-full object-contain p-1.5"
+                      onError={(e) => { (e.currentTarget.style.display = 'none'); }}
+                    />
+                  </span>
                 ))}
               </div>
               <p className="text-[14px] text-muted">
