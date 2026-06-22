@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { api, rupees } from '@/lib/api';
 import { useRequireRole } from '@/lib/useRequireRole';
 import StoreNav from '@/components/StoreNav';
@@ -17,13 +17,14 @@ const STEPS = [
 const idx = (s: string) => STEPS.findIndex((x) => x.key === s);
 const MINI = [{ key: 'Paid', label: 'PAID', icon: <Lock size={15} /> }, { key: 'Shipped', label: 'SHIPPING', icon: <Truck size={15} /> }, { key: 'Completed', label: 'RELEASED', icon: <Check size={15} /> }];
 
-export default function OrderPage({ params }: { params: { id: string } }) {
+export default function OrderPage() {
+  const id = useParams().id as string;
   const { ready, role } = useRequireRole('buyer');
   const [o, setO] = useState<any>(null);
   const [err, setErr] = useState('');
   const router = useRouter();
-  const load = () => api.getOrder(params.id).then(setO).catch((e) => setErr(e.message));
-  useEffect(() => { load(); }, [params.id]);
+  const load = () => api.getOrder(id).then(setO).catch((e) => setErr(e.message));
+  useEffect(() => { load(); }, [id]);
 
   if (!ready || role !== 'buyer') return <main className="min-h-screen bg-paper" />;
   if (err) return <div className="grid min-h-screen place-items-center bg-paper text-muted">{err}</div>;

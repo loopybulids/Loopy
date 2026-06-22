@@ -6,8 +6,9 @@ import { Clock, Share, Star, Verified } from '@/components/icons';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StorePage({ params }: { params: { username: string } }) {
-  const store = await getStoreSSR(params.username);
+export default async function StorePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
+  const store = await getStoreSSR(username);
   if (!store) return <ApiDown what="This store" />;
   const cats = ['All Items', 'Outerwear', 'Denim', 'Accessories', 'Knitwear'];
 

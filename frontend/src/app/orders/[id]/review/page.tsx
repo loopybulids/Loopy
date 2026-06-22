@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useRequireRole } from '@/lib/useRequireRole';
 import StoreNav from '@/components/StoreNav';
 import { Back, Check } from '@/components/icons';
 
-export default function ReviewPage({ params }: { params: { id: string } }) {
+export default function ReviewPage() {
+  const id = useParams().id as string;
   const { ready, role } = useRequireRole('buyer');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('Exactly as described, came fast and packed so nicely.');
@@ -15,7 +16,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const submit = async () => {
     setBusy(true);
-    try { await api.reviewOrder(params.id, rating, comment); router.push(`/orders/${params.id}`); }
+    try { await api.reviewOrder(id, rating, comment); router.push(`/orders/${id}`); }
     catch (e: any) { alert(e.message); setBusy(false); }
   };
 
