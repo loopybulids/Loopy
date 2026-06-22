@@ -58,6 +58,8 @@ export const api = {
 
   // seller (auth required)
   myProfile: () => req<any>(`/sellers/me/profile`),
+  updateStoreConfig: (config: any) =>
+    req<any>(`/sellers/me/store-config`, { method: 'PUT', body: JSON.stringify({ config }) }),
   myOrders: () => req<any[]>(`/sellers/me/orders`),
   myProducts: () => req<any[]>(`/sellers/me/products`),
   myWallet: () => req<any>(`/sellers/me/wallet`),

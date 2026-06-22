@@ -2,6 +2,8 @@ import { getStoreSSR } from '@/lib/server-api';
 import StoreNav from '@/components/StoreNav';
 import ProductCard from '@/components/ProductCard';
 import ApiDown from '@/components/ApiDown';
+import StorePreview from '@/components/StorePreview';
+import { withDefaults } from '@/lib/store-config';
 import { Clock, Share, Star, Verified } from '@/components/icons';
 
 export const dynamic = 'force-dynamic';
@@ -10,6 +12,17 @@ export default async function StorePage({ params }: { params: Promise<{ username
   const { username } = await params;
   const store = await getStoreSSR(username);
   if (!store) return <ApiDown what="This store" />;
+
+  // If the seller has published a Store Editor config, render that storefront.
+  if (store.storeConfig) {
+    const config = withDefaults(store.storeName, store.storeConfig);
+    return (
+      <main className="min-h-screen">
+        <StorePreview config={config} products={store.products} storeName={store.storeName} />
+      </main>
+    );
+  }
+
   const cats = ['All Items', 'Outerwear', 'Denim', 'Accessories', 'Knitwear'];
 
   return (

@@ -42,6 +42,7 @@ model Seller {
   ratingCount Int      @default(0)
   city        String?
   kycStatus   String   @default("approved") // pending | approved | rejected
+  storeConfig String?  // JSON string — storefront builder config (sections, theme, hero…)
   createdAt   DateTime @default(now())
 
   user     User      @relation(fields: [userId], references: [id])

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { SellersService } from './sellers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -48,5 +48,12 @@ export class SellersController {
   @Post('me/payouts')
   payout(@Req() req: any) {
     return this.sellers.requestPayout(req.user.sellerId);
+  }
+
+  // Authenticated seller — save storefront builder config
+  @UseGuards(JwtAuthGuard)
+  @Put('me/store-config')
+  saveStoreConfig(@Req() req: any, @Body() body: any) {
+    return this.sellers.updateStoreConfig(req.user.sellerId, body?.config ?? body);
   }
 }

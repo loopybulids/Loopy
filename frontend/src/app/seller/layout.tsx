@@ -13,6 +13,7 @@ const NAV = [
   { href: '/seller/catalog', label: 'Products', icon: <Tag size={18} /> },
   { href: '/seller/orders', label: 'Orders', icon: <Bag size={18} /> },
   { href: '/seller/customers', label: 'Customers', icon: <Heart size={18} /> },
+  { href: '/seller/store-editor', label: 'Store Editor', icon: <Store size={18} /> },
   { href: '/seller/links', label: 'Checkout links', icon: <Share size={18} /> },
   { href: '/seller/shipping', label: 'Shipping', icon: <Truck size={18} /> },
   { href: '/seller/payments', label: 'Payments', icon: <Wallet size={18} /> },

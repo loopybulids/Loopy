@@ -11,6 +11,13 @@ function safeParse(s: string): string[] {
     return [];
   }
 }
+function safeParseObj(s: string): any {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
 
 @Injectable()
 export class SellersService {
@@ -50,8 +57,17 @@ export class SellersService {
       ratingCount: seller.ratingCount,
       city: seller.city,
       kycStatus: seller.kycStatus,
+      storeConfig: seller.storeConfig ? safeParseObj(seller.storeConfig) : null,
       products: seller.products.map(shapeProduct),
     };
+  }
+
+  async updateStoreConfig(sellerId: string, config: any) {
+    await this.prisma.seller.update({
+      where: { id: sellerId },
+      data: { storeConfig: JSON.stringify(config ?? {}) },
+    });
+    return { ok: true };
   }
 
   async getSellerOrders(sellerId: string) {
