@@ -103,6 +103,49 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * Exchange a Supabase session token (from Google OAuth or email OTP on the
+   * frontend) for a Loopy JWT. Verifies the token via Supabase's /auth/v1/user,
+   * then finds or creates the matching seller account.
+   */
+  async loginWithSupabase(token: string) {
+    if (!token) throw new UnauthorizedException('Missing token');
+    const base = process.env.SUPABASE_URL;
+    const apikey = process.env.SUPABASE_ANON_KEY;
+    if (!base || !apikey) throw new UnauthorizedException('Supabase auth not configured');
+
+    let supaUser: any;
+    try {
+      const res = await fetch(`${base}/auth/v1/user`, {
+        headers: { Authorization: `Bearer ${token}`, apikey },
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      supaUser = await res.json();
+    } catch {
+      throw new UnauthorizedException('Invalid Supabase session');
+    }
+
+    const email = (supaUser?.email || '').toLowerCase().trim();
+    if (!email) throw new UnauthorizedException('Supabase user has no email');
+    const name =
+      supaUser?.user_metadata?.full_name || supaUser?.user_metadata?.name || email.split('@')[0];
+
+    let user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await this.prisma.user.create({ data: { email, name, role: 'seller' } });
+    }
+
+    let seller = await this.prisma.seller.findUnique({ where: { userId: user.id } });
+    if (!seller) {
+      const username = await this.uniqueUsername(name || email);
+      seller = await this.prisma.seller.create({
+        data: { userId: user.id, storeName: name || 'My Store', username, kycStatus: 'approved' },
+      });
+    }
+
+    return this.issueSession(user.id, user.name, user.role, seller.id);
+  }
+
   async loginEmail(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },

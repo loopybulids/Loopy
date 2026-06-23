@@ -38,6 +38,7 @@ interface AuthState {
   hydrate: () => void;
   signIn: (role: Role, name: string) => Promise<void>;
   loginEmail: (email: string, password: string) => Promise<void>;
+  loginWithSupabase: (token: string) => Promise<void>;
   register: (body: { name: string; email: string; password: string; storeName: string }) => Promise<void>;
   signOut: () => void;
 }
@@ -109,6 +110,19 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ busy: true });
     try {
       const r = await api.loginEmail(email, password);
+      const display = persistSession(r, 'seller', 'Your Store');
+      set({ ready: true, role: 'seller', user: r.user, name: display, busy: false });
+    } catch (e) {
+      set({ busy: false });
+      throw e;
+    }
+  },
+
+  // Exchange a verified Supabase session (Google / email OTP) for a Loopy JWT.
+  loginWithSupabase: async (token) => {
+    set({ busy: true });
+    try {
+      const r = await api.loginWithSupabase(token);
       const display = persistSession(r, 'seller', 'Your Store');
       set({ ready: true, role: 'seller', user: r.user, name: display, busy: false });
     } catch (e) {

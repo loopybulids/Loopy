@@ -29,6 +29,12 @@ export class AuthController {
     return this.auth.loginEmail(dto.email, dto.password);
   }
 
+  // ── Supabase session exchange (Google / email OTP) ──
+  @Post('supabase')
+  supabase(@Body() body: { token: string }) {
+    return this.auth.loginWithSupabase(body?.token);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('change-password')
   changePassword(@Req() req: any, @Body() body: { password: string }) {

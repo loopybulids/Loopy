@@ -45,6 +45,8 @@ export const api = {
     req<any>(`/auth/register`, { method: 'POST', body: JSON.stringify(body) }),
   loginEmail: (email: string, password: string) =>
     req<any>(`/auth/login-email`, { method: 'POST', body: JSON.stringify({ email, password }) }),
+  loginWithSupabase: (token: string) =>
+    req<any>(`/auth/supabase`, { method: 'POST', body: JSON.stringify({ token }) }),
 
   // order actions
   deliverOrder: (id: string) => req<any>(`/orders/${id}/deliver`, { method: 'POST' }),
