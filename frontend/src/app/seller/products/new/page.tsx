@@ -3,14 +3,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageHead, Panel, money } from '@/components/seller-ui';
-import MediaInput from '@/components/MediaInput';
-import { Camera, Heart, ShieldLock, Sparkle, Verified } from '@/components/icons';
+import MediaGallery from '@/components/MediaGallery';
+import { Heart, ShieldLock, Camera, Sparkle, Verified } from '@/components/icons';
 
 const CONDITIONS = ['Brand New', 'Like new', 'Good', 'Fair'];
 
 export default function AddProduct() {
   const router = useRouter();
-  const [f, setF] = useState({ title: '', price: '', condition: 'Brand New', category: '', description: '', image: '' });
+  const [f, setF] = useState({ title: '', price: '', condition: 'Brand New', category: '', description: '', quantity: '1' });
+  const [media, setMedia] = useState<string[]>([]);
   const [authentic, setAuthentic] = useState(true);
   const [original, setOriginal] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -25,7 +26,7 @@ export default function AddProduct() {
       await api.createProduct({
         title: f.title, price: Number(f.price), condition: f.condition,
         category: f.category, description: f.description,
-        images: f.image ? [f.image] : [], quantity: 1,
+        images: media, quantity: Number(f.quantity) || 1,
       });
       router.push('/seller/catalog');
     } catch (e: any) { setErr(e?.message || 'Could not list product.'); setBusy(false); }
@@ -38,19 +39,26 @@ export default function AddProduct() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* form */}
         <Panel>
-          <MediaInput dropzone value={f.image} onChange={(v) => set('image', v)} />
+          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Photos &amp; video</label>
+          <div className="mt-1.5"><MediaGallery value={media} onChange={setMedia} /></div>
 
           <Field label="Product title" value={f.title} onChange={(v) => set('title', v)} placeholder="e.g. Vintage Leather Camera Strap" />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Field label="Price (₹)" value={f.price} onChange={(v) => set('price', v)} placeholder="0.00" />
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Stock</label>
+              <input type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} className="c-input mt-1.5" />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Condition</label>
               <select value={f.condition} onChange={(e) => set('condition', e.target.value)} className="c-input mt-1.5">
                 {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
               </select>
             </div>
+            <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear" />
           </div>
-          <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear, Bags, Apparel" />
 
           <div className="mt-4 space-y-3 rounded-xl border border-line bg-paper p-4">
             <Toggle on={authentic} set={setAuthentic} icon={<Verified size={16} />} title="Authenticity Guaranteed" sub="I confirm this item is genuine." />
@@ -68,9 +76,9 @@ export default function AddProduct() {
             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-green-600"><span className="h-2 w-2 animate-pulse rounded-full bg-green-500" /> Updating live</span>
           </div>
           <div className="card mx-auto max-w-[280px] overflow-hidden">
-            <div className="relative grid max-h-64 place-items-center bg-green-soft">
-              {f.image
-                ? <img src={f.image} alt="" className="max-h-64 w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+            <div className="relative grid max-h-56 place-items-center bg-green-soft">
+              {media[0]
+                ? <img src={media[0]} alt="" className="max-h-56 w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
                 : <div className="aspect-square w-full" />}
               <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white"><ShieldLock size={11} /> Loopy Protected</span>
             </div>

@@ -4,22 +4,23 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { PageHead, Panel } from '@/components/seller-ui';
-import MediaInput from '@/components/MediaInput';
+import MediaGallery from '@/components/MediaGallery';
 
 const CONDITIONS = ['Brand New', 'Like new', 'Good', 'Fair'];
 
-function firstImage(p: any): string {
+function allImages(p: any): string[] {
   try {
-    if (Array.isArray(p.images)) return p.images[0] || '';
-    if (typeof p.images === 'string') return JSON.parse(p.images)[0] || '';
+    if (Array.isArray(p.images)) return p.images.filter(Boolean);
+    if (typeof p.images === 'string') return JSON.parse(p.images).filter(Boolean);
   } catch { /* ignore */ }
-  return '';
+  return [];
 }
 
 export default function EditProduct() {
   const id = useParams().id as string;
   const router = useRouter();
-  const [f, setF] = useState({ title: '', price: '', condition: 'Good', category: '', description: '', image: '', quantity: '1' });
+  const [f, setF] = useState({ title: '', price: '', condition: 'Good', category: '', description: '', quantity: '1' });
+  const [media, setMedia] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -29,9 +30,10 @@ export default function EditProduct() {
     api.getProduct(id).then((p) => {
       setF({
         title: p.title || '', price: String(p.price ?? ''), condition: p.condition || 'Good',
-        category: p.category || '', description: p.description || '', image: firstImage(p),
+        category: p.category || '', description: p.description || '',
         quantity: String(p.quantity ?? 1),
       });
+      setMedia(allImages(p));
       setLoading(false);
     }).catch(() => { setErr('Could not load product.'); setLoading(false); });
   }, [id]);
@@ -43,7 +45,7 @@ export default function EditProduct() {
     try {
       await api.updateProduct(id, {
         title: f.title, price: Number(f.price), condition: f.condition, category: f.category,
-        description: f.description, images: f.image ? [f.image] : [], quantity: Number(f.quantity),
+        description: f.description, images: media, quantity: Number(f.quantity),
       });
       router.push('/seller/catalog');
     } catch (e: any) { setErr(e?.message || 'Could not save.'); setBusy(false); }
@@ -77,8 +79,8 @@ export default function EditProduct() {
           <textarea value={f.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" />
         </div>
         <div className="mt-4">
-          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Photo</label>
-          <div className="mt-1.5"><MediaInput value={f.image} onChange={(v) => set('image', v)} /></div>
+          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Photos &amp; video</label>
+          <div className="mt-1.5"><MediaGallery value={media} onChange={setMedia} /></div>
         </div>
 
         {err && <p className="mt-3 text-[13px] font-semibold text-rose">{err}</p>}
