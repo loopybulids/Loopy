@@ -38,12 +38,7 @@ export default function AddProduct() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* form */}
         <Panel>
-          <div className="rounded-lg border border-dashed border-line bg-paper p-4 text-center">
-            <span className="mx-auto grid h-11 w-11 place-items-center rounded-lg bg-green-soft text-green-600 ring-1 ring-green/15"><Camera size={20} /></span>
-            <div className="mt-2 font-display text-[15px] font-bold text-navy">Add a product photo</div>
-            <p className="mt-1 text-[12.5px] text-muted">Upload from your device, or paste an image/video URL.</p>
-          </div>
-          <div className="mt-2"><MediaInput value={f.image} onChange={(v) => set('image', v)} /></div>
+          <MediaInput dropzone value={f.image} onChange={(v) => set('image', v)} />
 
           <Field label="Product title" value={f.title} onChange={(v) => set('title', v)} placeholder="e.g. Vintage Leather Camera Strap" />
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -67,15 +62,17 @@ export default function AddProduct() {
         </Panel>
 
         {/* live preview */}
-        <div>
+        <div className="lg:sticky lg:top-24">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-[16px] font-extrabold text-navy">Live preview</h2>
+            <h2 className="font-display text-[15px] font-extrabold text-navy">Live preview</h2>
             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-green-600"><span className="h-2 w-2 animate-pulse rounded-full bg-green-500" /> Updating live</span>
           </div>
-          <div className="card overflow-hidden">
-            <div className="relative aspect-[5/4] bg-green-soft">
-              {f.image && <img src={f.image} alt="" className="absolute inset-0 h-full w-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />}
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-green-600 px-2.5 py-1 text-[10px] font-bold text-white"><ShieldLock size={11} /> Loopy Protected</span>
+          <div className="card mx-auto max-w-[280px] overflow-hidden">
+            <div className="relative grid max-h-64 place-items-center bg-green-soft">
+              {f.image
+                ? <img src={f.image} alt="" className="max-h-64 w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+                : <div className="aspect-square w-full" />}
+              <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white"><ShieldLock size={11} /> Loopy Protected</span>
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between">

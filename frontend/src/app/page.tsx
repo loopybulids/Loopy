@@ -65,7 +65,6 @@ export default function Landing() {
         </div>
         <nav className="hidden items-center gap-1 text-[15px] font-semibold text-navy/75 md:flex">
           <a href="#how" className="rounded-full px-3 py-2 transition-colors hover:text-navy">How it works</a>
-          <Link href="/pricing" className="rounded-full px-3 py-2 transition-colors hover:text-navy">Pricing</Link>
           <a href="#faq" className="rounded-full px-3 py-2 transition-colors hover:text-navy">FAQ</a>
         </nav>
         <div className="ml-auto flex items-center gap-2">
@@ -279,7 +278,6 @@ export default function Landing() {
             <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Company</div>
             <ul className="mt-3 space-y-2 text-[14px] text-muted">
               {[
-                { l: 'Pricing', href: '/pricing' },
                 { l: 'Terms', href: '/terms' },
                 { l: 'Privacy Policy', href: '/terms#privacy' },
                 { l: 'Refund Policy', href: '/terms#refunds' },
