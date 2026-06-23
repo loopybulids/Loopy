@@ -20,7 +20,7 @@ export default function Orders() {
 
   return (
     <div>
-      <PageHead title="Orders" sub="Every order from your checkout links, in one queue." />
+      <PageHead title="Orders" sub="Every order in one queue." action={<Link href="/seller/orders/new" className="btn-green"><Plus size={15} /> New order</Link>} />
 
       <div className="mb-5 flex flex-wrap gap-2">
         {FILTERS.map((f) => (

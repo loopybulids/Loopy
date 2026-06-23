@@ -64,6 +64,50 @@ export class OrdersService {
     return order;
   }
 
+  // Seller manually records a sale (e.g. an order that came via DM). Marks it
+  // Paid and auto-decrements stock.
+  async createManual(sellerId: string, dto: any) {
+    if (!dto.items?.length) throw new BadRequestException('Add at least one item');
+    const ids = dto.items.map((i: any) => i.productId);
+    const products = await this.prisma.product.findMany({ where: { id: { in: ids }, sellerId } });
+    if (products.length !== new Set(ids).size) throw new BadRequestException('Invalid product selection');
+
+    let itemsAmount = 0;
+    const itemRows = dto.items.map((i: any) => {
+      const p = products.find((x) => x.id === i.productId)!;
+      const qty = Number(i.quantity) || 1;
+      if (p.quantity < qty) throw new BadRequestException(`"${p.title}" is out of stock`);
+      itemsAmount += p.price * qty;
+      return { productId: p.id, title: p.title, unitPrice: p.price, quantity: qty };
+    });
+
+    const commissionAmount = Math.round((itemsAmount * this.commissionPct) / 100);
+    const shippingCharge = Number(dto.shippingCharge ?? this.shippingFlat);
+    const totalAmount = itemsAmount + shippingCharge;
+
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          sellerId,
+          buyerName: dto.buyerName,
+          buyerPhone: dto.buyerPhone,
+          address: dto.address,
+          itemsAmount,
+          commissionAmount,
+          shippingCharge,
+          totalAmount,
+          status: 'Paid',
+          items: { create: itemRows },
+        },
+        include: { items: true },
+      });
+      for (const row of itemRows) {
+        await tx.product.update({ where: { id: row.productId }, data: { quantity: { decrement: row.quantity } } });
+      }
+      return order;
+    });
+  }
+
   // POST /orders/:id/confirm — verify payment + finalize (stubbed).
   // Real impl verifies Razorpay HMAC signature on the webhook (PRD §15.1).
   async confirmPayment(id: string) {

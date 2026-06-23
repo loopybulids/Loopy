@@ -62,6 +62,15 @@ export class SellersService {
     };
   }
 
+  async updateProfile(sellerId: string, data: any) {
+    const upd: any = {};
+    for (const k of ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl']) {
+      if (data?.[k] !== undefined) upd[k] = data[k];
+    }
+    await this.prisma.seller.update({ where: { id: sellerId }, data: upd });
+    return { ok: true };
+  }
+
   async updateStoreConfig(sellerId: string, config: any) {
     await this.prisma.seller.update({
       where: { id: sellerId },

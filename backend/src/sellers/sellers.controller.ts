@@ -25,6 +25,12 @@ export class SellersController {
     return this.sellers.getMe(req.user.sellerId);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Put('me/profile')
+  saveProfile(@Req() req: any, @Body() body: any) {
+    return this.sellers.updateProfile(req.user.sellerId, body);
+  }
+
   // Authenticated seller — own orders queue
   @UseGuards(JwtAuthGuard)
   @Get('me/orders')

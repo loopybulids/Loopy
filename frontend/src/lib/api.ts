@@ -68,6 +68,12 @@ export const api = {
   requestPayout: () => req<any>(`/sellers/me/payouts`, { method: 'POST' }),
   createProduct: (body: any) =>
     req<any>(`/products`, { method: 'POST', body: JSON.stringify(body) }),
+  updateProduct: (id: string, body: any) =>
+    req<any>(`/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  createManualOrder: (body: any) =>
+    req<any>(`/orders/manual`, { method: 'POST', body: JSON.stringify(body) }),
+  updateProfile: (body: any) =>
+    req<any>(`/sellers/me/profile`, { method: 'PUT', body: JSON.stringify(body) }),
   acceptOrder: (id: string) => req<any>(`/orders/${id}/accept`, { method: 'POST' }),
   shipOrder: (id: string) => req<any>(`/orders/${id}/ship`, { method: 'POST' }),
 

@@ -39,24 +39,36 @@ export default function Catalog() {
                   <th className="pb-3 font-bold">Price</th>
                   <th className="pb-3 font-bold">Stock</th>
                   <th className="pb-3 font-bold">Status</th>
+                  <th className="pb-3 font-bold"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <td className="py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-green-soft">
-                          {firstImage(p) && <img src={firstImage(p)!} alt="" className="h-full w-full object-cover" />}
-                        </span>
-                        <span className="font-display font-bold text-navy">{p.title || p.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 font-semibold text-navy">{money(p.price)}</td>
-                    <td className="py-3 text-muted">{p.stock ?? (p.sold ? 'Sold' : 'In stock')}</td>
-                    <td className="py-3"><span className="chip-green">{p.status || 'Live'}</span></td>
-                  </tr>
-                ))}
+                {products.map((p) => {
+                  const qty = p.quantity ?? 0;
+                  const low = qty > 0 && qty <= 5;
+                  return (
+                    <tr key={p.id}>
+                      <td className="py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-green-soft">
+                            {firstImage(p) && <img src={firstImage(p)!} alt="" className="h-full w-full object-cover" />}
+                          </span>
+                          <span className="font-display font-bold text-navy">{p.title || p.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 font-semibold text-navy">{money(p.price)}</td>
+                      <td className="py-3">
+                        {qty <= 0
+                          ? <span className="chip-rose">Out of stock</span>
+                          : <span className={low ? 'font-semibold text-amber' : 'text-muted'}>{low ? `🔥 ${qty} left` : `${qty} in stock`}</span>}
+                      </td>
+                      <td className="py-3"><span className={qty > 0 ? 'chip-green' : 'chip-navy'}>{qty > 0 ? 'Live' : 'Sold out'}</span></td>
+                      <td className="py-3 text-right">
+                        <Link href={`/seller/catalog/${p.id}/edit`} className="text-[13px] font-bold text-green-600 hover:underline">Edit</Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

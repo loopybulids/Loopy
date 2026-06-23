@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import {
-  Bag, Bell, Chart, Cog, Grid, Heart, LogOut, Loop, Plus, Share, Store, Tag, Truck, Wallet,
+  Bag, Bell, Chart, Cog, Grid, Heart, LogOut, Loop, Plus, Share, Store, Tag, Truck, Verified, Wallet,
 } from '@/components/icons';
 
 /* ───── sidebar tabs (PRD seller modules) ───── */
@@ -19,15 +19,19 @@ const NAV = [
   { href: '/seller/payments', label: 'Payments', icon: <Wallet size={18} /> },
   { href: '/seller/discounts', label: 'Discounts', icon: <Tag size={18} /> },
   { href: '/seller/analytics', label: 'Analytics', icon: <Chart size={18} /> },
+  { href: '/seller/profile', label: 'Profile', icon: <Verified size={18} /> },
   { href: '/seller/settings', label: 'Settings', icon: <Cog size={18} /> },
 ];
 
 // console routes that get the sidebar chrome (NAV tabs + extra nested pages)
 const CONSOLE = new Set([...NAV.map((n) => n.href), '/seller/products/new']);
 
+// nested console pages (product edit, manual order) also get the chrome
+const CONSOLE_PREFIXES = ['/seller/catalog/', '/seller/orders/'];
+
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isConsole = CONSOLE.has(pathname);
+  const isConsole = CONSOLE.has(pathname) || CONSOLE_PREFIXES.some((p) => pathname.startsWith(p));
 
   // Login + any legacy seller pages render without the console chrome.
   if (!isConsole) return <>{children}</>;

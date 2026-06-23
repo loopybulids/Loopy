@@ -12,6 +12,13 @@ export class OrdersController {
     return this.orders.checkout(dto);
   }
 
+  // Seller records a manual order (e.g. from a DM) — marks Paid + decrements stock.
+  @UseGuards(JwtAuthGuard)
+  @Post('manual')
+  manual(@Req() req: any, @Body() dto: any) {
+    return this.orders.createManual(req.user.sellerId, dto);
+  }
+
   // Stubbed payment confirmation (stands in for the Razorpay webhook).
   @Post(':id/confirm')
   confirm(@Param('id') id: string) {
