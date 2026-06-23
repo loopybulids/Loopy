@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
-import { ArrowRight, Bolt, Loop, ShieldLock, Sparkle, Store, Verified } from '@/components/icons';
+import { ArrowRight, Bolt, Loop, Sparkle, Store, Verified } from '@/components/icons';
 
 type Mode = 'login' | 'register';
 
@@ -107,7 +107,6 @@ export default function SellerAuth() {
           </div>
         </div>
 
-        <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-faint"><ShieldLock size={13} /> Secured with JWT — your session token is signed and verified on every request.</p>
       </div>
     </main>
   );

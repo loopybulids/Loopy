@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic, Tilt } from '@/components/motion';
 import {
-  ArrowRight, Bolt, Check, Clock, Heart, Loop, Plus, Share,
+  ArrowRight, Bolt, Check, Loop, Plus, Share,
   ShieldLock, Star, Store, Truck, Verified, Wallet,
 } from '@/components/icons';
 
@@ -31,15 +31,6 @@ const SOLUTIONS = [
   { icon: <Star size={20} />, t: 'Analytics', d: 'Revenue, conversion and product insights at a glance.' },
 ];
 
-const FEATURES = [
-  { icon: <Clock size={22} />, t: 'Order management', pts: ['All orders in one queue', 'Live status updates', 'Full order timeline', 'Customer history'] },
-  { icon: <Share size={22} />, t: 'Checkout links', pts: ['One-click checkout links', 'Pre-filled carts', 'Variant & quantity ready', 'Faster purchasing'] },
-  { icon: <Heart size={22} />, t: 'Customer management', pts: ['Customer database', 'Purchase history', 'Spend & AOV metrics', 'Segmentation'] },
-  { icon: <Truck size={22} />, t: 'Shipping management', pts: ['Shipment tracking', 'Fulfillment workflow', 'Courier integrations', 'Returns handling'] },
-  { icon: <Star size={22} />, t: 'Analytics', pts: ['Revenue tracking', 'Sales insights', 'Best/worst sellers', 'Customer LTV'] },
-  { icon: <Wallet size={22} />, t: 'Payments', pts: ['UPI & cards', 'Net banking & wallets', 'Cash on delivery', 'International payments'] },
-];
-
 const TESTIMONIALS = [
   { name: 'Riya Mehta', store: '@vintagefinds.in', quote: 'I used to lose half my DMs. Now every chat becomes a paid order — my revenue doubled in two months.', growth: '+118% revenue', avatar: 'bg-rose' },
   { name: 'Arjun Nair', store: '@thesneakerloop', quote: 'Checkout links killed the payment chasing. Customers pay instantly and I ship the same day.', growth: '+74% orders', avatar: 'bg-navy-600' },
@@ -47,16 +38,12 @@ const TESTIMONIALS = [
 ];
 
 const FAQS = [
-  { q: 'How does turning a DM into an order work?', a: 'You pick the product, quantity and variant from your catalog, and Loopy generates a checkout link with the cart pre-filled. You paste it into the chat, your customer pays, and the order appears in your dashboard automatically.' },
-  { q: 'Do I need a website already?', a: 'No. Loopy gives you a hosted storefront at loopy.com/s/yourname the moment you sign up. You can add a custom domain later on the Pro plan.' },
-  { q: 'Which payment methods are supported?', a: 'UPI, credit & debit cards, net banking, wallets and cash on delivery. International payments are available on Pro.' },
-  { q: 'How do payouts work?', a: 'Payments are collected securely and settled to your bank account on a rolling schedule. You can track available, pending and settled balances from the payouts dashboard.' },
-  { q: 'Can I manage inventory and variants?', a: 'Yes — track stock per product and per variant (size, colour, material), get low-stock alerts, and prevent overselling automatically.' },
-  { q: 'How is shipping handled?', a: 'Generate labels and track shipments from the dashboard, with integrations for Shiprocket, Delhivery and Blue Dart. Customers get automatic tracking updates.' },
-  { q: 'Will my customers be notified automatically?', a: 'Yes. Order confirmation, payment confirmation, shipment updates and delivery confirmations go out over email, SMS and WhatsApp.' },
-  { q: 'Is there a free plan?', a: 'Yes, the Free plan includes a storefront, unlimited products and orders, checkout links and basic analytics — no card required.' },
-  { q: 'Can I use my own brand and domain?', a: 'On Pro you get a custom homepage, branding controls (logo, fonts, colours) and a custom domain with automatic SSL.' },
-  { q: 'Do you support Instagram and WhatsApp directly?', a: 'Checkout links work in any chat today. Deeper Instagram and WhatsApp Business API integrations are on our near-term roadmap.' },
+  { q: 'How does a DM become an order?', a: 'Pick a product, generate a checkout link, paste it in chat. Your customer pays and the order lands in your dashboard.' },
+  { q: 'Do I need a website?', a: 'No — you get a hosted storefront the moment you sign up.' },
+  { q: 'Which payments are supported?', a: 'UPI, cards, net banking and wallets.' },
+  { q: 'How do payouts work?', a: 'Funds are held in escrow and settled to your bank after delivery is confirmed.' },
+  { q: 'Can I track inventory?', a: 'Yes — stock updates automatically as orders come in, with low-stock alerts.' },
+  { q: 'Is there a free plan?', a: 'Yes. Storefront, unlimited products and checkout links — no card required.' },
 ];
 
 export default function Landing() {
@@ -78,7 +65,7 @@ export default function Landing() {
         </div>
         <nav className="hidden items-center gap-1 text-[15px] font-semibold text-navy/75 md:flex">
           <a href="#how" className="rounded-full px-3 py-2 transition-colors hover:text-navy">How it works</a>
-          <a href="#features" className="rounded-full px-3 py-2 transition-colors hover:text-navy">Features</a>
+          <Link href="/pricing" className="rounded-full px-3 py-2 transition-colors hover:text-navy">Pricing</Link>
           <a href="#faq" className="rounded-full px-3 py-2 transition-colors hover:text-navy">FAQ</a>
         </nav>
         <div className="ml-auto flex items-center gap-2">
@@ -126,7 +113,7 @@ export default function Landing() {
                 ))}
               </div>
               <p className="text-[14px] text-muted">
-                Trusted by <span className="font-bold text-navy">5,000+</span> thrift sellers across India
+                Trusted by <span className="font-bold text-navy">125+</span> sellers across India
               </p>
             </div>
           </Reveal>
@@ -191,14 +178,14 @@ export default function Landing() {
         <Reveal>
           <div className="glass-panel grid grid-cols-2 gap-6 rounded-3xl px-6 py-8 sm:grid-cols-4">
             {[
-              { to: 250000, suffix: '+', label: 'Orders processed' },
-              { to: 5000, suffix: '+', label: 'Active sellers' },
+              { to: 500, suffix: '+', label: 'Orders processed' },
+              { to: 125, suffix: '', label: 'Active sellers' },
               { to: 30, suffix: 's', label: 'Chat to checkout' },
-              { to: 99.9, decimals: 1, suffix: '%', label: 'Payment uptime' },
+              { to: 48, suffix: 'h', label: 'Protected payout' },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="font-display text-[28px] font-extrabold text-navy sm:text-[34px]">
-                  <CountUp to={s.to} suffix={s.suffix} decimals={s.decimals || 0} />
+                  <CountUp to={s.to} suffix={s.suffix} />
                 </div>
                 <div className="mt-1 text-[12px] font-semibold uppercase tracking-wide text-muted">{s.label}</div>
               </div>
@@ -221,32 +208,6 @@ export default function Landing() {
                 <div className="mt-4 font-display text-[17px] font-bold text-navy">{s.t}</div>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{s.d}</p>
               </motion.div>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </section>
-
-      {/* ───── feature showcase ───── */}
-      <section id="features" className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-        <Reveal>
-          <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">One platform, your whole business</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[16px] text-muted">From the first DM to delivery — every tool a social seller needs.</p>
-        </Reveal>
-        <Stagger className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <StaggerItem key={f.t}>
-              <Tilt max={6}>
-                <div className="glass-card group relative flex h-full flex-col overflow-hidden rounded-3xl p-7">
-                  <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-green-mint/40 blur-2xl transition-transform duration-500 group-hover:scale-125" />
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-green-600 shadow-card">{f.icon}</span>
-                  <h3 className="mt-5 font-display text-[20px] font-extrabold text-navy">{f.t}</h3>
-                  <ul className="mt-4 space-y-2 text-[14px] font-semibold text-navy/80">
-                    {f.pts.map((p) => (
-                      <li key={p} className="flex items-center gap-2"><Check size={15} className="text-green-600" /> {p}</li>
-                    ))}
-                  </ul>
-                </div>
-              </Tilt>
             </StaggerItem>
           ))}
         </Stagger>
@@ -317,8 +278,14 @@ export default function Landing() {
           <div>
             <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Company</div>
             <ul className="mt-3 space-y-2 text-[14px] text-muted">
-              {['About', 'Contact', 'Pricing', 'Privacy Policy', 'Terms', 'Refund Policy'].map((l) => (
-                <li key={l}><a className="transition-colors hover:text-navy">{l}</a></li>
+              {[
+                { l: 'Pricing', href: '/pricing' },
+                { l: 'Terms', href: '/terms' },
+                { l: 'Privacy Policy', href: '/terms#privacy' },
+                { l: 'Refund Policy', href: '/terms#refunds' },
+                { l: 'Contact', href: '/terms#contact' },
+              ].map((x) => (
+                <li key={x.l}><Link href={x.href} className="transition-colors hover:text-navy">{x.l}</Link></li>
               ))}
             </ul>
           </div>
