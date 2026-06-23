@@ -104,7 +104,7 @@ export default function Landing() {
                 {BRANDS.map((b) => (
                   <span key={b.domain} className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-white shadow-card ring-2 ring-paper">
                     <img
-                      src={`https://logo.clearbit.com/${b.domain}`}
+                      src={`https://www.google.com/s2/favicons?domain=${b.domain}&sz=128`}
                       alt={b.name}
                       className="h-full w-full object-contain p-1.5"
                       onError={(e) => { (e.currentTarget.style.display = 'none'); }}
