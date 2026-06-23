@@ -5,7 +5,7 @@
 :root { color-scheme: light; }
 
 * { -webkit-font-smoothing: antialiased; }
-body { background: #f6f5f0; color: #0e2a47; }
+body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
 
 ::selection { background: #86efac; color: #0e2a47; }
 

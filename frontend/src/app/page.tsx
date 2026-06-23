@@ -48,9 +48,9 @@ const FAQS = [
 
 export default function Landing() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-paper text-navy">
-      {/* ───── animated aurora background ───── */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
+    <main className="relative min-h-screen bg-paper text-navy">
+      {/* ───── animated aurora background (fixed so it never traps scroll) ───── */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="aurora-blob animate-aurora absolute -left-24 -top-24 h-[42vw] w-[42vw] bg-green-mint" />
         <div className="aurora-blob animate-aurora absolute right-[-10%] top-[8%] h-[34vw] w-[34vw] bg-green-600/70" style={{ animationDelay: '-6s' }} />
         <div className="aurora-blob animate-aurora absolute bottom-[-12%] left-[28%] h-[36vw] w-[36vw] bg-navy/20" style={{ animationDelay: '-11s' }} />
@@ -195,7 +195,7 @@ export default function Landing() {
       </section>
 
       {/* ───── solution ───── */}
-      <section id="how" className="mx-auto max-w-5xl px-5 py-12 sm:px-8">
+      <section id="how" className="mx-auto max-w-5xl scroll-mt-24 px-5 py-12 sm:px-8">
         <Reveal>
           <p className="text-center text-[13px] font-extrabold uppercase tracking-widest text-green-600">The solution</p>
           <h2 className="mt-3 text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Everything organized in one place</h2>
@@ -241,7 +241,7 @@ export default function Landing() {
       </section>
 
       {/* ───── faq ───── */}
-      <section id="faq" className="mx-auto max-w-3xl px-5 py-16 sm:px-8">
+      <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-5 py-16 sm:px-8">
         <Reveal>
           <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Frequently asked questions</h2>
         </Reveal>
