@@ -1,9 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Allow larger JSON bodies — product/store media is sent as base64 data-URLs.
+  // (Default Express limit is 100kb.) Note: on Vercel the platform caps at ~4.5MB.
+  app.use(json({ limit: '25mb' }));
+  app.use(urlencoded({ extended: true, limit: '25mb' }));
 
   // API versioning per PRD §9.5
   app.setGlobalPrefix('api/v1');
