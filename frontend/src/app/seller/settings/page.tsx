@@ -48,7 +48,10 @@ export default function Settings() {
   const persist = (k: string, v: boolean, set: (v: boolean) => void) => { set(v); localStorage.setItem(k, String(v)); };
 
   const username = profile?.username || 'yourstore';
-  const storeUrl = `${username}.loopy.shop`;
+  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  // Subdomain once a wildcard domain is configured, else the live path-based URL.
+  const storeUrl = root ? `${username}.${root}` : `${origin.replace(/^https?:\/\//, '')}/s/${username}`;
   const email = profile?.user?.email || '—';
   const storeId = user?.sellerId || profile?.id || '—';
 
@@ -62,7 +65,8 @@ export default function Settings() {
   };
 
   const copyUrl = async () => {
-    await navigator.clipboard.writeText(`https://${storeUrl}`).catch(() => {});
+    const full = root ? `https://${username}.${root}` : `${origin}/s/${username}`;
+    await navigator.clipboard.writeText(full).catch(() => {});
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
 

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageHead, Panel, money } from '@/components/seller-ui';
+import MediaInput from '@/components/MediaInput';
 import { Camera, Heart, ShieldLock, Sparkle, Verified } from '@/components/icons';
 
 const CONDITIONS = ['Brand New', 'Like new', 'Good', 'Fair'];
@@ -37,12 +38,12 @@ export default function AddProduct() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* form */}
         <Panel>
-          <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-line bg-paper p-6 text-center transition-colors hover:border-green/40">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green-soft text-green-600 ring-1 ring-green/15"><Camera size={20} /></span>
-            <div className="mt-3 font-display text-[16px] font-bold text-navy">Add high-quality photos</div>
-            <p className="mt-1 text-[12.5px] text-muted">Buyers are 4× more likely to purchase items with 5+ photos. Paste an image URL below to preview.</p>
-          </label>
-          <input value={f.image} onChange={(e) => set('image', e.target.value)} placeholder="Image URL (https://…)" className="c-input mt-2" />
+          <div className="rounded-lg border border-dashed border-line bg-paper p-4 text-center">
+            <span className="mx-auto grid h-11 w-11 place-items-center rounded-lg bg-green-soft text-green-600 ring-1 ring-green/15"><Camera size={20} /></span>
+            <div className="mt-2 font-display text-[15px] font-bold text-navy">Add a product photo</div>
+            <p className="mt-1 text-[12.5px] text-muted">Upload from your device, or paste an image/video URL.</p>
+          </div>
+          <div className="mt-2"><MediaInput value={f.image} onChange={(v) => set('image', v)} /></div>
 
           <Field label="Product title" value={f.title} onChange={(v) => set('title', v)} placeholder="e.g. Vintage Leather Camera Strap" />
           <div className="mt-4 grid grid-cols-2 gap-3">

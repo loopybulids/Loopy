@@ -33,6 +33,10 @@ export default function SellerProfile() {
     } catch { /* ignore */ } finally { setBusy(false); }
   };
 
+  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const storeUrl = root ? `${p.username}.${root}` : `${origin.replace(/^https?:\/\//, '')}/s/${p.username}`;
+
   if (loading) return <p className="py-10 text-center text-[13px] text-faint">Loading…</p>;
 
   return (
@@ -59,7 +63,7 @@ export default function SellerProfile() {
         <Field label="Store name" value={p.storeName} onChange={(v) => set('storeName', v)} />
         <div className="mt-4">
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store URL</label>
-          <div className="mt-1.5 c-input bg-paper text-muted">{p.username ? `${p.username}.loopy.shop` : '—'}</div>
+          <div className="mt-1.5 c-input break-all bg-paper text-muted">{p.username ? storeUrl : '—'}</div>
         </div>
         <Field label="City" value={p.city} onChange={(v) => set('city', v)} placeholder="Mumbai" />
         <div className="mt-4">
