@@ -279,9 +279,10 @@ export default function Landing() {
             <ul className="mt-3 space-y-2 text-[14px] text-muted">
               {[
                 { l: 'Terms', href: '/terms' },
-                { l: 'Privacy Policy', href: '/terms#privacy' },
+                { l: 'Privacy Policy', href: '/privacy' },
                 { l: 'Refund Policy', href: '/terms#refunds' },
-                { l: 'Contact', href: '/terms#contact' },
+                { l: 'Legal', href: '/legal' },
+                { l: 'Contact', href: '/legal#contact' },
               ].map((x) => (
                 <li key={x.l}><Link href={x.href} className="transition-colors hover:text-navy">{x.l}</Link></li>
               ))}
