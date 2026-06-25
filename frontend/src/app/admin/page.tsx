@@ -11,19 +11,32 @@ export default function AdminConsole() {
   const [sellers, setSellers] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [q, setQ] = useState('');
+  const [ready, setReady] = useState(false);
+  const [loadErr, setLoadErr] = useState('');
   const router = useRouter();
 
   const load = () =>
     Promise.all([api.adminOverview(), api.adminStats(), api.adminSellers(), api.adminDisputes()])
-      .then(([ov, s, se, d]) => { setOverview(ov); setStats(s); setSellers(se); setDisputes(d); })
-      .catch(() => router.push('/admin/login'));
+      .then(([ov, s, se, d]) => { setOverview(ov); setStats(s); setSellers(se); setDisputes(d); setLoadErr(''); })
+      .catch((e: any) => {
+        // Only kick back to login on an auth failure — not on a transient error.
+        if (String(e?.message || '').match(/401|403|Unauthorized|Admins only/i)) {
+          localStorage.removeItem('loopy_token'); localStorage.removeItem('loopy_role');
+          router.replace('/admin/login');
+        } else {
+          setLoadErr(e?.message || 'Could not load data.');
+        }
+      });
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && (!localStorage.getItem('loopy_token') || localStorage.getItem('loopy_role') !== 'admin')) {
-      router.push('/admin/login'); return;
-    }
+    const token = localStorage.getItem('loopy_token');
+    const role = localStorage.getItem('loopy_role');
+    if (!token || role !== 'admin') { router.replace('/admin/login'); return; }
+    setReady(true);
     load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!ready) return <main className="grid min-h-screen place-items-center bg-paper text-muted"><span className="animate-pulse font-display text-sm font-bold">Loading admin…</span></main>;
 
   const kyc = async (id: string, ok: boolean) => { ok ? await api.approveSeller(id) : await api.rejectSeller(id); load(); };
   const resolve = async (id: string, r: 'refunded' | 'released') => { await api.resolveDispute(id, r); load(); };
@@ -44,6 +57,7 @@ export default function AdminConsole() {
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
         <h1 className="font-display text-[28px] font-extrabold text-navy sm:text-[34px]">Platform Overview</h1>
         <p className="mt-1 text-muted">Every seller and their performance, in one place.</p>
+        {loadErr && <div className="mt-3 rounded-lg border border-rose/30 bg-rose-soft/50 px-4 py-2 text-[13px] font-semibold text-rose">{loadErr} <button onClick={load} className="ml-2 underline">Retry</button></div>}
 
         {/* platform overview cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

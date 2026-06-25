@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { ArrowRight, Loop, ShieldLock } from '@/components/icons';
@@ -10,7 +9,6 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const router = useRouter();
 
   const go = async () => {
     setErr('');
@@ -22,7 +20,8 @@ export default function AdminLogin() {
       localStorage.setItem('loopy_token', r.accessToken);
       localStorage.setItem('loopy_user', JSON.stringify(r.user));
       localStorage.setItem('loopy_role', 'admin');
-      router.push('/admin');
+      // hard nav so /admin loads fresh with the token already in localStorage
+      window.location.href = '/admin';
     } catch (e: any) { setErr(e?.message || 'Login failed.'); setBusy(false); }
   };
 
