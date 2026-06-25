@@ -1,24 +1,41 @@
 /**
  * Vercel serverless entry for the NestJS API.
  *
- * Vercel runs functions, not a long-lived `app.listen()` server, so we create
- * the Nest app once (cached across warm invocations) and hand each request to
- * the underlying Express instance. Importing from ../src lets Vercel bundle the
- * whole app into the function in one pass (the previous ../dist approach failed
- * because dist isn't bundled into the function at runtime).
+ * We load the *compiled* AppModule from ../dist at RUNTIME (via a require with a
+ * computed path so esbuild can't inline/strip it). The compiled JS keeps the
+ * decorator metadata Nest's DI needs — importing from ../src would have esbuild
+ * strip it, crashing the app at bootstrap (FUNCTION_INVOCATION_FAILED).
+ *
+ * `npm run build` (nest build) produces dist; vercel.json includes dist/** in
+ * the function bundle.
  */
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { json, urlencoded } from 'express';
-import { AppModule } from '../src/app.module';
+import express from 'express';
+
+// Computed paths defeat esbuild's static resolution → kept as runtime requires.
+// dist layout differs (dist/app.module vs dist/src/app.module) depending on what
+// .ts files exist, so try both.
+function loadAppModule(): any {
+  const candidates = [['..', 'dist', 'src', 'app.module'], ['..', 'dist', 'app.module']];
+  for (const c of candidates) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const m = require(c.join('/'));
+      if (m?.AppModule) return m.AppModule;
+    } catch { /* try next */ }
+  }
+  throw new Error('AppModule not found in dist — did `npm run build` run?');
+}
+const AppModule = loadAppModule();
 
 let cached: any;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(json({ limit: '25mb' }));
-  app.use(urlencoded({ extended: true, limit: '25mb' }));
+  app.use(express.json({ limit: '4mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '4mb' }));
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: false }),
