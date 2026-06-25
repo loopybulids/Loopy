@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { supabase, supabaseEnabled } from '@/lib/supabase';
-import { ArrowRight, Bolt, Loop, Sparkle, Store, Verified } from '@/components/icons';
+import { ArrowRight, Loop, Store } from '@/components/icons';
 
 type Mode = 'login' | 'register';
 
@@ -168,12 +168,6 @@ export default function SellerAuth() {
           <button disabled={busy} onClick={submit} className="btn-green mt-5 w-full justify-center disabled:opacity-60">
             {busy ? 'Please wait…' : <>{mode === 'login' ? 'Enter console' : 'Create store'} <ArrowRight size={16} /></>}
           </button>
-
-          <div className="mt-6 grid gap-2 text-[12.5px] font-semibold text-navy/75">
-            <span className="flex items-center gap-2"><Bolt size={15} className="text-green-600" /> List items in seconds</span>
-            <span className="flex items-center gap-2"><Sparkle size={15} className="text-green-600" /> Live order queue &amp; payouts</span>
-            <span className="flex items-center gap-2"><Verified size={15} className="text-green-600" /> Escrow-backed, instant release</span>
-          </div>
         </div>
       </div>
     </main>
