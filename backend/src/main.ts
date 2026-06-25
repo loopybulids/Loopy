@@ -22,7 +22,15 @@ async function bootstrap() {
   // In dev, reflect any origin so the app works from localhost AND the LAN IP
   // (e.g. http://192.168.x.x:3000). Set CORS_ORIGIN to lock this down in prod.
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [];
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   });
 

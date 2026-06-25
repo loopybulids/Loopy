@@ -29,7 +29,7 @@ Loopy is a monorepo with two apps:
 The storefront, product and store pages are `force-dynamic`, so they always
 fetch live data at request time. If the API is unreachable they render a
 friendly "service unavailable" screen instead of crashing the build.
-
+          
 ## 2. Deploy the backend (example: Render)
 
 1. New **Web Service** → point it at this repo, root directory `backend`.
