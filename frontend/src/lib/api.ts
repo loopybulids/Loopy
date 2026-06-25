@@ -79,6 +79,7 @@ export const api = {
 
   // admin (auth required, role=admin)
   adminStats: () => req<any>(`/admin/stats`),
+  adminOverview: () => req<any>(`/admin/overview`),
   adminSellers: () => req<any[]>(`/admin/sellers`),
   approveSeller: (id: string) => req<any>(`/admin/sellers/${id}/approve`, { method: 'POST' }),
   rejectSeller: (id: string) => req<any>(`/admin/sellers/${id}/reject`, { method: 'POST' }),

@@ -12,6 +12,11 @@ export class AdminController {
     return this.admin.stats(req.user);
   }
 
+  @Get('overview')
+  overview(@Req() req: any) {
+    return this.admin.overview(req.user);
+  }
+
   @Get('sellers')
   sellers(@Req() req: any) {
     return this.admin.sellers(req.user);
