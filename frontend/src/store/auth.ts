@@ -110,6 +110,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ busy: true });
     try {
       const r = await api.loginEmail(email, password);
+      // Seller console is for sellers only — block admin/other accounts here.
+      if (r.user?.role !== 'seller') {
+        set({ busy: false });
+        throw new Error('That account isn’t a seller. Admins sign in at /admin/login.');
+      }
       const display = persistSession(r, 'seller', 'Your Store');
       set({ ready: true, role: 'seller', user: r.user, name: display, busy: false });
     } catch (e) {
