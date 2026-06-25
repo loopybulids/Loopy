@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { StoreConfig, SECTION_ORDER, withDefaults } from '@/lib/store-config';
+import { StoreConfig, SECTION_ORDER, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS } from '@/lib/store-config';
+
+const ACCENT_PRESETS = ['#15784A', '#0E2A47', '#7C3AED', '#DB2777', '#EA580C', '#0891B2', '#CA8A04', '#E11D48'];
 import StorePreview from '@/components/StorePreview';
 import MediaInput from '@/components/MediaInput';
 import { Check } from '@/components/icons';
@@ -254,10 +256,28 @@ function Fields({ active, config, set, setConfig, storeName }: {
             <input type="color" value={config.theme.accent} onChange={(e) => set('theme', 'accent', e.target.value)} className="h-10 w-14 cursor-pointer rounded-md border border-line" />
             <input className="c-input" value={config.theme.accent} onChange={(e) => set('theme', 'accent', e.target.value)} />
           </div>
-          <div className="mt-4 text-[12px] font-bold uppercase tracking-wide text-faint">Hero background</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {ACCENT_PRESETS.map((hex) => (
+              <button key={hex} onClick={() => set('theme', 'accent', hex)} className="h-7 w-7 rounded-full ring-2 ring-white shadow-card" style={{ background: hex }} title={hex} />
+            ))}
+          </div>
+
+          <div className="mt-5 text-[12px] font-bold uppercase tracking-wide text-faint">Hero background</div>
           <div className="mt-1.5 grid grid-cols-3 gap-2">
-            {(['mint', 'navy', 'plain'] as const).map((bg) => (
-              <button key={bg} onClick={() => set('theme', 'heroBg', bg)} className={`rounded-md border py-2 text-[12px] font-bold capitalize ${config.theme.heroBg === bg ? 'border-green bg-green-soft text-green' : 'border-line text-muted'}`}>{bg}</button>
+            {HERO_BG_OPTIONS.map((bg) => (
+              <button key={bg.key} onClick={() => set('theme', 'heroBg', bg.key)} className={`flex items-center gap-1.5 rounded-md border px-2 py-2 text-[12px] font-bold ${config.theme.heroBg === bg.key ? 'border-green bg-green-soft text-green' : 'border-line text-muted'}`}>
+                <span className="h-4 w-4 shrink-0 rounded-full border border-line" style={{ background: bg.key === 'accent' ? config.theme.accent : bg.swatch }} />
+                {bg.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5 text-[12px] font-bold uppercase tracking-wide text-faint">Font style</div>
+          <div className="mt-1.5 grid grid-cols-3 gap-2">
+            {FONT_OPTIONS.map((ft) => (
+              <button key={ft.key} onClick={() => set('theme', 'font', ft.key)} className={`rounded-md border py-2.5 text-[15px] font-extrabold ${ft.className} ${config.theme.font === ft.key ? 'border-green bg-green-soft text-green' : 'border-line text-navy'}`}>
+                {ft.label}
+              </button>
             ))}
           </div>
         </>

@@ -4,8 +4,11 @@
 export type NavLink = { label: string; href: string };
 export type Policy = { title: string; body: string };
 
+export type HeroBg = 'mint' | 'navy' | 'plain' | 'sand' | 'dark' | 'accent';
+export type FontChoice = 'modern' | 'bold' | 'classic';
+
 export interface StoreConfig {
-  theme: { accent: string; heroBg: 'mint' | 'navy' | 'plain' };
+  theme: { accent: string; heroBg: HeroBg; font: FontChoice };
   announcement: { enabled: boolean; text: string };
   header: { enabled: boolean; showSearch: boolean; nav: NavLink[] };
   hero: {
@@ -41,7 +44,7 @@ export const SECTION_ORDER: { key: keyof StoreConfig | 'theme'; label: string }[
 
 export function defaultConfig(storeName = 'Your Store'): StoreConfig {
   return {
-    theme: { accent: '#15784A', heroBg: 'mint' },
+    theme: { accent: '#15784A', heroBg: 'mint', font: 'bold' },
     announcement: { enabled: true, text: `✨ Welcome to ${storeName} — every order escrow-protected ✨` },
     header: {
       enabled: true,
@@ -108,8 +111,33 @@ export function isVideo(url?: string): boolean {
   return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url) || url.startsWith('data:video');
 }
 
-export const HERO_BG: Record<StoreConfig['theme']['heroBg'], string> = {
+export const HERO_BG: Record<HeroBg, string> = {
   mint: 'bg-gradient-to-b from-green-mint/40 to-paper',
   navy: 'bg-navy text-white',
   plain: 'bg-paper',
+  sand: 'bg-gradient-to-b from-amber-soft to-paper',
+  dark: 'bg-navy-deep text-white',
+  accent: '', // filled at render time from theme.accent (gradient)
+};
+
+/* Labels + swatch colors for the editor's hero-background picker. */
+export const HERO_BG_OPTIONS: { key: HeroBg; label: string; swatch: string }[] = [
+  { key: 'mint', label: 'Mint', swatch: '#86EFAC' },
+  { key: 'sand', label: 'Sand', swatch: '#FBF1DC' },
+  { key: 'plain', label: 'Plain', swatch: '#F6F5F0' },
+  { key: 'navy', label: 'Navy', swatch: '#0E2A47' },
+  { key: 'dark', label: 'Dark', swatch: '#091B2E' },
+  { key: 'accent', label: 'Accent', swatch: '#15784A' },
+];
+
+/* Font presets — uses fonts already loaded in layout (+ a web-safe serif). */
+export const FONT_OPTIONS: { key: FontChoice; label: string; className: string; preview: string }[] = [
+  { key: 'bold', label: 'Bold', className: 'font-display', preview: 'font-display' },
+  { key: 'modern', label: 'Modern', className: 'font-sans', preview: 'font-sans' },
+  { key: 'classic', label: 'Classic', className: 'font-serif', preview: 'font-serif' },
+];
+export const FONT_CLASS: Record<FontChoice, string> = {
+  bold: 'font-display',
+  modern: 'font-sans',
+  classic: 'font-serif',
 };

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { StoreConfig, HERO_BG, isVideo } from '@/lib/store-config';
+import { StoreConfig, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
 import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
@@ -31,10 +31,16 @@ export default function StorePreview({
   const c = config;
   const accent = c.theme.accent;
   const hasHeroMedia = !!c.hero.imageUrl;
+  const fontClass = FONT_CLASS[c.theme.font] || 'font-display';
+  // 'accent' hero bg builds a gradient from the store's accent colour.
+  const heroBgClass = HERO_BG[c.theme.heroBg] || HERO_BG.mint;
+  const heroAccentStyle = c.theme.heroBg === 'accent' && !hasHeroMedia
+    ? { background: `linear-gradient(160deg, ${accent}, ${accent}22)`, color: '#fff' }
+    : undefined;
   const [tab, setTab] = useState(c.productTabs.tabs[0] || 'Featured');
 
   return (
-    <div className="bg-paper text-navy">
+    <div className={`bg-paper text-navy ${fontClass}`}>
       {/* announcement */}
       {c.announcement.enabled && c.announcement.text && (
         <div className="bg-navy py-2 text-center text-[12.5px] font-semibold text-white">{c.announcement.text}</div>
@@ -54,10 +60,10 @@ export default function StorePreview({
           {/* nav with animated underline */}
           <nav className={`items-center gap-7 text-[14px] font-semibold text-navy/70 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
             {c.header.nav.map((n, i) => (
-              <span key={i} className="group relative cursor-pointer transition-colors hover:text-navy">
+              <a key={i} href={n.href || '#'} className="group relative cursor-pointer transition-colors hover:text-navy">
                 {n.label}
                 <span className="absolute -bottom-1.5 left-0 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ background: accent }} />
-              </span>
+              </a>
             ))}
           </nav>
 
@@ -77,7 +83,7 @@ export default function StorePreview({
 
       {/* hero */}
       {c.hero.enabled && (
-        <section className={`relative grid min-h-[420px] place-items-center overflow-hidden px-5 py-16 text-center sm:px-8 ${hasHeroMedia ? 'text-white' : HERO_BG[c.theme.heroBg]}`}>
+        <section style={heroAccentStyle} className={`relative grid min-h-[420px] place-items-center overflow-hidden px-5 py-16 text-center sm:px-8 ${hasHeroMedia ? 'text-white' : heroAccentStyle ? '' : heroBgClass}`}>
           {hasHeroMedia && (
             <div className="absolute inset-0">
               {isVideo(c.hero.imageUrl)
