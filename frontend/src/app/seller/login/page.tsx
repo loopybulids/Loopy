@@ -25,10 +25,13 @@ export default function SellerAuth() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // After a Google OAuth redirect, Supabase puts the session in the URL — pick it
-  // up, exchange it for a Loopy JWT, and enter the console.
+  // Only auto-complete a Google login right after the user clicked "Continue with
+  // Google" (we set a one-shot flag before redirecting). Otherwise a lingering
+  // Supabase session would silently log the user in on every page visit.
   useEffect(() => {
     if (!supabase) return;
+    if (sessionStorage.getItem('loopy_oauth_pending') !== '1') return;
+    sessionStorage.removeItem('loopy_oauth_pending');
     supabase.auth.getSession().then(async ({ data }) => {
       const token = data.session?.access_token;
       if (token) {
@@ -58,11 +61,12 @@ export default function SellerAuth() {
   const google = async () => {
     setErr('');
     if (!supabase) return setErr('Google sign-in isn’t configured yet.');
+    sessionStorage.setItem('loopy_oauth_pending', '1'); // one-shot: auth the session on return
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/seller/login` },
     });
-    if (error) setErr(error.message);
+    if (error) { sessionStorage.removeItem('loopy_oauth_pending'); setErr(error.message); }
   };
 
   const sendCode = async () => {
