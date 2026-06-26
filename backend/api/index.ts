@@ -18,14 +18,20 @@ import express from 'express';
 // dist layout differs (dist/app.module vs dist/src/app.module) depending on what
 // .ts files exist, so try both.
 function loadAppModule(): any {
-  const candidates = [['..', 'dist', 'src', 'app.module'], ['..', 'dist', 'app.module']];
+  const path = require('path');
+  const candidates = [
+    path.join(__dirname, '..', 'dist', 'src', 'app.module'),
+    path.join(__dirname, '..', 'dist', 'app.module'),
+    path.join(process.cwd(), 'dist', 'src', 'app.module'),
+    path.join(process.cwd(), 'dist', 'app.module')
+  ];
   const errors = [];
   for (const c of candidates) {
     try {
-      const m = require(c.join('/'));
+      const m = require(c);
       if (m?.AppModule) return m.AppModule;
     } catch (err) {
-      errors.push(`Failed to load ${c.join('/')}: ${err.message}`);
+      errors.push(`Failed to load ${c}: ${err.message}`);
     }
   }
   throw new Error('AppModule not found in dist — did `npm run build` run? Details: ' + errors.join(' | '));
