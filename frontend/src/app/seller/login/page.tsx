@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
+import { api } from '@/lib/api';
 import { supabase, supabaseEnabled } from '@/lib/supabase';
 import { ArrowRight, Loop, Store } from '@/components/icons';
 
@@ -10,10 +11,11 @@ type Mode = 'login' | 'register';
 
 export default function SellerAuth() {
   const router = useRouter();
-  const { loginEmail, register, loginWithSupabase, busy } = useAuth();
+  const { register, loginWithSupabase, busy } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', storeName: '' });
   const [err, setErr] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
 
   // email-OTP flow
   const [showCode, setShowCode] = useState(false);
@@ -43,17 +45,35 @@ export default function SellerAuth() {
 
   const submit = async () => {
     setErr('');
+    if (mode === 'register') {
+      if (!form.name || !form.email || !form.password || !form.storeName) return setErr('Please fill in every field.');
+      if (form.password.length < 6) return setErr('Password must be at least 6 characters.');
+      try { await register(form); router.push('/seller'); }
+      catch (e: any) { setErr(e?.message || 'Something went wrong. Is the API running?'); }
+      return;
+    }
+    // login — route by role: admins go to /admin, sellers to /seller (no rejection line)
+    if (!form.email || !form.password) return setErr('Enter your email and password.');
+    setPwBusy(true);
     try {
-      if (mode === 'register') {
-        if (!form.name || !form.email || !form.password || !form.storeName) return setErr('Please fill in every field.');
-        if (form.password.length < 6) return setErr('Password must be at least 6 characters.');
-        await register(form);
-      } else {
-        if (!form.email || !form.password) return setErr('Enter your email and password.');
-        await loginEmail(form.email, form.password);
+      const r = await api.loginEmail(form.email, form.password);
+      localStorage.setItem('loopy_token', r.accessToken);
+      localStorage.setItem('loopy_user', JSON.stringify(r.user));
+      if (r.user?.role === 'admin') {
+        localStorage.setItem('loopy_role', 'admin');
+        window.location.href = '/admin'; // hard nav so the page loads with the token set
+        return;
       }
-      router.push('/seller');
+      if (r.user?.role !== 'seller') {
+        localStorage.removeItem('loopy_token'); localStorage.removeItem('loopy_user');
+        setPwBusy(false);
+        return setErr('This account can’t access the console.');
+      }
+      localStorage.setItem('loopy_role', 'seller');
+      localStorage.setItem('loopy_name', r.user?.name?.trim() || 'Your Store');
+      window.location.href = '/seller';
     } catch (e: any) {
+      setPwBusy(false);
       setErr(e?.message || 'Something went wrong. Is the API running?');
     }
   };
@@ -167,15 +187,10 @@ export default function SellerAuth() {
             {mode === 'register' && <Field label="Store name" value={form.storeName} onChange={set('storeName')} placeholder="The Vintage Loop" onEnter={submit} />}
           </div>
 
-          {err && (
-            <p className="mt-3 text-[13px] font-semibold text-rose">
-              {/admin/i.test(err) ? "That account isn't a seller. " : `${err} `}
-              {/admin/i.test(err) && <Link href="/admin/login" className="text-navy underline underline-offset-2 hover:text-green-600">Go to admin login →</Link>}
-            </p>
-          )}
+          {err && <p className="mt-3 text-[13px] font-semibold text-rose">{err}</p>}
 
-          <button disabled={busy} onClick={submit} className="btn-green mt-5 w-full justify-center disabled:opacity-60">
-            {busy ? 'Please wait…' : <>{mode === 'login' ? 'Enter console' : 'Create store'} <ArrowRight size={16} /></>}
+          <button disabled={busy || pwBusy} onClick={submit} className="btn-green mt-5 w-full justify-center disabled:opacity-60">
+            {busy || pwBusy ? 'Please wait…' : <>{mode === 'login' ? 'Enter console' : 'Create store'} <ArrowRight size={16} /></>}
           </button>
         </div>
       </div>
