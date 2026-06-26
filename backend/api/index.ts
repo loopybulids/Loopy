@@ -36,11 +36,13 @@ function loadAppModule(): any {
   }
   throw new Error('AppModule not found in dist — did `npm run build` run? Details: ' + errors.join(' | '));
 }
-const AppModule = loadAppModule();
-
 let cached: any;
+let AppModule: any;
 
 async function bootstrap() {
+  if (!AppModule) {
+    AppModule = loadAppModule();
+  }
   const app = await NestFactory.create(AppModule);
   app.use(express.json({ limit: '4mb' }));
   app.use(express.urlencoded({ extended: true, limit: '4mb' }));
