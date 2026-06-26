@@ -19,14 +19,16 @@ import express from 'express';
 // .ts files exist, so try both.
 function loadAppModule(): any {
   const candidates = [['..', 'dist', 'src', 'app.module'], ['..', 'dist', 'app.module']];
+  const errors = [];
   for (const c of candidates) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const m = require(c.join('/'));
       if (m?.AppModule) return m.AppModule;
-    } catch { /* try next */ }
+    } catch (err) {
+      errors.push(`Failed to load ${c.join('/')}: ${err.message}`);
+    }
   }
-  throw new Error('AppModule not found in dist — did `npm run build` run?');
+  throw new Error('AppModule not found in dist — did `npm run build` run? Details: ' + errors.join(' | '));
 }
 const AppModule = loadAppModule();
 
@@ -51,6 +53,15 @@ async function bootstrap() {
 }
 
 export default async function handler(req: any, res: any) {
-  if (!cached) cached = await bootstrap();
-  return cached(req, res);
+  try {
+    if (!cached) cached = await bootstrap();
+    return cached(req, res);
+  } catch (err) {
+    console.error('Fatal Bootstrap Error:', err);
+    res.status(500).json({ 
+      error: 'Internal Server Error during bootstrap', 
+      details: err?.message || String(err),
+      stack: err?.stack
+    });
+  }
 }
