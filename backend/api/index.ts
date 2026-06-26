@@ -53,6 +53,11 @@ async function bootstrap() {
 }
 
 export default async function handler(req: any, res: any) {
+  // Handle CORS preflight immediately to bypass bootstrap potential crashes
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  
   try {
     if (!cached) cached = await bootstrap();
     return cached(req, res);
