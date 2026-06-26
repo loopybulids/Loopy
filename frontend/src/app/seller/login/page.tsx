@@ -167,7 +167,12 @@ export default function SellerAuth() {
             {mode === 'register' && <Field label="Store name" value={form.storeName} onChange={set('storeName')} placeholder="The Vintage Loop" onEnter={submit} />}
           </div>
 
-          {err && <p className="mt-3 text-[13px] font-semibold text-rose">{err}</p>}
+          {err && (
+            <p className="mt-3 text-[13px] font-semibold text-rose">
+              {/admin/i.test(err) ? "That account isn't a seller. " : `${err} `}
+              {/admin/i.test(err) && <Link href="/admin/login" className="text-navy underline underline-offset-2 hover:text-green-600">Go to admin login →</Link>}
+            </p>
+          )}
 
           <button disabled={busy} onClick={submit} className="btn-green mt-5 w-full justify-center disabled:opacity-60">
             {busy ? 'Please wait…' : <>{mode === 'login' ? 'Enter console' : 'Create store'} <ArrowRight size={16} /></>}
