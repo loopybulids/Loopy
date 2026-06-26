@@ -13,36 +13,17 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import express from 'express';
+// Static import of the COMPILED app. `npm run build` (vercel buildCommand) makes
+// dist before the function is bundled, so esbuild resolves this, keeps the
+// decorator metadata (compiled JS), AND traces/bundles all node_modules deps
+// (@nestjs/config, prisma, etc.). A runtime require() can't be traced → those
+// deps go missing ("Cannot find module '@nestjs/config'").
+// @ts-ignore — resolved from build output at deploy time
+import { AppModule } from '../dist/app.module';
 
-// Computed paths defeat esbuild's static resolution → kept as runtime requires.
-// dist layout differs (dist/app.module vs dist/src/app.module) depending on what
-// .ts files exist, so try both.
-function loadAppModule(): any {
-  const path = require('path');
-  const candidates = [
-    path.join(__dirname, '..', 'dist', 'src', 'app.module'),
-    path.join(__dirname, '..', 'dist', 'app.module'),
-    path.join(process.cwd(), 'dist', 'src', 'app.module'),
-    path.join(process.cwd(), 'dist', 'app.module')
-  ];
-  const errors = [];
-  for (const c of candidates) {
-    try {
-      const m = require(c);
-      if (m?.AppModule) return m.AppModule;
-    } catch (err) {
-      errors.push(`Failed to load ${c}: ${err.message}`);
-    }
-  }
-  throw new Error('AppModule not found in dist — did `npm run build` run? Details: ' + errors.join(' | '));
-}
 let cached: any;
-let AppModule: any;
 
 async function bootstrap() {
-  if (!AppModule) {
-    AppModule = loadAppModule();
-  }
   const app = await NestFactory.create(AppModule);
   app.use(express.json({ limit: '4mb' }));
   app.use(express.urlencoded({ extended: true, limit: '4mb' }));
@@ -50,12 +31,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: false }),
   );
-  app.enableCors({
-      origin: process.env.CORS_ORIGIN 
-        ? [...process.env.CORS_ORIGIN.split(','), /\.vercel\.app$/, /localhost/]
-        : true,
-    credentials: true,
-  });
+  // CORS is handled by vercel.json edge headers (applies even if a route errors).
   await app.init();
   return app.getHttpAdapter().getInstance();
 }
