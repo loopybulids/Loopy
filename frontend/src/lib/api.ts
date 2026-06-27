@@ -80,7 +80,22 @@ export const api = {
   // admin (auth required, role=admin)
   adminStats: () => req<any>(`/admin/stats`),
   adminOverview: () => req<any>(`/admin/overview`),
+  adminCommand: () => req<any>(`/admin/command`),
   adminSellers: () => req<any[]>(`/admin/sellers`),
+  adminSellerDetail: (id: string) => req<any>(`/admin/sellers/${id}/detail`),
+  adminOrders: (q?: string, status?: string) => {
+    const qs = new URLSearchParams();
+    if (q) qs.set('q', q);
+    if (status && status !== 'all') qs.set('status', status);
+    const s = qs.toString();
+    return req<any[]>(`/admin/orders${s ? `?${s}` : ''}`);
+  },
+  adminOrderDetail: (id: string) => req<any>(`/admin/orders/${id}`),
+  adminOrderAction: (id: string, action: string) => req<any>(`/admin/orders/${id}/${action}`, { method: 'POST' }),
+  adminCustomers: (q?: string) => req<any[]>(`/admin/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  adminCustomerDetail: (key: string) => req<any>(`/admin/customers/${encodeURIComponent(key)}`),
+  adminFinance: () => req<any>(`/admin/finance`),
+  adminAnalytics: () => req<any>(`/admin/analytics`),
   approveSeller: (id: string) => req<any>(`/admin/sellers/${id}/approve`, { method: 'POST' }),
   rejectSeller: (id: string) => req<any>(`/admin/sellers/${id}/reject`, { method: 'POST' }),
   adminDisputes: () => req<any[]>(`/admin/disputes`),
