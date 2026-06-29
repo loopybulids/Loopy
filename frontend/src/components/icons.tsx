@@ -23,7 +23,16 @@ export const Wallet = ({ className, size }: P) => (<svg {...b(size)} className={
 export const Bell = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>);
 export const Star = ({ className, size }: P) => (<svg {...b(size)} className={className} fill="currentColor" stroke="none"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z" /></svg>);
 export const Verified = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M12 2l2.2 1.6 2.7-.2 1 2.5 2.2 1.5-.6 2.6.6 2.6-2.2 1.5-1 2.5-2.7-.2L12 22l-2.2-1.6-2.7.2-1-2.5L3.9 16l.6-2.6L3.9 11l2.2-1.5 1-2.5 2.7.2z" /><path d="M9 12l2 2 4-4" /></svg>);
-export const Loop = ({ className, size = 20 }: P) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" className={className}><path d="M7 8a5 5 0 1 0 5 5 5 5 0 0 1 5-5 5 5 0 1 1-5 5 5 5 0 0 0-5-5Z" /></svg>);
+// Loopy brand mark — four rounded modular tiles whose inner corners point to the
+// centre (a "connected ecosystem"). Filled with currentColor so it inherits color.
+export const Loop = ({ className, size = 20 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none" className={className}>
+    <path d="M5.5 2.5 H8 A3 3 0 0 1 11 5.5 V10.2 A0.8 0.8 0 0 1 10.2 11 H5.5 A3 3 0 0 1 2.5 8 V5.5 A3 3 0 0 1 5.5 2.5 Z" />
+    <path d="M16 2.5 H18.5 A3 3 0 0 1 21.5 5.5 V8 A3 3 0 0 1 18.5 11 H13.8 A0.8 0.8 0 0 1 13 10.2 V5.5 A3 3 0 0 1 16 2.5 Z" />
+    <path d="M5.5 13 H10.2 A0.8 0.8 0 0 1 11 13.8 V18.5 A3 3 0 0 1 8 21.5 H5.5 A3 3 0 0 1 2.5 18.5 V16 A3 3 0 0 1 5.5 13 Z" />
+    <path d="M13.8 13 H18.5 A3 3 0 0 1 21.5 16 V18.5 A3 3 0 0 1 18.5 21.5 H16 A3 3 0 0 1 13 18.5 V13.8 A0.8 0.8 0 0 1 13.8 13 Z" />
+  </svg>
+);
 export const Sparkle = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2.5 2.5M15 15l2.5 2.5M17.5 6.5L15 9M9 15l-2.5 2.5" /></svg>);
 export const Grid = ({ className, size }: P) => (<svg {...b(size)} className={className}><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></svg>);
 export const Users = ({ className, size }: P) => (<svg {...b(size)} className={className}><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M16 5.2a3.2 3.2 0 0 1 0 6M17.5 19a5.5 5.5 0 0 0-2.3-4.5" /></svg>);

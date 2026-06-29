@@ -20,6 +20,8 @@ export default function AdminLogin() {
       localStorage.setItem('loopy_token', r.accessToken);
       localStorage.setItem('loopy_user', JSON.stringify(r.user));
       localStorage.setItem('loopy_role', 'admin');
+      // Prefetch the dashboard data so analytics are ready the instant /admin loads.
+      try { const cmd = await api.adminCommand(); localStorage.setItem('loopy_admin_command', JSON.stringify(cmd)); } catch {}
       // hard nav so /admin loads fresh with the token already in localStorage
       window.location.href = '/admin';
     } catch (e: any) { setErr(e?.message || 'Login failed.'); setBusy(false); }

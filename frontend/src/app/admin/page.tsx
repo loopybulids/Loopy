@@ -4,12 +4,22 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { AreaTrend, Bars, Card, Chip, Donut, Icon, money, num, SectionTitle, StatCard, statusChip } from '@/components/admin/AdminKit';
 
+const CACHE_KEY = 'loopy_admin_command';
+
 export default function CommandCenter() {
-  const [d, setD] = useState<any>(null);
+  // Hydrate instantly from the last cached payload (saved at login / previous visit),
+  // then refresh in the background — so analytics appear the moment you land here.
+  const [d, setD] = useState<any>(() => {
+    if (typeof window === 'undefined') return null;
+    try { const c = localStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : null; } catch { return null; }
+  });
   const [err, setErr] = useState('');
 
-  const load = () => api.adminCommand().then(setD).catch((e) => setErr(e?.message || 'Failed to load.'));
-  useEffect(() => { load(); }, []);
+  const load = () =>
+    api.adminCommand()
+      .then((r) => { setD(r); try { localStorage.setItem(CACHE_KEY, JSON.stringify(r)); } catch {} })
+      .catch((e) => { if (!d) setErr(e?.message || 'Failed to load.'); });
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (err) return <Card className="p-6 text-rose">{err} <button onClick={() => { setErr(''); load(); }} className="ml-2 underline">Retry</button></Card>;
   if (!d) return <div className="animate-pulse space-y-4"><div className="h-8 w-56 rounded bg-line" /><div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{Array.from({ length: 12 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-line/60" />)}</div></div>;

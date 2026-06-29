@@ -61,6 +61,7 @@ export default function SellerAuth() {
       localStorage.setItem('loopy_user', JSON.stringify(r.user));
       if (r.user?.role === 'admin') {
         localStorage.setItem('loopy_role', 'admin');
+        try { const cmd = await api.adminCommand(); localStorage.setItem('loopy_admin_command', JSON.stringify(cmd)); } catch {}
         window.location.href = '/admin'; // hard nav so the page loads with the token set
         return;
       }
