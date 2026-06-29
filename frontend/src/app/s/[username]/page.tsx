@@ -18,7 +18,7 @@ export default async function StorePage({ params }: { params: Promise<{ username
     const config = withDefaults(store.storeName, store.storeConfig);
     return (
       <main className="min-h-screen">
-        <StorePreview config={config} products={store.products} storeName={store.storeName} />
+        <StorePreview config={config} products={store.products} storeName={store.storeName} username={username} />
       </main>
     );
   }

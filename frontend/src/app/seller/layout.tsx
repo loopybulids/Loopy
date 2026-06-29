@@ -77,7 +77,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           <span className="ml-auto rounded-md bg-green-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green">Seller</span>
         </Link>
 
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {NAV.map((n) => {
             const on = pathname === n.href;
             return (

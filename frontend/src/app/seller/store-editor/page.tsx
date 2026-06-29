@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { StoreConfig, SECTION_ORDER, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS } from '@/lib/store-config';
+import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
 
 const ACCENT_PRESETS = ['#15784A', '#0E2A47', '#7C3AED', '#DB2777', '#EA580C', '#0891B2', '#CA8A04', '#E11D48'];
 import StorePreview from '@/components/StorePreview';
@@ -17,6 +17,7 @@ export default function StoreEditor() {
   const [storeName, setStoreName] = useState('Your Store');
   const [username, setUsername] = useState('');
   const [active, setActive] = useState<SectionKey>('hero');
+  const [pageId, setPageId] = useState<string | null>(null); // which custom page is open in the Pages editor
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -95,13 +96,13 @@ export default function StoreEditor() {
         {/* live preview */}
         <main className="order-3 min-w-0 flex-1 bg-paper p-4 lg:order-2 lg:overflow-y-auto">
           <div className={`mx-auto overflow-hidden rounded-lg border border-line shadow-card transition-all ${previewWidth}`}>
-            <StorePreview config={config} products={products} storeName={storeName} mobile={device === 'mobile'} />
+            <StorePreview config={config} products={products} storeName={storeName} mobile={device === 'mobile'} page={active === 'pages' && pageId ? (config.pages || []).find((p) => p.id === pageId) : null} />
           </div>
         </main>
 
         {/* field editor */}
         <aside className="order-2 w-full shrink-0 border-t border-line bg-white p-5 lg:order-3 lg:w-80 lg:border-t-0 lg:border-l lg:overflow-y-auto">
-          <Fields active={active} config={config} set={set} setConfig={setConfig} storeName={storeName} />
+          <Fields active={active} config={config} set={set} setConfig={setConfig} storeName={storeName} pageId={pageId} setPageId={setPageId} />
         </aside>
       </div>
     </div>
@@ -111,12 +112,14 @@ export default function StoreEditor() {
 function safeParse(s: string) { try { return JSON.parse(s); } catch { return null; } }
 
 /* ───── per-section field editors ───── */
-function Fields({ active, config, set, setConfig, storeName }: {
+function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }: {
   active: SectionKey;
   config: StoreConfig;
   set: (section: keyof StoreConfig, field: string, value: any) => void;
   setConfig: React.Dispatch<React.SetStateAction<StoreConfig | null>>;
   storeName: string;
+  pageId: string | null;
+  setPageId: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
   const label = SECTION_ORDER.find((s) => s.key === active)?.label;
   return (
@@ -249,6 +252,8 @@ function Fields({ active, config, set, setConfig, storeName }: {
         <Text label="Footer text" value={config.footer.text} onChange={(v) => set('footer', 'text', v)} />
       )}
 
+      {active === 'pages' && <PagesEditor config={config} setConfig={setConfig} openId={pageId} setOpenId={setPageId} />}
+
       {active === 'theme' && (
         <>
           <div className="text-[12px] font-bold uppercase tracking-wide text-faint">Accent colour</div>
@@ -282,6 +287,98 @@ function Fields({ active, config, set, setConfig, storeName }: {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ───── custom pages manager ───── */
+const BLOCK_TYPES: { type: PageBlockType; label: string }[] = [
+  { type: 'heading', label: '+ Heading' },
+  { type: 'text', label: '+ Text' },
+  { type: 'image', label: '+ Image / Video' },
+  { type: 'button', label: '+ Button' },
+];
+
+function PagesEditor({ config, setConfig, openId, setOpenId }: {
+  config: StoreConfig;
+  setConfig: React.Dispatch<React.SetStateAction<StoreConfig | null>>;
+  openId: string | null;
+  setOpenId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  const pages = config.pages || [];
+  const setPages = (next: StorePage[]) => setConfig((c) => (c ? { ...c, pages: next } : c));
+  const patchPage = (id: string, patch: Partial<StorePage>) => setPages(pages.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  const open = pages.find((p) => p.id === openId) || null;
+
+  // editing one page's content blocks
+  if (open) {
+    const setBlocks = (blocks: typeof open.blocks) => patchPage(open.id, { blocks });
+    const move = (i: number, dir: -1 | 1) => {
+      const j = i + dir; if (j < 0 || j >= open.blocks.length) return;
+      const b = [...open.blocks];[b[i], b[j]] = [b[j], b[i]]; setBlocks(b);
+    };
+    return (
+      <div>
+        <button onClick={() => setOpenId(null)} className="mb-3 text-[13px] font-semibold text-muted hover:text-navy">← All pages</button>
+        <Text label="Page title" value={open.title} onChange={(v) => patchPage(open.id, { title: v, slug: slugify(v) })} />
+        <div className="mt-3">
+          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">URL slug</label>
+          <input className="c-input mt-1.5" value={open.slug} onChange={(e) => patchPage(open.id, { slug: slugify(e.target.value) })} />
+          <p className="mt-1 text-[11px] text-faint">/s/yourstore/<b>{open.slug}</b></p>
+        </div>
+        <div className="mt-3"><Toggle label="Show in navigation" value={open.showInNav} onChange={(v) => patchPage(open.id, { showInNav: v })} /></div>
+
+        <div className="mt-5 text-[12px] font-bold uppercase tracking-wide text-faint">Content blocks</div>
+        <div className="mt-2 space-y-3">
+          {open.blocks.map((b, i) => (
+            <div key={b.id} className="rounded-lg border border-line p-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-faint capitalize">{b.type}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => move(i, -1)} className="px-1 text-muted hover:text-navy" title="Move up">↑</button>
+                  <button onClick={() => move(i, 1)} className="px-1 text-muted hover:text-navy" title="Move down">↓</button>
+                  <button onClick={() => setBlocks(open.blocks.filter((x) => x.id !== b.id))} className="px-1 text-rose" title="Remove">✕</button>
+                </div>
+              </div>
+              {b.type === 'heading' && <input className="c-input" value={b.text || ''} onChange={(e) => setBlocks(open.blocks.map((x) => x.id === b.id ? { ...x, text: e.target.value } : x))} />}
+              {b.type === 'text' && <textarea className="c-input" rows={4} value={b.text || ''} onChange={(e) => setBlocks(open.blocks.map((x) => x.id === b.id ? { ...x, text: e.target.value } : x))} />}
+              {b.type === 'image' && <MediaInput value={b.url || ''} onChange={(v) => setBlocks(open.blocks.map((x) => x.id === b.id ? { ...x, url: v } : x))} />}
+              {b.type === 'button' && (
+                <div className="space-y-2">
+                  <input className="c-input" placeholder="Button label" value={b.text || ''} onChange={(e) => setBlocks(open.blocks.map((x) => x.id === b.id ? { ...x, text: e.target.value } : x))} />
+                  <input className="c-input" placeholder="Link (https://… or #products)" value={b.href || ''} onChange={(e) => setBlocks(open.blocks.map((x) => x.id === b.id ? { ...x, href: e.target.value } : x))} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {BLOCK_TYPES.map((bt) => (
+            <button key={bt.type} onClick={() => setBlocks([...open.blocks, blankBlock(bt.type)])} className="btn-ghost py-2 text-[12.5px]">{bt.label}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // list of pages
+  return (
+    <div>
+      <p className="text-[12.5px] text-muted">Add extra pages like About, Lookbook or FAQ. Pages set to “show in nav” appear in your storefront menu.</p>
+      <div className="mt-3 space-y-2">
+        {pages.map((p) => (
+          <div key={p.id} className="flex items-center gap-2 rounded-lg border border-line p-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13.5px] font-bold text-navy">{p.title}</div>
+              <div className="truncate text-[11px] text-faint">/{p.slug} · {p.blocks.length} block{p.blocks.length === 1 ? '' : 's'}{p.showInNav ? ' · in nav' : ''}</div>
+            </div>
+            <button onClick={() => setOpenId(p.id)} className="rounded-md bg-paper px-2.5 py-1.5 text-[12px] font-bold text-navy hover:bg-green-soft">Edit</button>
+            <button onClick={() => setPages(pages.filter((x) => x.id !== p.id))} className="rounded-md px-1.5 text-rose" title="Delete">✕</button>
+          </div>
+        ))}
+        {!pages.length && <div className="rounded-lg border border-dashed border-line py-6 text-center text-[12.5px] text-faint">No custom pages yet.</div>}
+      </div>
+      <button onClick={() => { const np = blankPage(); setPages([...pages, np]); setOpenId(np.id); }} className="btn-green mt-3 w-full py-2.5 text-[13px]">+ Add page</button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { StoreConfig, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
+import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
 import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
@@ -21,15 +21,23 @@ const POLICY_ICONS = [<ShieldLock key="0" size={20} />, <Truck key="1" size={20}
  * the editor preview.
  */
 export default function StorePreview({
-  config, products = [], storeName, mobile = false,
+  config, products = [], storeName, mobile = false, username, page,
 }: {
   config: StoreConfig;
   products?: any[];
   storeName: string;
   mobile?: boolean;
+  username?: string;        // when set, nav links point at real storefront routes
+  page?: StorePage | null;  // when set, render this custom page instead of the home layout
 }) {
   const c = config;
   const accent = c.theme.accent;
+  const home = username ? `/s/${username}` : '#';
+  const pageLinks = (c.pages || []).filter((p) => p.showInNav).map((p) => ({ label: p.title, href: username ? `/s/${username}/${p.slug}` : '#' }));
+  const navLinks = [
+    ...c.header.nav.map((n) => ({ label: n.label, href: username && (n.href === '#' || n.href === '') ? home : n.href })),
+    ...pageLinks,
+  ];
   const hasHeroMedia = !!c.hero.imageUrl;
   const fontClass = FONT_CLASS[c.theme.font] || 'font-display';
   // 'accent' hero bg builds a gradient from the store's accent colour.
@@ -50,16 +58,16 @@ export default function StorePreview({
       {c.header.enabled && (
         <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-line bg-white/85 px-5 py-3.5 backdrop-blur-md sm:px-8">
           {/* brand: logo mark + name */}
-          <div className="flex items-center gap-2.5">
+          <a href={home} className="flex items-center gap-2.5">
             <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>
               {storeName.charAt(0).toUpperCase()}
             </span>
             <span className="font-display text-[21px] font-extrabold tracking-tight text-navy">{storeName}</span>
-          </div>
+          </a>
 
           {/* nav with animated underline */}
           <nav className={`items-center gap-7 text-[14px] font-semibold text-navy/70 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
-            {c.header.nav.map((n, i) => (
+            {navLinks.map((n, i) => (
               <a key={i} href={n.href || '#'} className="group relative cursor-pointer transition-colors hover:text-navy">
                 {n.label}
                 <span className="absolute -bottom-1.5 left-0 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ background: accent }} />
@@ -81,8 +89,11 @@ export default function StorePreview({
         </header>
       )}
 
+      {/* custom page body — replaces the home layout when a page is selected */}
+      {page && <PageBody page={page} accent={accent} />}
+
       {/* hero */}
-      {c.hero.enabled && (
+      {!page && c.hero.enabled && (
         <section style={heroAccentStyle} className={`relative grid min-h-[420px] place-items-center overflow-hidden px-5 py-16 text-center sm:px-8 ${hasHeroMedia ? 'text-white' : heroAccentStyle ? '' : heroBgClass}`}>
           {hasHeroMedia && (
             <div className="absolute inset-0">
@@ -109,7 +120,7 @@ export default function StorePreview({
       )}
 
       {/* banner images */}
-      {c.banners.enabled && c.banners.images.filter(Boolean).length > 0 && (
+      {!page && c.banners.enabled && c.banners.images.filter(Boolean).length > 0 && (
         <section className="grid gap-3 px-5 py-6 sm:px-8 md:grid-cols-2">
           {c.banners.images.filter(Boolean).map((src, i) => (
             isVideo(src)
@@ -120,7 +131,7 @@ export default function StorePreview({
       )}
 
       {/* product tabs + grid */}
-      {c.productTabs.enabled && (
+      {!page && c.productTabs.enabled && (
         <section id="products" className="px-5 py-12 sm:px-8">
           <h2 className="text-center font-display text-[30px] font-extrabold">{c.productTabs.heading}</h2>
           {c.productTabs.sub && <p className="mt-1 text-center text-[14px] text-muted">{c.productTabs.sub}</p>}
@@ -158,7 +169,7 @@ export default function StorePreview({
       )}
 
       {/* policies — sliding carousel on mobile, grid on desktop */}
-      {c.policies.enabled && c.policies.items.length > 0 && (
+      {!page && c.policies.enabled && c.policies.items.length > 0 && (
         <section className="bg-white px-5 py-12 sm:px-8">
           <div className={mobile ? 'block' : 'lg:hidden'}>
             <PolicyCarousel items={c.policies.items} accent={accent} />
@@ -172,7 +183,7 @@ export default function StorePreview({
       )}
 
       {/* contact */}
-      {c.contact.enabled && (c.contact.email || c.contact.phone || c.contact.address) && (
+      {!page && c.contact.enabled && (c.contact.email || c.contact.phone || c.contact.address) && (
         <section id="contact" className="px-5 py-12 text-center sm:px-8">
           <h2 className="font-display text-[24px] font-extrabold">Get in touch</h2>
           <div className="mt-3 space-y-1 text-[14px] text-muted">
@@ -184,7 +195,7 @@ export default function StorePreview({
       )}
 
       {/* socials */}
-      {c.socials.enabled && (c.socials.instagram || c.socials.facebook || c.socials.whatsapp) && (
+      {!page && c.socials.enabled && (c.socials.instagram || c.socials.facebook || c.socials.whatsapp) && (
         <div className="flex justify-center gap-4 pb-6 text-[13px] font-semibold" style={{ color: accent }}>
           {c.socials.instagram && <span>Instagram</span>}
           {c.socials.facebook && <span>Facebook</span>}
@@ -197,6 +208,30 @@ export default function StorePreview({
         {c.footer.text}
       </footer>
     </div>
+  );
+}
+
+/* renders a custom page's content blocks */
+function PageBody({ page, accent }: { page: StorePage; accent: string }) {
+  return (
+    <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8">
+      {page.blocks.length === 0 && <p className="py-8 text-center text-[13px] text-faint">This page is empty — add some content blocks.</p>}
+      {page.blocks.map((b) => {
+        if (b.type === 'heading') return <h2 key={b.id} className="mt-8 font-display text-[28px] font-extrabold leading-tight first:mt-0">{b.text}</h2>;
+        if (b.type === 'text') return <p key={b.id} className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted">{b.text}</p>;
+        if (b.type === 'image') return b.url ? (
+          isVideo(b.url)
+            ? <video key={b.id} src={b.url} className="mt-6 w-full rounded-xl" muted loop autoPlay playsInline />
+            : <img key={b.id} src={b.url} alt="" className="mt-6 w-full rounded-xl object-cover" />
+        ) : null;
+        if (b.type === 'button') return (
+          <div key={b.id} className="mt-6">
+            <a href={b.href || '#'} className="inline-block rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card" style={{ background: accent }}>{b.text || 'Button'}</a>
+          </div>
+        );
+        return null;
+      })}
+    </section>
   );
 }
 

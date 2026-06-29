@@ -4,6 +4,27 @@
 export type NavLink = { label: string; href: string };
 export type Policy = { title: string; body: string };
 
+/* Custom pages — sellers can add as many extra pages (About, Lookbook, FAQ…) as
+   they like, each built from simple content blocks. */
+export type PageBlockType = 'heading' | 'text' | 'image' | 'button';
+export type PageBlock = { id: string; type: PageBlockType; text?: string; url?: string; href?: string };
+export type StorePage = { id: string; title: string; slug: string; showInNav: boolean; blocks: PageBlock[] };
+
+export const uid = () => Math.random().toString(36).slice(2, 9);
+export const slugify = (s: string) =>
+  (s || 'page').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'page';
+
+export function blankBlock(type: PageBlockType): PageBlock {
+  const base = { id: uid(), type };
+  if (type === 'heading') return { ...base, text: 'New heading' };
+  if (type === 'text') return { ...base, text: 'Write something about your store…' };
+  if (type === 'image') return { ...base, url: '' };
+  return { ...base, text: 'Button', href: '#' }; // button
+}
+export function blankPage(title = 'New Page'): StorePage {
+  return { id: uid(), title, slug: slugify(title), showInNav: true, blocks: [blankBlock('heading'), blankBlock('text')] };
+}
+
 export type HeroBg = 'mint' | 'navy' | 'plain' | 'sand' | 'dark' | 'accent';
 export type FontChoice = 'modern' | 'bold' | 'classic';
 
@@ -26,6 +47,7 @@ export interface StoreConfig {
   socials: { enabled: boolean; instagram: string; facebook: string; whatsapp: string };
   contact: { enabled: boolean; email: string; phone: string; address: string };
   footer: { text: string };
+  pages: StorePage[];
 }
 
 /* The ordered section list the editor shows on the left. */
@@ -39,6 +61,7 @@ export const SECTION_ORDER: { key: keyof StoreConfig | 'theme'; label: string }[
   { key: 'socials', label: 'Social Links' },
   { key: 'contact', label: 'Contact' },
   { key: 'footer', label: 'Footer' },
+  { key: 'pages', label: 'Custom Pages' },
   { key: 'theme', label: 'Theme & Styles' },
 ];
 
@@ -83,6 +106,7 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
     socials: { enabled: true, instagram: '', facebook: '', whatsapp: '' },
     contact: { enabled: true, email: '', phone: '', address: '' },
     footer: { text: `© ${'2026'} ${storeName} · Powered by Loopy` },
+    pages: [],
   };
 }
 
@@ -102,6 +126,15 @@ export function withDefaults(storeName: string, saved?: Partial<StoreConfig> | n
     socials: { ...d.socials, ...saved.socials },
     contact: { ...d.contact, ...saved.contact },
     footer: { ...d.footer, ...saved.footer },
+    pages: Array.isArray(saved.pages)
+      ? saved.pages.map((p) => ({
+          id: p.id || uid(),
+          title: p.title || 'Page',
+          slug: p.slug || slugify(p.title || 'page'),
+          showInNav: p.showInNav ?? true,
+          blocks: Array.isArray(p.blocks) ? p.blocks.map((b) => ({ id: b.id || uid(), type: b.type, text: b.text, url: b.url, href: b.href })) : [],
+        }))
+      : d.pages,
   };
 }
 
