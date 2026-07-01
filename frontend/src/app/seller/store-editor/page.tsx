@@ -40,7 +40,11 @@ export default function StoreEditor() {
   const publish = async () => {
     if (!config) return;
     setSaving(true); setSaved(false);
-    try { await api.updateStoreConfig(config); setSaved(true); setTimeout(() => setSaved(false), 2000); }
+    try {
+      await api.updateStoreConfig(config);
+      await api.updateProfile({ published: true }).catch(() => {}); // mark store live
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    }
     catch { /* surfaced below */ }
     finally { setSaving(false); }
   };

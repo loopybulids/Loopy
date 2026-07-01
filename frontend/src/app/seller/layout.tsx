@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import {
-  Bag, Bell, Chart, Cog, Grid, Heart, LogOut, Loop, Plus, Share, Store, Tag, Truck, Verified, Wallet,
+  Bag, Bell, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
 } from '@/components/icons';
 
 /* ───── sidebar tabs (PRD seller modules) ───── */
@@ -18,7 +18,7 @@ const NAV = [
   { href: '/seller/shipping', label: 'Shipping', icon: <Truck size={18} /> },
   { href: '/seller/payments', label: 'Payments', icon: <Wallet size={18} /> },
   { href: '/seller/discounts', label: 'Discounts', icon: <Tag size={18} /> },
-  { href: '/seller/analytics', label: 'Analytics', icon: <Chart size={18} /> },
+  { href: '/seller/reviews', label: 'Reviews', icon: <MessageDots size={18} /> },
   { href: '/seller/profile', label: 'Profile', icon: <Verified size={18} /> },
   { href: '/seller/settings', label: 'Settings', icon: <Cog size={18} /> },
 ];

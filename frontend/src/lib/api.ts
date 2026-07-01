@@ -65,6 +65,13 @@ export const api = {
   myOrders: () => req<any[]>(`/sellers/me/orders`),
   myProducts: () => req<any[]>(`/sellers/me/products`),
   myWallet: () => req<any>(`/sellers/me/wallet`),
+  myAnalytics: () => req<any>(`/sellers/me/analytics`),
+  myOnboarding: () => req<any>(`/sellers/me/onboarding`),
+  myReviews: () => req<any[]>(`/sellers/me/reviews`),
+  respondReview: (id: string, response: string) =>
+    req<any>(`/sellers/me/reviews/${id}/respond`, { method: 'POST', body: JSON.stringify({ response }) }),
+  recordVisit: (username: string, session: string) =>
+    req<any>(`/sellers/${username}/visit`, { method: 'POST', body: JSON.stringify({ session }) }),
   requestPayout: () => req<any>(`/sellers/me/payouts`, { method: 'POST' }),
   createProduct: (body: any) =>
     req<any>(`/products`, { method: 'POST', body: JSON.stringify(body) }),

@@ -41,13 +41,35 @@ model Seller {
   rating      Float    @default(0)
   ratingCount Int      @default(0)
   city        String?
+  address     String?  // pickup / business address
   kycStatus   String   @default("approved") // pending | approved | rejected
   storeConfig String?  // JSON string — storefront builder config (sections, theme, hero…)
+  published   Boolean  @default(false) // store is live once the seller publishes
+  // payout details
+  payoutUpi     String?
+  payoutAccount String?
+  payoutName    String?
+  // flat shipping fee (rupees) the seller charges
+  shippingFee   Int?
   createdAt   DateTime @default(now())
 
   user     User      @relation(fields: [userId], references: [id])
   products Product[]
   orders   Order[]
+  visits   Visit[]
+}
+
+// Lightweight storefront traffic — one row per page view (deduped by session).
+model Visit {
+  id        String   @id @default(cuid())
+  sellerId  String
+  session   String?
+  createdAt DateTime @default(now())
+
+  seller Seller @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+  @@index([createdAt])
 }
 
 model Product {
@@ -114,13 +136,16 @@ model OrderItem {
 }
 
 model Review {
-  id        String   @id @default(cuid())
-  orderId   String
-  productId String
-  sellerId  String
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  orderId     String
+  productId   String
+  sellerId    String
+  buyerName   String?
+  rating      Int
+  comment     String?
+  response    String?   // seller's public reply
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
 
   @@index([sellerId])
 }

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { PageHead, StatCard, Panel, Empty, money } from '@/components/seller-ui';
-import { Truck } from '@/components/icons';
+import { Truck, Check } from '@/components/icons';
 
 const STATUS_CHIP: Record<string, string> = {
   Paid: 'chip-amber',
@@ -15,9 +15,22 @@ export default function Shipping() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
+  const [fee, setFee] = useState('');
+  const [address, setAddress] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const load = () => api.myOrders().then((o) => { setOrders(o || []); setLoading(false); }).catch(() => setLoading(false));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.myProfile().then((p) => { setFee(p?.shippingFee != null ? String(p.shippingFee) : ''); setAddress(p?.address || ''); }).catch(() => {});
+  }, []);
+
+  const saveSettings = async () => {
+    setSaving(true); setSaved(false);
+    try { await api.updateProfile({ shippingFee: fee === '' ? 0 : Number(fee), address }); setSaved(true); setTimeout(() => setSaved(false), 2000); }
+    catch { /* ignore */ } finally { setSaving(false); }
+  };
 
   const ship = async (id: string) => {
     setBusyId(id);
@@ -37,6 +50,21 @@ export default function Shipping() {
         <StatCard label="In transit" value={inTransit} />
         <StatCard label="Delivered" value={delivered} />
       </div>
+
+      <Panel className="mt-6" title="Shipping settings">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Flat shipping fee (₹)</label>
+            <input type="number" min={0} value={fee} onChange={(e) => setFee(e.target.value)} placeholder="0 for free shipping" className="c-input mt-1.5" />
+            <p className="mt-1 text-[11px] text-faint">Charged to customers per order. Set 0 for free shipping.</p>
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Pickup address</label>
+            <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} placeholder="Where couriers pick up your parcels" className="c-input mt-1.5" />
+          </div>
+        </div>
+        <button onClick={saveSettings} disabled={saving} className="btn-green mt-4 disabled:opacity-60">{saving ? 'Saving…' : saved ? <><Check size={16} /> Saved</> : 'Save shipping settings'}</button>
+      </Panel>
 
       <Panel className="mt-6" title="Fulfillment queue">
         {loading ? (

@@ -3,6 +3,7 @@ import StoreNav from '@/components/StoreNav';
 import ProductCard from '@/components/ProductCard';
 import ApiDown from '@/components/ApiDown';
 import StorePreview from '@/components/StorePreview';
+import VisitPing from '@/components/VisitPing';
 import { withDefaults } from '@/lib/store-config';
 import { Clock, Share, Star, Verified } from '@/components/icons';
 
@@ -18,6 +19,7 @@ export default async function StorePage({ params }: { params: Promise<{ username
     const config = withDefaults(store.storeName, store.storeConfig);
     return (
       <main className="min-h-screen">
+        <VisitPing username={username} />
         <StorePreview config={config} products={store.products} storeName={store.storeName} username={username} />
       </main>
     );
@@ -32,6 +34,7 @@ export default async function StorePage({ params }: { params: Promise<{ username
         <div className="aurora-blob animate-aurora absolute right-[-10%] top-[6%] h-[34vw] w-[34vw] bg-green-600/60" style={{ animationDelay: '-6s' }} />
         <div className="absolute inset-0 grain" />
       </div>
+      <VisitPing username={username} />
       <StoreNav />
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
         {/* profile card */}

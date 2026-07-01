@@ -1,6 +1,7 @@
 import { getStoreSSR } from '@/lib/server-api';
 import ApiDown from '@/components/ApiDown';
 import StorePreview from '@/components/StorePreview';
+import VisitPing from '@/components/VisitPing';
 import { withDefaults } from '@/lib/store-config';
 import Link from 'next/link';
 
@@ -28,6 +29,7 @@ export default async function StoreCustomPage({ params }: { params: Promise<{ us
 
   return (
     <main className="min-h-screen">
+      <VisitPing username={username} />
       <StorePreview config={config} products={store.products} storeName={store.storeName} username={username} page={page} />
     </main>
   );

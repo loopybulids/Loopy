@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
+
 function shapeProduct(p: any) {
   return { ...p, images: safeParse(p.images) };
 }
@@ -64,11 +66,107 @@ export class SellersService {
 
   async updateProfile(sellerId: string, data: any) {
     const upd: any = {};
-    for (const k of ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl']) {
+    for (const k of ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl', 'address', 'payoutUpi', 'payoutAccount', 'payoutName', 'published']) {
       if (data?.[k] !== undefined) upd[k] = data[k];
+    }
+    if (data?.shippingFee !== undefined && data.shippingFee !== null && data.shippingFee !== '') {
+      upd.shippingFee = Math.max(0, Math.round(Number(data.shippingFee) || 0));
     }
     await this.prisma.seller.update({ where: { id: sellerId }, data: upd });
     return { ok: true };
+  }
+
+  // day-by-day series helper for the last `days` days
+  private series(rows: { createdAt: Date }[], days: number, value: (r: any) => number) {
+    const out: { label: string; value: number }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const next = new Date(d); next.setDate(d.getDate() + 1);
+      out.push({
+        label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+        value: rows.filter((r) => r.createdAt >= d && r.createdAt < next).reduce((s, r) => s + value(r), 0),
+      });
+    }
+    return out;
+  }
+
+  // Record a storefront page-view (deduped per session within 30 min).
+  async recordVisit(username: string, session?: string) {
+    const seller = await this.prisma.seller.findUnique({ where: { username }, select: { id: true } });
+    if (!seller) return { ok: false };
+    if (session) {
+      const recent = await this.prisma.visit.findFirst({
+        where: { sellerId: seller.id, session, createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } },
+      });
+      if (recent) return { ok: true, deduped: true };
+    }
+    await this.prisma.visit.create({ data: { sellerId: seller.id, session: session || null } });
+    return { ok: true };
+  }
+
+  // Everything the dashboard needs: sales, traffic, live users, reviews.
+  async getAnalytics(sellerId: string) {
+    const [orders, visits, reviews] = await Promise.all([
+      this.prisma.order.findMany({ where: { sellerId }, select: { status: true, totalAmount: true, itemsAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true } }),
+      this.prisma.visit.findMany({ where: { sellerId }, select: { session: true, createdAt: true } }),
+      this.prisma.review.findMany({ where: { sellerId }, select: { rating: true } }),
+    ]);
+    const paid = orders.filter((o) => PAID.includes(o.status));
+    const now = Date.now();
+    const liveWindow = new Date(now - 5 * 60 * 1000);
+    const liveSessions = new Set(visits.filter((v) => v.createdAt >= liveWindow).map((v, i) => v.session || `anon-${i}`));
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+
+    return {
+      revenue: paid.reduce((s, o) => s + o.itemsAmount, 0),
+      orders: orders.length,
+      paidOrders: paid.length,
+      customers: new Set(orders.map((o) => o.buyerId || o.buyerPhone || o.buyerName).filter(Boolean)).size,
+      totalVisits: visits.length,
+      visitsToday: visits.filter((v) => v.createdAt >= todayStart).length,
+      liveUsers: liveSessions.size,
+      conversion: visits.length ? Math.round((paid.length / visits.length) * 1000) / 10 : 0,
+      reviewCount: reviews.length,
+      avgRating: reviews.length ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : 0,
+      revenueSeries: this.series(paid, 14, (o) => o.itemsAmount),
+      ordersSeries: this.series(orders, 14, () => 1),
+      trafficSeries: this.series(visits, 14, () => 1),
+    };
+  }
+
+  // Onboarding checklist — computed from real store state.
+  async getOnboarding(sellerId: string) {
+    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId } });
+    if (!seller) throw new NotFoundException('Seller not found');
+    const productCount = await this.prisma.product.count({ where: { sellerId } });
+    const steps = [
+      { key: 'product', label: 'Add your first product', hint: 'List an item with images and price to start selling.', href: '/seller/products/new', done: productCount > 0 },
+      { key: 'payout', label: 'Add payout details', hint: 'Configure how you’ll receive payments from orders.', href: '/seller/payments', done: !!(seller.payoutUpi || seller.payoutAccount) },
+      { key: 'shipping', label: 'Configure shipping', hint: 'Set your shipping rate and pickup address.', href: '/seller/shipping', done: seller.shippingFee !== null && seller.shippingFee !== undefined },
+      { key: 'customize', label: 'Customize your store', hint: 'Update colors, logo and pages to match your brand.', href: '/seller/store-editor', done: !!seller.storeConfig },
+      { key: 'publish', label: 'Publish your store', hint: 'Make your store live for customers to visit.', href: '/seller/store-editor', done: !!seller.published },
+    ];
+    return { steps, done: steps.filter((s) => s.done).length, total: steps.length, published: !!seller.published };
+  }
+
+  // Reviews for the seller, with the product title, so they can reply.
+  async getReviews(sellerId: string) {
+    const reviews = await this.prisma.review.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } });
+    const productIds = [...new Set(reviews.map((r) => r.productId))];
+    const products = await this.prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true } });
+    const title = (id: string) => products.find((p) => p.id === id)?.title || 'Product';
+    return reviews.map((r) => ({
+      id: r.id, rating: r.rating, comment: r.comment, response: r.response, respondedAt: r.respondedAt,
+      buyerName: r.buyerName || 'Customer', product: title(r.productId), createdAt: r.createdAt,
+    }));
+  }
+
+  async respondReview(sellerId: string, reviewId: string, response: string) {
+    const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
+    if (!review || review.sellerId !== sellerId) throw new NotFoundException('Review not found');
+    return this.prisma.review.update({ where: { id: reviewId }, data: { response, respondedAt: new Date() } });
   }
 
   async updateStoreConfig(sellerId: string, config: any) {

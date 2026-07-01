@@ -39,3 +39,5 @@ export const Users = ({ className, size }: P) => (<svg {...b(size)} className={c
 export const Cog = ({ className, size }: P) => (<svg {...b(size)} className={className}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>);
 export const LogOut = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3" /><path d="M10 17l-5-5 5-5M5 12h11" /></svg>);
 export const Chart = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M4 19V5M4 19h16" /><path d="M8 16v-4M12 16V8M16 16v-6" /></svg>);
+export const Eye = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>);
+export const MessageDots = ({ className, size }: P) => (<svg {...b(size)} className={className}><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6.1A8.4 8.4 0 1 1 21 11.5Z" /><path d="M8 12h.01M12 12h.01M16 12h.01" /></svg>);

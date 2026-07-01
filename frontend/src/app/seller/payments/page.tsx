@@ -2,20 +2,34 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { PageHead, StatCard, Panel, Empty, money } from '@/components/seller-ui';
-import { Wallet } from '@/components/icons';
+import { Wallet, Check } from '@/components/icons';
 
 export default function Payments() {
   const [wallet, setWallet] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [pd, setPd] = useState({ payoutName: '', payoutUpi: '', payoutAccount: '' });
+  const [savingPd, setSavingPd] = useState(false);
+  const [savedPd, setSavedPd] = useState(false);
+  const setP = (k: keyof typeof pd, v: string) => setPd((s) => ({ ...s, [k]: v }));
 
   const load = () => Promise.all([
     api.myWallet().catch(() => null),
     api.myOrders().catch(() => []),
-  ]).then(([w, o]) => { setWallet(w); setOrders(o || []); });
+    api.myProfile().catch(() => null),
+  ]).then(([w, o, p]) => {
+    setWallet(w); setOrders(o || []);
+    if (p) setPd({ payoutName: p.payoutName || '', payoutUpi: p.payoutUpi || '', payoutAccount: p.payoutAccount || '' });
+  });
 
   useEffect(() => { load(); }, []);
+
+  const savePd = async () => {
+    setSavingPd(true); setSavedPd(false);
+    try { await api.updateProfile(pd); setSavedPd(true); setTimeout(() => setSavedPd(false), 2000); }
+    catch { /* ignore */ } finally { setSavingPd(false); }
+  };
 
   const payout = async () => {
     setBusy(true); setMsg('');
@@ -35,6 +49,24 @@ export default function Payments() {
         <StatCard label="Pending (escrow)" value={money(wallet?.pending ?? 0)} />
         <StatCard label="Settled" value={money(wallet?.settled ?? 0)} />
       </div>
+
+      <Panel className="mt-6" title="Payout details">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Account holder name</label>
+            <input value={pd.payoutName} onChange={(e) => setP('payoutName', e.target.value)} placeholder="As per bank" className="c-input mt-1.5" />
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">UPI ID</label>
+            <input value={pd.payoutUpi} onChange={(e) => setP('payoutUpi', e.target.value)} placeholder="you@upi" className="c-input mt-1.5" />
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Bank account / IFSC</label>
+            <input value={pd.payoutAccount} onChange={(e) => setP('payoutAccount', e.target.value)} placeholder="Acc no · IFSC" className="c-input mt-1.5" />
+          </div>
+        </div>
+        <button onClick={savePd} disabled={savingPd} className="btn-green mt-4 disabled:opacity-60">{savingPd ? 'Saving…' : savedPd ? <><Check size={16} /> Saved</> : 'Save payout details'}</button>
+      </Panel>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.6fr]">
         <Panel title="Withdraw">

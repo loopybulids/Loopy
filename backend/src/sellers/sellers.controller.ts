@@ -18,6 +18,37 @@ export class SellersController {
     return this.sellers.getStore(username);
   }
 
+  // Public — record a storefront page view (traffic analytics)
+  @Post(':username/visit')
+  recordVisit(@Param('username') username: string, @Body() body: { session?: string }) {
+    return this.sellers.recordVisit(username, body?.session);
+  }
+
+  // Authenticated seller — dashboard analytics (sales + traffic + live users)
+  @UseGuards(JwtAuthGuard)
+  @Get('me/analytics')
+  analytics(@Req() req: any) {
+    return this.sellers.getAnalytics(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/onboarding')
+  onboarding(@Req() req: any) {
+    return this.sellers.getOnboarding(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/reviews')
+  reviews(@Req() req: any) {
+    return this.sellers.getReviews(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/reviews/:id/respond')
+  respondReview(@Req() req: any, @Param('id') id: string, @Body() body: { response: string }) {
+    return this.sellers.respondReview(req.user.sellerId, id, body?.response || '');
+  }
+
   // Authenticated seller — own profile
   @UseGuards(JwtAuthGuard)
   @Get('me/profile')
