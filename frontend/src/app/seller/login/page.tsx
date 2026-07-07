@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
@@ -26,22 +26,6 @@ export default function SellerAuth() {
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  // Only auto-complete a Google login right after the user clicked "Continue with
-  // Google" (we set a one-shot flag before redirecting). Otherwise a lingering
-  // Supabase session would silently log the user in on every page visit.
-  useEffect(() => {
-    if (!supabase) return;
-    if (sessionStorage.getItem('loopy_oauth_pending') !== '1') return;
-    sessionStorage.removeItem('loopy_oauth_pending');
-    supabase.auth.getSession().then(async ({ data }) => {
-      const token = data.session?.access_token;
-      if (token) {
-        try { await loginWithSupabase(token); router.replace('/seller'); }
-        catch (e: any) { setErr(e?.message || 'Sign-in failed.'); }
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
     setErr('');
@@ -77,17 +61,6 @@ export default function SellerAuth() {
       setPwBusy(false);
       setErr(e?.message || 'Something went wrong. Is the API running?');
     }
-  };
-
-  const google = async () => {
-    setErr('');
-    if (!supabase) return setErr('Google sign-in isn’t configured yet.');
-    sessionStorage.setItem('loopy_oauth_pending', '1'); // one-shot: auth the session on return
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/seller/login` },
-    });
-    if (error) { sessionStorage.removeItem('loopy_oauth_pending'); setErr(error.message); }
   };
 
   const sendCode = async () => {
@@ -137,16 +110,12 @@ export default function SellerAuth() {
             {mode === 'login' ? 'Sign in to your seller console.' : 'Create your account — your storefront goes live instantly.'}
           </p>
 
-          {/* Google + email-code (Supabase) */}
+          {/* email-code (Supabase) */}
           {supabaseEnabled && (
             <>
-              <button onClick={google} className="btn-ghost mt-6 w-full justify-center gap-3">
-                <GoogleIcon /> Continue with Google
-              </button>
-
               {!showCode ? (
-                <button onClick={() => setShowCode(true)} className="mt-2 w-full rounded-lg py-2 text-[13px] font-bold text-navy/70 transition-colors hover:text-navy">
-                  Email me a sign-in code instead
+                <button onClick={() => setShowCode(true)} className="mt-6 w-full rounded-lg border border-line py-2.5 text-[13px] font-bold text-navy/80 transition-colors hover:bg-white hover:text-navy">
+                  Email me a sign-in code
                 </button>
               ) : (
                 <div className="mt-3 rounded-xl border border-line bg-white/70 p-3">
@@ -211,13 +180,3 @@ function Field({ label, value, onChange, placeholder, type = 'text', onEnter }: 
   );
 }
 
-function GoogleIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden>
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.46 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
-    </svg>
-  );
-}

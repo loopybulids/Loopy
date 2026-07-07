@@ -90,6 +90,7 @@ export const api = {
   adminCommand: () => req<any>(`/admin/command`),
   adminSellers: () => req<any[]>(`/admin/sellers`),
   adminSellerDetail: (id: string) => req<any>(`/admin/sellers/${id}/detail`),
+  adminImpersonate: (id: string) => req<any>(`/admin/sellers/${id}/impersonate`, { method: 'POST' }),
   adminOrders: (q?: string, status?: string) => {
     const qs = new URLSearchParams();
     if (q) qs.set('q', q);

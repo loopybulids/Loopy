@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { impersonateSeller } from '@/lib/impersonate';
 import { Card, Icon, money, StatCard, statusChip } from '@/components/admin/AdminKit';
 
 export default function SellersCenter() {
@@ -70,9 +71,11 @@ export default function SellersCenter() {
                   <td className="py-3 text-green-600">{money(s.stats.commission)}</td>
                   <td className="py-3">{statusChip(s.kycStatus)}</td>
                   <td className="py-3 pr-4 text-right">
-                    {s.kycStatus !== 'approved'
-                      ? <button onClick={() => kyc(s.id, true)} className="rounded-lg bg-navy px-3 py-1.5 text-[11px] font-bold text-white">Approve</button>
-                      : <Link href={`/admin/sellers/${s.id}`} className="font-bold text-green-600 hover:underline">Open →</Link>}
+                    <div className="flex items-center justify-end gap-2">
+                      {s.kycStatus !== 'approved' && <button onClick={() => kyc(s.id, true)} className="rounded-lg bg-navy px-3 py-1.5 text-[11px] font-bold text-white">Approve</button>}
+                      <button onClick={() => impersonateSeller(s.id)} className="rounded-lg bg-green-soft px-3 py-1.5 text-[11px] font-bold text-green-600">Log in</button>
+                      <Link href={`/admin/sellers/${s.id}`} className="font-bold text-green-600 hover:underline">Open →</Link>
+                    </div>
                   </td>
                 </tr>
               ))}

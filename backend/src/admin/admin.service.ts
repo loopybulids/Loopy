@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Order statuses that represent real, paid money in the system.
@@ -12,10 +13,23 @@ const custKey = (o: any) => o.buyerId || o.buyerPhone || o.buyerName || 'guest';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private jwt: JwtService) {}
 
   private assertAdmin(user: any) {
     if (!user || user.role !== 'admin') throw new ForbiddenException('Admins only');
+  }
+
+  // Issue a seller session token so an admin can enter any seller's console.
+  async impersonate(user: any, sellerId: string) {
+    this.assertAdmin(user);
+    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId }, include: { user: true } });
+    if (!seller) throw new NotFoundException('Seller not found');
+    const token = await this.jwt.signAsync({ sub: seller.userId, role: 'seller', sellerId: seller.id });
+    return {
+      accessToken: token,
+      user: { id: seller.userId, name: (seller as any).user?.name || seller.storeName, role: 'seller', sellerId: seller.id },
+      storeName: seller.storeName,
+    };
   }
 
   // Build a day-by-day series for the last `days` days from a list of dated rows.

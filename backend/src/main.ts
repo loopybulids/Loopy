@@ -10,6 +10,7 @@ async function bootstrap() {
   // (Default Express limit is 100kb.) Note: on Vercel the platform caps at ~4.5MB.
   app.use(json({ limit: '25mb' }));
   app.use(urlencoded({ extended: true, limit: '25mb' }));
+  
 
   // API versioning per PRD §9.5
   app.setGlobalPrefix('api/v1');
@@ -33,3 +34,4 @@ async function bootstrap() {
   console.log(`🟣  Loopy API running on http://localhost:${port}/api/v1`);
 }
 bootstrap();
+

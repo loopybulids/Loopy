@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { impersonateSeller } from '@/lib/impersonate';
 import { AreaTrend, Card, Chip, Icon, money, SectionTitle, StatCard, statusChip } from '@/components/admin/AdminKit';
 
 export default function SellerProfile() {
@@ -41,10 +42,10 @@ export default function SellerProfile() {
         </div>
         {/* action buttons */}
         <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => impersonateSeller(id)} className="rounded-xl bg-green-600 px-4 py-2 text-[12.5px] font-bold text-white">Log in as seller →</button>
           {d.kycStatus !== 'approved' && <button onClick={() => kyc(true)} className="rounded-xl bg-navy px-4 py-2 text-[12.5px] font-bold text-white">Approve Seller</button>}
           {d.kycStatus !== 'rejected' && <button onClick={() => kyc(false)} className="rounded-xl bg-rose-soft px-4 py-2 text-[12.5px] font-bold text-rose">Suspend Seller</button>}
           <a href={d.email ? `mailto:${d.email}` : '#'} className="rounded-xl bg-paper px-4 py-2 text-[12.5px] font-bold text-navy">Message Seller</a>
-          <Link href={`/admin/sellers/${id}`} className="rounded-xl bg-paper px-4 py-2 text-[12.5px] font-bold text-navy">Financial Report</Link>
         </div>
       </Card>
 

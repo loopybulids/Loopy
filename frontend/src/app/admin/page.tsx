@@ -52,23 +52,23 @@ export default function CommandCenter() {
 
       {/* primary money metrics */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="GMV" value={money(m.gmv)} icon="rupee" accent="navy" hint="Gross merchandise value" />
-        <StatCard label="Revenue (Commission)" value={money(m.revenue)} icon="wallet" accent="green" delta={revDelta} />
-        <StatCard label="Net Profit" value={money(m.netProfit)} icon="bolt" accent="green" hint="After refunds" />
-        <StatCard label="Gross Profit" value={money(m.grossProfit)} icon="chart" accent="violet" />
-        <StatCard label="Seller Payouts" value={money(m.sellerPayouts)} icon="store" accent="navy" />
-        <StatCard label="Pending Refunds" value={money(m.pendingRefunds)} icon="refund" accent={m.pendingRefunds ? 'rose' : 'green'} />
+        <StatCard label="GMV" value={money(m.gmv)} icon="rupee" accent="navy" hint="Gross merchandise value" href="/admin/orders" />
+        <StatCard label="Revenue (Commission)" value={money(m.revenue)} icon="wallet" accent="green" delta={revDelta} href="/admin/finance" />
+        <StatCard label="Net Profit" value={money(m.netProfit)} icon="bolt" accent="green" hint="After refunds" href="/admin/finance" />
+        <StatCard label="Gross Profit" value={money(m.grossProfit)} icon="chart" accent="violet" href="/admin/finance" />
+        <StatCard label="Seller Payouts" value={money(m.sellerPayouts)} icon="store" accent="navy" href="/admin/finance" />
+        <StatCard label="Pending Refunds" value={money(m.pendingRefunds)} icon="refund" accent={m.pendingRefunds ? 'rose' : 'green'} href="/admin/support" />
       </div>
 
       {/* order + people metrics */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
-        <StatCard label="Active Orders" value={num(m.activeOrders)} icon="bag" accent="violet" />
-        <StatCard label="Processing" value={num(m.processingOrders)} icon="truck" accent="amber" />
-        <StatCard label="Delivered" value={num(m.deliveredOrders)} icon="check" accent="green" />
-        <StatCard label="Cancelled" value={num(m.cancelledOrders)} icon="alert" accent="rose" />
-        <StatCard label="Return Requests" value={num(m.returnRequests)} icon="refund" accent="amber" />
-        <StatCard label="Active Customers" value={num(m.activeCustomers)} icon="users" accent="navy" />
-        <StatCard label="Active Sellers" value={num(m.activeSellers)} icon="store" accent="navy" />
+        <StatCard label="Active Orders" value={num(m.activeOrders)} icon="bag" accent="violet" href="/admin/orders" />
+        <StatCard label="Processing" value={num(m.processingOrders)} icon="truck" accent="amber" href="/admin/orders" />
+        <StatCard label="Delivered" value={num(m.deliveredOrders)} icon="check" accent="green" href="/admin/orders" />
+        <StatCard label="Cancelled" value={num(m.cancelledOrders)} icon="alert" accent="rose" href="/admin/orders" />
+        <StatCard label="Return Requests" value={num(m.returnRequests)} icon="refund" accent="amber" href="/admin/support" />
+        <StatCard label="Active Customers" value={num(m.activeCustomers)} icon="users" accent="navy" href="/admin/customers" />
+        <StatCard label="Active Sellers" value={num(m.activeSellers)} icon="store" accent="navy" href="/admin/sellers" />
       </div>
 
       {/* charts row */}

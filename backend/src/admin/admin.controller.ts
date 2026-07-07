@@ -52,6 +52,11 @@ export class AdminController {
     return this.admin.sellerDetail(req.user, id);
   }
 
+  @Post('sellers/:id/impersonate')
+  impersonate(@Req() req: any, @Param('id') id: string) {
+    return this.admin.impersonate(req.user, id);
+  }
+
   @Get('stats')
   stats(@Req() req: any) {
     return this.admin.stats(req.user);

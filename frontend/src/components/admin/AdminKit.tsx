@@ -1,5 +1,6 @@
 'use client';
 import { ReactNode } from 'react';
+import Link from 'next/link';
 import {
   Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -70,10 +71,10 @@ export function Delta({ value, suffix = '%' }: { value: number; suffix?: string 
   );
 }
 
-export function StatCard({ label, value, delta, icon, accent, hint }: { label: string; value: ReactNode; delta?: number; icon?: IconName; accent?: 'green' | 'navy' | 'rose' | 'amber' | 'violet'; hint?: string }) {
+export function StatCard({ label, value, delta, icon, accent, hint, href }: { label: string; value: ReactNode; delta?: number; icon?: IconName; accent?: 'green' | 'navy' | 'rose' | 'amber' | 'violet'; hint?: string; href?: string }) {
   const ring = accent === 'green' ? 'text-green-600 bg-green-mint' : accent === 'rose' ? 'text-rose bg-rose-soft' : accent === 'amber' ? 'text-amber bg-amber-soft' : accent === 'violet' ? 'text-violet-600 bg-violet-50' : 'text-navy bg-paper';
-  return (
-    <Card className="p-4">
+  const inner = (
+    <>
       <div className="flex items-start justify-between">
         <span className="text-[11px] font-bold uppercase tracking-wide text-faint">{label}</span>
         {icon && <span className={`grid h-7 w-7 place-items-center rounded-lg ${ring}`}><Icon name={icon} size={15} /></span>}
@@ -83,8 +84,10 @@ export function StatCard({ label, value, delta, icon, accent, hint }: { label: s
         {delta !== undefined && <Delta value={delta} />}
         {hint && <span className="text-[11px] text-muted">{hint}</span>}
       </div>
-    </Card>
+    </>
   );
+  if (href) return <Link href={href} className="block rounded-2xl border border-line bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-green-600/40 hover:shadow-soft">{inner}</Link>;
+  return <Card className="p-4">{inner}</Card>;
 }
 
 export function Chip({ tone, children }: { tone: 'green' | 'rose' | 'amber' | 'navy' | 'violet' | 'gray'; children: ReactNode }) {

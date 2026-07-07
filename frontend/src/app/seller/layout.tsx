@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
+import { exitImpersonation } from '@/lib/impersonate';
 import {
   Bag, Bell, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
 } from '@/components/icons';
@@ -43,8 +44,10 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
   const { user, name, hydrate, signOut } = useAuth();
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
+  const [impersonating, setImpersonating] = useState<string | null>(null);
 
   useEffect(() => {
+    setImpersonating(typeof window !== 'undefined' ? localStorage.getItem('loopy_impersonating') : null);
     hydrate();
     const token = typeof window !== 'undefined' ? localStorage.getItem('loopy_token') : null;
     const role = typeof window !== 'undefined' ? localStorage.getItem('loopy_role') : null;
@@ -114,6 +117,13 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
 
       {/* ───── main column ───── */}
       <div className="lg:pl-[248px]">
+        {/* admin impersonation banner */}
+        {impersonating && (
+          <div className="flex items-center justify-center gap-3 bg-navy px-4 py-2 text-center text-[12.5px] font-semibold text-white">
+            👁 Viewing {impersonating !== '1' ? <b>{impersonating}</b> : 'this store'} as admin
+            <button onClick={exitImpersonation} className="rounded-md bg-white/15 px-3 py-1 text-[12px] font-bold hover:bg-white/25">← Return to admin</button>
+          </div>
+        )}
         {/* topbar */}
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-paper/80 px-5 py-4 backdrop-blur sm:px-8">
           <button onClick={() => setOpen(true)} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white lg:hidden">
