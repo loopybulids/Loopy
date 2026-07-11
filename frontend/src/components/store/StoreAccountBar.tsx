@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getCust, clearCust, cartCount, type Cust } from '@/lib/customer';
+import { getCust, clearCust, cartCount, setCust, custApi, type Cust } from '@/lib/customer';
+import { supabase } from '@/lib/supabase';
 import CustomerAuth from './CustomerAuth';
 import { Heart, Bag, Users } from '@/components/icons';
 
@@ -17,6 +18,19 @@ export default function StoreAccountBar({ username, storeName }: { username: str
     window.addEventListener('cart-change', sync);
     window.addEventListener('storage', sync);
     return () => { window.removeEventListener('cust-change', sync); window.removeEventListener('cart-change', sync); window.removeEventListener('storage', sync); };
+  }, [username]);
+
+  // Complete a Google login that redirected back to the store.
+  useEffect(() => {
+    if (!supabase) return;
+    if (sessionStorage.getItem('loopy_cust_oauth') !== username) return;
+    supabase.auth.getSession().then(async ({ data }) => {
+      const t = data.session?.access_token;
+      if (!t) return;
+      sessionStorage.removeItem('loopy_cust_oauth');
+      sessionStorage.removeItem('loopy_cust_return');
+      try { const r = await custApi.authSupabase(username, t); setCust(username, r); } catch { /* ignore */ }
+    });
   }, [username]);
 
   return (

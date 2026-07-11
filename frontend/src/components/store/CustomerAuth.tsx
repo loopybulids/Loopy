@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { custApi, setCust } from '@/lib/customer';
 
@@ -12,23 +12,11 @@ export default function CustomerAuth({ username, storeName, onClose, onAuthed }:
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  // complete a Google redirect (flag was set before leaving)
-  useEffect(() => {
-    if (!supabase) return;
-    if (sessionStorage.getItem('loopy_cust_oauth') !== username) return;
-    sessionStorage.removeItem('loopy_cust_oauth');
-    supabase.auth.getSession().then(async ({ data }) => {
-      const t = data.session?.access_token;
-      if (!t) return;
-      try { const r = await custApi.authSupabase(username, t); setCust(username, r); onAuthed(r); }
-      catch (e: any) { setErr(e?.message || 'Sign-in failed.'); }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const google = async () => {
     setErr('');
     if (!supabase) return setErr('Sign-in isn’t configured.');
     sessionStorage.setItem('loopy_cust_oauth', username);
+    sessionStorage.setItem('loopy_cust_return', window.location.href);
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
     if (error) { sessionStorage.removeItem('loopy_cust_oauth'); setErr(error.message); }
   };
