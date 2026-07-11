@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { motion } from '@/components/motion';
 import { rupees } from '@/lib/api';
+import { SizeStrip } from '@/components/sizes';
 import { Heart, Shield } from './icons';
 
 const grad = ['from-[#caa07a] to-[#6b4a2f]', 'from-[#9fb4c9] to-[#3a4a5e]', 'from-[#d9c7a0] to-[#9c7d4a]', 'from-[#c7b8d6] to-[#7a5e94]'];
@@ -31,6 +32,7 @@ export default function ProductCard({ product, index = 0 }: { product: any; inde
                 <span className="font-display text-[16px] font-extrabold text-navy">{rupees(product.price)}</span>
                 {product.mrp && product.mrp > product.price && <span className="text-[12px] text-faint line-through">{rupees(product.mrp)}</span>}
               </div>
+              {product.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={product.sizes} compact /></div>}
               <div className="mt-2.5 rounded-xl bg-navy/0 py-2 text-center text-[12.5px] font-bold text-green transition-all duration-300 group-hover:bg-navy group-hover:text-white">View Details</div>
             </div>
           </div>

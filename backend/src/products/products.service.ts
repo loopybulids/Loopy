@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 function shape(p: any) {
-  return { ...p, images: safeParse(p.images), variants: safeParse(p.variants) };
+  return { ...p, images: safeParse(p.images), variants: safeParse(p.variants), sizes: safeParse(p.sizes) };
 }
 function safeParse(s: string): any[] {
   try {
@@ -51,6 +51,7 @@ export class ProductsService {
         category: data.category ?? existing.category,
         images: data.images ? JSON.stringify(data.images) : existing.images,
         variants: data.variants !== undefined ? JSON.stringify(data.variants || []) : existing.variants,
+        sizes: data.sizes !== undefined ? JSON.stringify(data.sizes || []) : existing.sizes,
         sizeChartUrl: data.sizeChartUrl !== undefined ? (data.sizeChartUrl || null) : existing.sizeChartUrl,
         quantity: data.quantity != null ? Number(data.quantity) : existing.quantity,
         isActive: data.isActive != null ? Boolean(data.isActive) : existing.isActive,
@@ -77,6 +78,7 @@ export class ProductsService {
         category: data.category || 'Apparel',
         images: JSON.stringify(data.images || []),
         variants: JSON.stringify(data.variants || []),
+        sizes: JSON.stringify(data.sizes || []),
         sizeChartUrl: data.sizeChartUrl || null,
         quantity: data.quantity ?? 1,
       },

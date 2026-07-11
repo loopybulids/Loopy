@@ -6,6 +6,7 @@ import { PageHead, Panel, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
 import { VariantsEditor, cleanVariants, type Variant } from '@/components/VariantsEditor';
+import { SizeSelector, SizeStrip } from '@/components/sizes';
 import { Heart, ShieldLock, Camera, Sparkle, Verified } from '@/components/icons';
 
 export default function AddProduct() {
@@ -13,6 +14,7 @@ export default function AddProduct() {
   const [f, setF] = useState({ title: '', price: '', mrp: '', category: '', description: '', quantity: '1' });
   const [media, setMedia] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
+  const [sizes, setSizes] = useState<string[]>([]);
   const [sizeChart, setSizeChart] = useState('');
   const [authentic, setAuthentic] = useState(true);
   const [original, setOriginal] = useState(true);
@@ -29,7 +31,7 @@ export default function AddProduct() {
         title: f.title, price: Number(f.price), mrp: f.mrp ? Number(f.mrp) : null,
         category: f.category, description: f.description,
         images: media, quantity: Number(f.quantity) || 1,
-        variants: cleanVariants(variants), sizeChartUrl: sizeChart || null,
+        variants: cleanVariants(variants), sizes, sizeChartUrl: sizeChart || null,
       });
       router.push('/seller/catalog');
     } catch (e: any) { setErr(e?.message || 'Could not list product.'); setBusy(false); }
@@ -69,6 +71,9 @@ export default function AddProduct() {
             </div>
             <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear" />
           </div>
+
+          {/* sizes */}
+          <div className="mt-5"><SizeSelector value={sizes} onChange={setSizes} /></div>
 
           {/* variants */}
           <div className="mt-5"><VariantsEditor variants={variants} setVariants={setVariants} /></div>
@@ -117,6 +122,7 @@ export default function AddProduct() {
                 <span className="font-display text-[18px] font-extrabold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>
                 {f.mrp && Number(f.mrp) > Number(f.price || 0) && <span className="text-[13px] font-semibold text-faint line-through">{money(Number(f.mrp))}</span>}
               </div>
+              {sizes.length > 0 && <div className="mt-2"><SizeStrip sizes={sizes} /></div>}
               {variants.filter((v) => v.label.trim()).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {variants.filter((v) => v.label.trim()).map((v, i) => <span key={i} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-semibold text-navy">{v.label}</span>)}

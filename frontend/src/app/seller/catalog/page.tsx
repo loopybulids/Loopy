@@ -6,6 +6,7 @@ import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
 import { VariantsEditor, cleanVariants, toEditorVariants, type Variant } from '@/components/VariantsEditor';
+import { SizeSelector } from '@/components/sizes';
 import { Plus, Tag, Heart, ShieldLock, Check } from '@/components/icons';
 
 function firstImage(p: any): string | null {
@@ -125,6 +126,7 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
   });
   const [media, setMedia] = useState<string[]>(toArray(product));
   const [variants, setVariants] = useState<Variant[]>(toEditorVariants(product.variants || []));
+  const [sizes, setSizes] = useState<string[]>(product.sizes || []);
   const [sizeChart, setSizeChart] = useState<string>(product.sizeChartUrl || '');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -140,7 +142,7 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
         title: f.title, price: Number(f.price), mrp: f.mrp ? Number(f.mrp) : null,
         quantity: Number(f.quantity) || 0, category: f.category, brand: f.brand,
         description: f.description, images: media, isActive: f.isActive,
-        variants: cleanVariants(variants), sizeChartUrl: sizeChart || null,
+        variants: cleanVariants(variants), sizes, sizeChartUrl: sizeChart || null,
       });
       setSaved(true);
       setTimeout(() => onSaved({ ...product, ...updated, images: media }), 600);
@@ -189,6 +191,8 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
             <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear" />
           </div>
           <Field label="Brand (optional)" value={f.brand} onChange={(v) => set('brand', v)} />
+
+          <SizeSelector value={sizes} onChange={setSizes} />
 
           <VariantsEditor variants={variants} setVariants={setVariants} />
 

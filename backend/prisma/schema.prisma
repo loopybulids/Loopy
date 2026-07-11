@@ -86,6 +86,7 @@ model Product {
   category    String?
   images      String   @default("[]") // JSON array of URLs (string for SQLite)
   variants    String   @default("[]") // JSON array of { label, price?, stock? }
+  sizes       String   @default("[]") // JSON array of available sizes (XS…XXXL)
   sizeChartUrl String? // uploaded size-chart image
   quantity    Int      @default(1) // one-of-one items default to 1
   isActive    Boolean  @default(true)

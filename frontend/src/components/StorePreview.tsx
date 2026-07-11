@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
+import { SizeStrip } from '@/components/sizes';
 import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
@@ -163,6 +164,7 @@ export default function StorePreview({
                       <span className="font-display text-[15px] font-extrabold" style={{ color: accent }}>{rupees(p.price)}</span>
                       {p.mrp && p.mrp > p.price && <span className="text-[12px] text-faint line-through">{rupees(p.mrp)}</span>}
                     </div>
+                    {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}
                   </div>
                 </div>
               ))
