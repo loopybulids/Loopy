@@ -78,12 +78,15 @@ model Product {
   title       String
   slug        String
   description String?
-  price       Int // rupees
+  price       Int // selling price (rupees)
+  mrp         Int? // market / compare-at price — shown struck-through when higher
   condition   String   @default("Good") // Like new | Good | Fair
   size        String?
   brand       String?
   category    String?
   images      String   @default("[]") // JSON array of URLs (string for SQLite)
+  variants    String   @default("[]") // JSON array of { label, price?, stock? }
+  sizeChartUrl String? // uploaded size-chart image
   quantity    Int      @default(1) // one-of-one items default to 1
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

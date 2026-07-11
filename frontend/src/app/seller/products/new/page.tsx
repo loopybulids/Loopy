@@ -4,14 +4,16 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageHead, Panel, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
+import MediaInput from '@/components/MediaInput';
+import { VariantsEditor, cleanVariants, type Variant } from '@/components/VariantsEditor';
 import { Heart, ShieldLock, Camera, Sparkle, Verified } from '@/components/icons';
-
-const CONDITIONS = ['Brand New', 'Like new', 'Good', 'Fair'];
 
 export default function AddProduct() {
   const router = useRouter();
-  const [f, setF] = useState({ title: '', price: '', condition: 'Brand New', category: '', description: '', quantity: '1' });
+  const [f, setF] = useState({ title: '', price: '', mrp: '', category: '', description: '', quantity: '1' });
   const [media, setMedia] = useState<string[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [sizeChart, setSizeChart] = useState('');
   const [authentic, setAuthentic] = useState(true);
   const [original, setOriginal] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -24,13 +26,17 @@ export default function AddProduct() {
     setBusy(true);
     try {
       await api.createProduct({
-        title: f.title, price: Number(f.price), condition: f.condition,
+        title: f.title, price: Number(f.price), mrp: f.mrp ? Number(f.mrp) : null,
         category: f.category, description: f.description,
         images: media, quantity: Number(f.quantity) || 1,
+        variants: cleanVariants(variants), sizeChartUrl: sizeChart || null,
       });
       router.push('/seller/catalog');
     } catch (e: any) { setErr(e?.message || 'Could not list product.'); setBusy(false); }
   };
+
+  const discount = f.mrp && f.price && Number(f.mrp) > Number(f.price)
+    ? Math.round((1 - Number(f.price) / Number(f.mrp)) * 100) : 0;
 
   return (
     <div>
@@ -43,21 +49,40 @@ export default function AddProduct() {
           <div className="mt-1.5"><MediaGallery value={media} onChange={setMedia} /></div>
 
           <Field label="Product title" value={f.title} onChange={(v) => set('title', v)} placeholder="e.g. Vintage Leather Camera Strap" />
+
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <Field label="Price (₹)" value={f.price} onChange={(v) => set('price', v)} placeholder="0.00" />
             <div>
-              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Stock</label>
-              <input type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} className="c-input mt-1.5" />
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Selling price (₹)</label>
+              <input type="number" value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="0.00" className="c-input mt-1.5" />
+            </div>
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Market price (₹)</label>
+              <input type="number" value={f.mrp} onChange={(e) => set('mrp', e.target.value)} placeholder="Optional — shows struck-through" className="c-input mt-1.5" />
             </div>
           </div>
+          {discount > 0 && <p className="mt-1.5 text-[12px] font-semibold text-green-600">{discount}% off — customers see the market price struck through.</p>}
+
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Condition</label>
-              <select value={f.condition} onChange={(e) => set('condition', e.target.value)} className="c-input mt-1.5">
-                {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
-              </select>
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Stock</label>
+              <input type="number" min={0} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} className="c-input mt-1.5" />
             </div>
             <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear" />
+          </div>
+
+          {/* variants */}
+          <div className="mt-5"><VariantsEditor variants={variants} setVariants={setVariants} /></div>
+
+          {/* size chart */}
+          <div className="mt-5">
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Size chart (optional)</label>
+            <p className="mb-1.5 text-[11px] text-muted">Upload a size-chart image — shown to buyers on the product page.</p>
+            <MediaInput value={sizeChart} onChange={setSizeChart} />
+          </div>
+
+          <div className="mt-5">
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Description</label>
+            <textarea value={f.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" placeholder="Describe the item and any details buyers should know." />
           </div>
 
           <div className="mt-4 space-y-3 rounded-xl border border-line bg-paper p-4">
@@ -81,6 +106,7 @@ export default function AddProduct() {
                 ? <img src={media[0]} alt="" className="max-h-56 w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
                 : <div className="aspect-square w-full" />}
               <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white"><ShieldLock size={11} /> Loopy Protected</span>
+              {discount > 0 && <span className="absolute right-2.5 top-2.5 rounded-md bg-rose px-2 py-0.5 text-[10px] font-bold text-white">{discount}% OFF</span>}
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between">
@@ -89,14 +115,19 @@ export default function AddProduct() {
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span className="font-display text-[18px] font-extrabold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>
-                <span className="chip-navy">{f.condition}</span>
+                {f.mrp && Number(f.mrp) > Number(f.price || 0) && <span className="text-[13px] font-semibold text-faint line-through">{money(Number(f.mrp))}</span>}
               </div>
+              {variants.filter((v) => v.label.trim()).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {variants.filter((v) => v.label.trim()).map((v, i) => <span key={i} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-semibold text-navy">{v.label}</span>)}
+                </div>
+              )}
               <div className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-[12px]"><span className="h-6 w-6 rounded-full bg-green-500" /><b className="text-navy">You</b> <span className="text-green-600">· Top Seller</span></div>
             </div>
           </div>
           <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-line bg-white px-4 py-3.5">
             <Sparkle size={18} className="mt-0.5 text-green-600" />
-            <p className="text-[12.5px] text-muted"><b className="text-navy">Seller Tip:</b> Items listed with a clear category and description sell 30% faster. Don’t forget to mention any minor flaws!</p>
+            <p className="text-[12.5px] text-muted"><b className="text-navy">Seller Tip:</b> Add a market price to show a discount, and list variants (sizes/colors) so buyers can pick.</p>
           </div>
         </div>
       </div>

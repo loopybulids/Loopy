@@ -4,11 +4,12 @@ import { PrismaService } from '../prisma/prisma.service';
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 
 function shapeProduct(p: any) {
-  return { ...p, images: safeParse(p.images) };
+  return { ...p, images: safeParse(p.images), variants: safeParse(p.variants) };
 }
-function safeParse(s: string): string[] {
+function safeParse(s: string): any[] {
   try {
-    return JSON.parse(s);
+    const v = JSON.parse(s);
+    return Array.isArray(v) ? v : [];
   } catch {
     return [];
   }

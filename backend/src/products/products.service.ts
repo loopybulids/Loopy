@@ -2,11 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 function shape(p: any) {
-  return { ...p, images: safeParse(p.images) };
+  return { ...p, images: safeParse(p.images), variants: safeParse(p.variants) };
 }
-function safeParse(s: string): string[] {
+function safeParse(s: string): any[] {
   try {
-    return JSON.parse(s);
+    const v = JSON.parse(s);
+    return Array.isArray(v) ? v : [];
   } catch {
     return [];
   }
@@ -45,9 +46,12 @@ export class ProductsService {
         title: data.title ?? existing.title,
         description: data.description ?? existing.description,
         price: data.price != null ? Number(data.price) : existing.price,
+        mrp: data.mrp !== undefined ? (data.mrp === null || data.mrp === '' ? null : Number(data.mrp)) : existing.mrp,
         condition: data.condition ?? existing.condition,
         category: data.category ?? existing.category,
         images: data.images ? JSON.stringify(data.images) : existing.images,
+        variants: data.variants !== undefined ? JSON.stringify(data.variants || []) : existing.variants,
+        sizeChartUrl: data.sizeChartUrl !== undefined ? (data.sizeChartUrl || null) : existing.sizeChartUrl,
         quantity: data.quantity != null ? Number(data.quantity) : existing.quantity,
         isActive: data.isActive != null ? Boolean(data.isActive) : existing.isActive,
         brand: data.brand ?? existing.brand,
@@ -66,11 +70,14 @@ export class ProductsService {
         slug,
         description: data.description || '',
         price: Number(data.price),
+        mrp: data.mrp ? Number(data.mrp) : null,
         condition: data.condition || 'Good',
         size: data.size,
         brand: data.brand,
         category: data.category || 'Apparel',
         images: JSON.stringify(data.images || []),
+        variants: JSON.stringify(data.variants || []),
+        sizeChartUrl: data.sizeChartUrl || null,
         quantity: data.quantity ?? 1,
       },
     });

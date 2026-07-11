@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
+import MediaInput from '@/components/MediaInput';
+import { VariantsEditor, cleanVariants, toEditorVariants, type Variant } from '@/components/VariantsEditor';
 import { Plus, Tag, Heart, ShieldLock, Check } from '@/components/icons';
-
-const CONDITIONS = ['Brand New', 'Like new', 'Good', 'Fair'];
 
 function firstImage(p: any): string | null {
   try {
@@ -83,7 +83,7 @@ export default function Catalog() {
                       <td className="py-3 font-semibold text-navy">{money(p.price)}</td>
                       <td className="py-3">
                         {qty <= 0 ? <span className="chip-rose">Out of stock</span>
-                          : <span className={low ? 'font-semibold text-amber' : 'text-muted'}>{low ? `🔥 ${qty} left` : `${qty} in stock`}</span>}
+                          : <span className={low ? 'font-semibold text-amber' : 'text-muted'}>{low ? `${qty} left` : `${qty} in stock`}</span>}
                       </td>
                       <td className="py-3" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => toggleLive(p)} className="flex items-center gap-2" title={p.isActive ? 'Live — click to delist' : 'Hidden — click to publish'}>
@@ -119,11 +119,13 @@ export default function Catalog() {
 
 function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: () => void; onSaved: (u: any) => void }) {
   const [f, setF] = useState({
-    title: product.title || '', price: String(product.price ?? ''), quantity: String(product.quantity ?? 1),
-    category: product.category || '', brand: product.brand || '', condition: product.condition || 'Good',
+    title: product.title || '', price: String(product.price ?? ''), mrp: product.mrp != null ? String(product.mrp) : '',
+    quantity: String(product.quantity ?? 1), category: product.category || '', brand: product.brand || '',
     description: product.description || '', isActive: product.isActive ?? true,
   });
   const [media, setMedia] = useState<string[]>(toArray(product));
+  const [variants, setVariants] = useState<Variant[]>(toEditorVariants(product.variants || []));
+  const [sizeChart, setSizeChart] = useState<string>(product.sizeChartUrl || '');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
@@ -135,9 +137,10 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
     setBusy(true);
     try {
       const updated = await api.updateProduct(product.id, {
-        title: f.title, price: Number(f.price), quantity: Number(f.quantity) || 0,
-        category: f.category, brand: f.brand, condition: f.condition,
+        title: f.title, price: Number(f.price), mrp: f.mrp ? Number(f.mrp) : null,
+        quantity: Number(f.quantity) || 0, category: f.category, brand: f.brand,
         description: f.description, images: media, isActive: f.isActive,
+        variants: cleanVariants(variants), sizeChartUrl: sizeChart || null,
       });
       setSaved(true);
       setTimeout(() => onSaved({ ...product, ...updated, images: media }), 600);
@@ -178,20 +181,25 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
           {/* fields */}
           <Field label="Product title" value={f.title} onChange={(v) => set('title', v)} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Price (₹)" value={f.price} onChange={(v) => set('price', v)} type="number" />
-            <Field label="Stock" value={f.quantity} onChange={(v) => set('quantity', v)} type="number" />
+            <Field label="Selling price (₹)" value={f.price} onChange={(v) => set('price', v)} type="number" />
+            <Field label="Market price (₹)" value={f.mrp} onChange={(v) => set('mrp', v)} type="number" placeholder="Struck-through" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Condition</label>
-              <select value={f.condition} onChange={(e) => set('condition', e.target.value)} className="c-input mt-1.5">{CONDITIONS.map((c) => <option key={c}>{c}</option>)}</select>
-            </div>
+            <Field label="Stock" value={f.quantity} onChange={(v) => set('quantity', v)} type="number" />
             <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear" />
           </div>
           <Field label="Brand (optional)" value={f.brand} onChange={(v) => set('brand', v)} />
+
+          <VariantsEditor variants={variants} setVariants={setVariants} />
+
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Size chart (optional)</label>
+            <div className="mt-1.5"><MediaInput value={sizeChart} onChange={setSizeChart} /></div>
+          </div>
+
           <div>
             <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Description</label>
-            <textarea value={f.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" placeholder="Describe the item, condition and any flaws." />
+            <textarea value={f.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" placeholder="Describe the item and any details buyers should know." />
           </div>
 
           {/* storefront preview */}
@@ -204,7 +212,8 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
               </div>
               <div className="p-3.5">
                 <div className="flex items-start justify-between"><div className="font-display text-[15px] font-bold text-navy">{f.title || 'Product Title'}</div><Heart size={17} className="text-faint" /></div>
-                <div className="mt-1 flex items-center gap-2"><span className="font-display text-[17px] font-extrabold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span><span className="chip-navy">{f.condition}</span></div>
+                <div className="mt-1 flex items-center gap-2"><span className="font-display text-[17px] font-extrabold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>{f.mrp && Number(f.mrp) > Number(f.price || 0) && <span className="text-[12px] font-semibold text-faint line-through">{money(Number(f.mrp))}</span>}</div>
+                {variants.filter((v) => v.label.trim()).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{variants.filter((v) => v.label.trim()).map((v, i) => <span key={i} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-semibold text-navy">{v.label}</span>)}</div>}
               </div>
             </div>
           </div>

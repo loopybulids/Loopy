@@ -32,6 +32,7 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: false }),
   );
   // CORS is handled by vercel.json edge headers (applies even if a route errors).
+
   await app.init();
   return app.getHttpAdapter().getInstance();
 }
