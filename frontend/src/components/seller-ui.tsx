@@ -1,17 +1,36 @@
 'use client';
 import { ReactNode } from 'react';
+import Link from 'next/link';
 import { motion } from '@/components/motion';
 
-/* Metric card for the dashboard grid. */
+/* Metric card for the dashboard grid. Pass `href` to make it navigate. */
 export function StatCard({
-  label, value, delta, icon, accent = false,
+  label, value, delta, icon, accent = false, href,
 }: {
   label: string;
   value: ReactNode;
   delta?: string;
   icon?: ReactNode;
   accent?: boolean;
+  href?: string;
 }) {
+  const inner = (
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] font-bold uppercase tracking-wide text-faint">{label}</span>
+        {icon && <span className="text-green-600">{icon}</span>}
+      </div>
+      <div className="mt-3 font-display text-[28px] font-extrabold text-navy">{value}</div>
+      {delta && <div className="mt-1 text-[12px] font-semibold text-green-600">{delta}</div>}
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={`card block p-5 transition hover:-translate-y-0.5 hover:shadow-soft ${accent ? 'ring-1 ring-green/20' : ''}`}>
+        {inner}
+      </Link>
+    );
+  }
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -19,12 +38,7 @@ export function StatCard({
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className={`card p-5 ${accent ? 'ring-1 ring-green/20' : ''}`}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] font-bold uppercase tracking-wide text-faint">{label}</span>
-        {icon && <span className="text-green-600">{icon}</span>}
-      </div>
-      <div className="mt-3 font-display text-[28px] font-extrabold text-navy">{value}</div>
-      {delta && <div className="mt-1 text-[12px] font-semibold text-green-600">{delta}</div>}
+      {inner}
     </motion.div>
   );
 }

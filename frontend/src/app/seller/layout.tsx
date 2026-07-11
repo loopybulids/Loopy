@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
+import { api } from '@/lib/api';
 import { exitImpersonation } from '@/lib/impersonate';
 import {
   Bag, Bell, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
@@ -45,6 +46,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [impersonating, setImpersonating] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     setImpersonating(typeof window !== 'undefined' ? localStorage.getItem('loopy_impersonating') : null);
@@ -56,6 +58,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
       return;
     }
     setReady(true);
+    api.myProfile().then((p) => setUsername(p?.username || '')).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ready) {
@@ -136,7 +139,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           <div className="ml-auto flex items-center gap-2">
             <Link href="/seller/links" className="btn-green hidden px-4 py-2.5 text-[13px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
             <button className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Bell size={18} /></button>
-            <Link href="/shop" title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>
+            <Link href={username ? `/s/${username}` : '/seller/profile'} target={username ? '_blank' : undefined} title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>
           </div>
         </header>
 

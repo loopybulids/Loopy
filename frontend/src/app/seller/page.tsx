@@ -31,12 +31,12 @@ export default function Dashboard() {
 
       {/* metric cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <StatCard label="Revenue" value={money(revenue)} delta={revenue ? 'Paid orders' : 'No sales yet'} icon={<Wallet size={18} />} accent />
-        <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} />
-        <StatCard label="Customers" value={an?.customers ?? 0} delta="Unique buyers" icon={<Users size={18} />} />
+        <StatCard label="Revenue" value={money(revenue)} delta={revenue ? 'Paid orders' : 'No sales yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
+        <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} href="/seller/orders" />
+        <StatCard label="Customers" value={an?.customers ?? 0} delta="Unique buyers" icon={<Users size={18} />} href="/seller/customers" />
         <StatCard label="Store visits" value={an?.totalVisits ?? 0} delta={`${an?.visitsToday ?? 0} today`} icon={<Eye size={18} />} />
         <LiveCard live={an?.liveUsers ?? 0} conversion={an?.conversion ?? 0} />
-        <StatCard label="Rating" value={an?.avgRating ? `${an.avgRating}★` : '—'} delta={`${an?.reviewCount ?? 0} reviews`} icon={<Star size={18} />} />
+        <StatCard label="Rating" value={an?.avgRating ? `${an.avgRating}★` : '—'} delta={`${an?.reviewCount ?? 0} reviews`} icon={<Star size={18} />} href="/seller/reviews" />
       </div>
 
       {/* charts */}
