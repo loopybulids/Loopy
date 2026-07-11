@@ -50,6 +50,8 @@ export class ProductsService {
         images: data.images ? JSON.stringify(data.images) : existing.images,
         quantity: data.quantity != null ? Number(data.quantity) : existing.quantity,
         isActive: data.isActive != null ? Boolean(data.isActive) : existing.isActive,
+        brand: data.brand ?? existing.brand,
+        size: data.size ?? existing.size,
       },
     });
     return shape(product);
