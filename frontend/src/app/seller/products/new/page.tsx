@@ -69,7 +69,10 @@ export default function AddProduct() {
               <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Stock</label>
               <input type="number" min={0} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} className="c-input mt-1.5" />
             </div>
-            <Field label="Category" value={f.category} onChange={(v) => set('category', v)} placeholder="e.g. Footwear" />
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Category</label>
+              <input value={f.category} onChange={(e) => set('category', e.target.value)} placeholder="e.g. Footwear" className="c-input mt-1.5" />
+            </div>
           </div>
 
           {/* sizes */}
