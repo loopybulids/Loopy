@@ -28,9 +28,9 @@ export default function ProductCard({ product, index = 0 }: { product: any; inde
           <div className="absolute inset-x-2.5 bottom-2.5">
             <div className="glass-card rounded-2xl p-3.5">
               <div className="truncate text-[13.5px] font-semibold text-navy">{product.title}</div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="font-display text-[16px] font-extrabold text-navy">{rupees(product.price)}</span>
-                {product.mrp && product.mrp > product.price && <span className="text-[12px] text-faint line-through">{rupees(product.mrp)}</span>}
+              <div className="mt-1 leading-tight">
+                <div className="font-display text-[16px] font-extrabold text-navy">{rupees(product.price)}</div>
+                {product.mrp && product.mrp > product.price && <div className="text-[12px] text-faint line-through">{rupees(product.mrp)}</div>}
               </div>
               {product.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={product.sizes} compact /></div>}
               <div className="mt-2.5 rounded-xl bg-navy/0 py-2 text-center text-[12.5px] font-bold text-green transition-all duration-300 group-hover:bg-navy group-hover:text-white">View Details</div>

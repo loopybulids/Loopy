@@ -160,9 +160,9 @@ export default function StorePreview({
                   </div>
                   <div className="p-3">
                     <div className="truncate font-display text-[14px] font-bold">{p.title || p.name}</div>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className="font-display text-[15px] font-extrabold" style={{ color: accent }}>{rupees(p.price)}</span>
-                      {p.mrp && p.mrp > p.price && <span className="text-[12px] text-faint line-through">{rupees(p.mrp)}</span>}
+                    <div className="mt-1 leading-tight">
+                      <div className="font-display text-[15px] font-extrabold" style={{ color: accent }}>{rupees(p.price)}</div>
+                      {p.mrp && p.mrp > p.price && <div className="text-[12px] text-faint line-through">{rupees(p.mrp)}</div>}
                     </div>
                     {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}
                   </div>
