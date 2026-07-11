@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+    <html lang="en" className={`${GeistSans.variable} ${inter.variable} ${jakarta.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

@@ -18,8 +18,8 @@ const config: Config = {
         rose: { DEFAULT: '#E14B3C', soft: '#FCEAE8' },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-jakarta)', 'var(--font-inter)', 'sans-serif'],
+        sans: ['var(--font-geist-sans)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-geist-sans)', 'var(--font-jakarta)', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 12px 40px -12px rgba(14,42,71,.18)',
