@@ -154,7 +154,7 @@ export default function StorePreview({
               <p className="col-span-full py-8 text-center text-[13px] text-faint">No products yet — add some in your catalog.</p>
             ) : (
               products.slice(0, 8).map((p) => (
-                <div key={p.id} className="overflow-hidden rounded-lg border border-line bg-white">
+                <a key={p.id} href={username ? `/s/${username}/product/${p.id}` : undefined} className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card">
                   <div className="aspect-square bg-green-soft">
                     {firstImage(p) && <img src={firstImage(p)!} alt="" className="h-full w-full object-cover" />}
                   </div>
@@ -166,7 +166,7 @@ export default function StorePreview({
                     </div>
                     {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}
                   </div>
-                </div>
+                </a>
               ))
             )}
           </div>

@@ -177,6 +177,34 @@ export class SellersService {
     return this.prisma.review.update({ where: { id: reviewId }, data: { response, respondedAt: new Date() } });
   }
 
+  // ── notifications ──
+  async getNotifications(sellerId: string) {
+    const items = await this.prisma.notification.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' }, take: 40 });
+    const unread = items.filter((n) => !n.read).length;
+    return { items, unread };
+  }
+  async markNotificationsRead(sellerId: string) {
+    await this.prisma.notification.updateMany({ where: { sellerId, read: false }, data: { read: true } });
+    return { ok: true };
+  }
+
+  // Registered customers for this store (recorded on signup), enriched with order totals.
+  async getCustomers(sellerId: string) {
+    const [customers, orders] = await Promise.all([
+      this.prisma.customer.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.order.findMany({ where: { sellerId }, select: { customerId: true, status: true, totalAmount: true } }),
+    ]);
+    const paidStatuses = PAID;
+    return customers.map((c) => {
+      const co = orders.filter((o) => o.customerId === c.id);
+      const paid = co.filter((o) => paidStatuses.includes(o.status));
+      return {
+        id: c.id, name: c.name, email: c.email, phone: c.phone, createdAt: c.createdAt,
+        orders: co.length, spent: paid.reduce((s, o) => s + o.totalAmount, 0),
+      };
+    });
+  }
+
   async updateStoreConfig(sellerId: string, config: any) {
     await this.prisma.seller.update({
       where: { id: sellerId },

@@ -70,6 +70,9 @@ export const api = {
   myReviews: () => req<any[]>(`/sellers/me/reviews`),
   respondReview: (id: string, response: string) =>
     req<any>(`/sellers/me/reviews/${id}/respond`, { method: 'POST', body: JSON.stringify({ response }) }),
+  myNotifications: () => req<any>(`/sellers/me/notifications`),
+  readNotifications: () => req<any>(`/sellers/me/notifications/read`, { method: 'POST' }),
+  myCustomers: () => req<any[]>(`/sellers/me/customers`),
   recordVisit: (username: string, session: string, source?: string, referrer?: string) =>
     req<any>(`/sellers/${username}/visit`, { method: 'POST', body: JSON.stringify({ session, source, referrer }) }),
   requestPayout: () => req<any>(`/sellers/me/payouts`, { method: 'POST' }),

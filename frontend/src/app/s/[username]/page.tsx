@@ -4,6 +4,7 @@ import ProductCard from '@/components/ProductCard';
 import ApiDown from '@/components/ApiDown';
 import StorePreview from '@/components/StorePreview';
 import VisitPing from '@/components/VisitPing';
+import StoreAccountBar from '@/components/store/StoreAccountBar';
 import { withDefaults } from '@/lib/store-config';
 import { Clock, Share, Star, Verified } from '@/components/icons';
 
@@ -20,6 +21,7 @@ export default async function StorePage({ params }: { params: Promise<{ username
     return (
       <main className="min-h-screen">
         <VisitPing username={username} />
+        <StoreAccountBar username={username} storeName={store.storeName} />
         <StorePreview config={config} products={store.products} storeName={store.storeName} username={username} />
       </main>
     );

@@ -49,6 +49,24 @@ export class SellersController {
     return this.sellers.respondReview(req.user.sellerId, id, body?.response || '');
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('me/notifications')
+  notifications(@Req() req: any) {
+    return this.sellers.getNotifications(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/notifications/read')
+  readNotifications(@Req() req: any) {
+    return this.sellers.markNotificationsRead(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/customers')
+  myCustomers(@Req() req: any) {
+    return this.sellers.getCustomers(req.user.sellerId);
+  }
+
   // Authenticated seller — own profile
   @UseGuards(JwtAuthGuard)
   @Get('me/profile')

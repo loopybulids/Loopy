@@ -5,8 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
 import { exitImpersonation } from '@/lib/impersonate';
+import NotificationsBell from '@/components/NotificationsBell';
 import {
-  Bag, Bell, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
+  Bag, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
 } from '@/components/icons';
 
 /* ───── sidebar tabs (PRD seller modules) ───── */
@@ -138,7 +139,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/seller/links" className="btn-green hidden px-4 py-2.5 text-[13px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
-            <button className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Bell size={18} /></button>
+            <NotificationsBell />
             <Link href={username ? `/s/${username}` : '/seller/profile'} target={username ? '_blank' : undefined} title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>
           </div>
         </header>
