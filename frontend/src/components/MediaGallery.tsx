@@ -29,7 +29,6 @@ export default function MediaGallery({
   const fileRef = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const [url, setUrl] = useState('');
 
   const addFiles = async (files: FileList | null) => {
     setErr('');
@@ -47,16 +46,6 @@ export default function MediaGallery({
     onChange(next);
     setBusy(false);
     if (fileRef.current) fileRef.current.value = '';
-  };
-
-  const addUrl = () => {
-    setErr('');
-    const u = url.trim();
-    if (!u) return;
-    if (value.length >= max) return setErr(`Up to ${max} files.`);
-    if (isVideo(u) && value.some(isVideo)) return setErr('Only one video allowed.');
-    onChange([...value, u]);
-    setUrl('');
   };
 
   const remove = (i: number) => onChange(value.filter((_, j) => j !== i));
@@ -85,12 +74,7 @@ export default function MediaGallery({
 
       <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
 
-      <div className="mt-2 flex gap-2">
-        <input className="c-input flex-1 py-2 text-[13px]" value={url} placeholder="…or paste an image / video URL" onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())} />
-        <button type="button" onClick={addUrl} className="btn-ghost px-3 py-2 text-[13px]">Add</button>
-      </div>
-
-      <p className="mt-1 text-[11px] text-faint">Multiple images + 1 video · ≤ {MAX_MB}MB each (or paste a URL for larger).</p>
+      <p className="mt-2 text-[11px] text-faint">Multiple images + 1 video · ≤ {MAX_MB}MB each.</p>
       {err && <p className="mt-1 text-[12px] font-semibold text-rose">{err}</p>}
     </div>
   );

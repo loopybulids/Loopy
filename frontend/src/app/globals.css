@@ -111,7 +111,7 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
 
   /* ───────── light console (seller area, matches the home page) ───────── */
   .c-input {
-    @apply w-full rounded-lg border border-line bg-white px-4 py-3 text-[15px] font-semibold text-navy transition-all;
+    @apply w-full rounded-lg border border-line bg-white px-4 py-3 text-[15px] font-normal text-navy transition-all;
   }
   .c-input::placeholder { color: #9AA2B1; }
   .c-input:focus { outline: none; border-color: rgba(30,158,99,.7); box-shadow: 0 0 0 3px rgba(30,158,99,.16); }

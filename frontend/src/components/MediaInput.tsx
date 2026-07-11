@@ -63,10 +63,9 @@ export default function MediaInput({
         >
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-lg bg-green-soft text-green-600 ring-1 ring-green/15"><Camera size={20} /></span>
           <div className="mt-2 font-display text-[15px] font-bold text-navy">{busy ? 'Uploading…' : 'Add a product photo'}</div>
-          <p className="mt-1 text-[12.5px] text-muted">Click to upload an image/video from your device — or paste a URL below.</p>
+          <p className="mt-1 text-[12.5px] text-muted">Click to upload an image or video from your device · ≤ {MAX_MB}MB</p>
         </button>
         {fileInput}
-        <input className="c-input mt-2" value={isData ? '' : value} placeholder={isData ? 'Uploaded file ✓' : '…or paste an image/video URL'} onChange={(e) => onChange(e.target.value)} />
         {err && <p className="mt-1.5 text-[12px] font-semibold text-rose">{err}</p>}
         {preview}
       </div>
@@ -75,12 +74,11 @@ export default function MediaInput({
 
   return (
     <div>
-      <input className="c-input" value={isData ? '' : value} placeholder={isData ? 'Uploaded file ✓' : placeholder} onChange={(e) => onChange(e.target.value)} />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-3 py-2 text-[13px]" disabled={busy}>
-          {busy ? 'Loading…' : '⬆ Upload image / video'}
+          {busy ? 'Loading…' : value ? '⬆ Replace image / video' : '⬆ Upload image / video'}
         </button>
-        <span className="text-[12px] text-faint">≤ {MAX_MB}MB</span>
+        <span className="text-[12px] text-faint">{value ? 'Uploaded ✓' : `≤ ${MAX_MB}MB`}</span>
         {fileInput}
       </div>
       {err && <p className="mt-1.5 text-[12px] font-semibold text-rose">{err}</p>}
