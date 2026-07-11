@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic, Tilt } from '@/components/motion';
+import RedirectAuthed from '@/components/RedirectAuthed';
 import {
   ArrowRight, Bolt, Check, Loop, Plus, Share,
   ShieldLock, Star, Store, Truck, Verified, Wallet,
@@ -49,6 +50,7 @@ const FAQS = [
 export default function Landing() {
   return (
     <main className="relative min-h-screen bg-paper text-navy">
+      <RedirectAuthed />
       {/* ───── animated aurora background (fixed so it never traps scroll) ───── */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="aurora-blob animate-aurora absolute -left-24 -top-24 h-[42vw] w-[42vw] bg-green-mint" />
