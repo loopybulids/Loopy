@@ -70,8 +70,8 @@ export const api = {
   myReviews: () => req<any[]>(`/sellers/me/reviews`),
   respondReview: (id: string, response: string) =>
     req<any>(`/sellers/me/reviews/${id}/respond`, { method: 'POST', body: JSON.stringify({ response }) }),
-  recordVisit: (username: string, session: string) =>
-    req<any>(`/sellers/${username}/visit`, { method: 'POST', body: JSON.stringify({ session }) }),
+  recordVisit: (username: string, session: string, source?: string, referrer?: string) =>
+    req<any>(`/sellers/${username}/visit`, { method: 'POST', body: JSON.stringify({ session, source, referrer }) }),
   requestPayout: () => req<any>(`/sellers/me/payouts`, { method: 'POST' }),
   createProduct: (body: any) =>
     req<any>(`/products`, { method: 'POST', body: JSON.stringify(body) }),

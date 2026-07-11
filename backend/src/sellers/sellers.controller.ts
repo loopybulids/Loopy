@@ -20,8 +20,8 @@ export class SellersController {
 
   // Public — record a storefront page view (traffic analytics)
   @Post(':username/visit')
-  recordVisit(@Param('username') username: string, @Body() body: { session?: string }) {
-    return this.sellers.recordVisit(username, body?.session);
+  recordVisit(@Param('username') username: string, @Body() body: { session?: string; source?: string; referrer?: string }) {
+    return this.sellers.recordVisit(username, body?.session, body?.source, body?.referrer);
   }
 
   // Authenticated seller — dashboard analytics (sales + traffic + live users)

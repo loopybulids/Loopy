@@ -94,7 +94,7 @@ export class SellersService {
   }
 
   // Record a storefront page-view (deduped per session within 30 min).
-  async recordVisit(username: string, session?: string) {
+  async recordVisit(username: string, session?: string, source?: string, referrer?: string) {
     const seller = await this.prisma.seller.findUnique({ where: { username }, select: { id: true } });
     if (!seller) return { ok: false };
     if (session) {
@@ -103,7 +103,9 @@ export class SellersService {
       });
       if (recent) return { ok: true, deduped: true };
     }
-    await this.prisma.visit.create({ data: { sellerId: seller.id, session: session || null } });
+    await this.prisma.visit.create({
+      data: { sellerId: seller.id, session: session || null, source: (source || 'Direct').slice(0, 40), referrer: referrer?.slice(0, 300) || null },
+    });
     return { ok: true };
   }
 
@@ -111,9 +113,13 @@ export class SellersService {
   async getAnalytics(sellerId: string) {
     const [orders, visits, reviews] = await Promise.all([
       this.prisma.order.findMany({ where: { sellerId }, select: { status: true, totalAmount: true, itemsAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true } }),
-      this.prisma.visit.findMany({ where: { sellerId }, select: { session: true, createdAt: true } }),
+      this.prisma.visit.findMany({ where: { sellerId }, select: { session: true, source: true, createdAt: true } }),
       this.prisma.review.findMany({ where: { sellerId }, select: { rating: true } }),
     ]);
+    // traffic sources (top)
+    const srcMap = new Map<string, number>();
+    visits.forEach((v) => srcMap.set(v.source || 'Direct', (srcMap.get(v.source || 'Direct') || 0) + 1));
+    const sources = [...srcMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
     const paid = orders.filter((o) => PAID.includes(o.status));
     const now = Date.now();
     const liveWindow = new Date(now - 5 * 60 * 1000);
@@ -134,6 +140,7 @@ export class SellersService {
       revenueSeries: this.series(paid, 14, (o) => o.itemsAmount),
       ordersSeries: this.series(orders, 14, () => 1),
       trafficSeries: this.series(visits, 14, () => 1),
+      sources,
     };
   }
 

@@ -64,6 +64,8 @@ model Visit {
   id        String   @id @default(cuid())
   sellerId  String
   session   String?
+  source    String?  // Instagram | WhatsApp | Google | Direct | …
+  referrer  String?  // raw referrer URL for detail
   createdAt DateTime @default(now())
 
   seller Seller @relation(fields: [sellerId], references: [id])

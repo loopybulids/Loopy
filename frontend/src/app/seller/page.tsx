@@ -49,19 +49,35 @@ export default function Dashboard() {
         </Panel>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Orders · 14 days">
           {an ? <AreaTrend data={an.ordersSeries} color="#15784A" height={200} /> : <Skel />}
         </Panel>
-        <Panel title="Payouts">
-          <div className="space-y-4">
-            <Row label="Available balance" value={money(wallet?.available ?? 0)} strong />
-            <Row label="Held (in escrow)" value={money(wallet?.held ?? 0)} />
-            <Row label="Paid out" value={money(wallet?.paidOut ?? 0)} />
-          </div>
-          <Link href="/seller/payments" className="btn-green mt-5 w-full justify-center">Go to payouts</Link>
+        <Panel title="Traffic sources" action={<span className="chip-navy">{an?.totalVisits ?? 0} visits</span>}>
+          {an?.sources?.length ? (
+            <ul className="space-y-3">
+              {an.sources.map((s: any) => {
+                const pct = an.totalVisits ? Math.round((s.value / an.totalVisits) * 100) : 0;
+                return (
+                  <li key={s.name}>
+                    <div className="mb-1 flex items-center justify-between text-[13px]"><span className="font-semibold text-navy">{s.name}</span><span className="text-muted">{s.value} · {pct}%</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-paper"><div className="h-full rounded-full bg-green-600" style={{ width: `${pct}%` }} /></div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <p className="py-8 text-center text-[13px] text-faint">No visits yet. Share your store link to see where traffic comes from.</p>}
         </Panel>
       </div>
+
+      <Panel title="Payouts">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Row label="Available balance" value={money(wallet?.available ?? 0)} strong />
+          <Row label="Held (in escrow)" value={money(wallet?.held ?? 0)} />
+          <Row label="Paid out" value={money(wallet?.paidOut ?? 0)} />
+        </div>
+        <Link href="/seller/payments" className="btn-green mt-5 w-fit">Go to payouts</Link>
+      </Panel>
 
       {/* recent orders */}
       <Panel title="Recent orders" action={<Link href="/seller/orders" className="text-[13px] font-bold text-green-600 hover:underline">View all</Link>}>
