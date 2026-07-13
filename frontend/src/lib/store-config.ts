@@ -174,3 +174,13 @@ export const FONT_CLASS: Record<FontChoice, string> = {
   modern: 'font-sans',
   classic: 'font-serif',
 };
+
+/* One-tap design templates — set accent, font and hero background together. */
+export type TemplateKey = 'kawaii' | 'boho' | 'minimal' | 'bold' | 'paper';
+export const TEMPLATES: { key: TemplateKey; label: string; desc: string; emoji: string; accent: string; font: FontChoice; heroBg: HeroBg }[] = [
+  { key: 'kawaii', label: 'Kawaii', desc: 'Cute & playful. Pastel tones, rounded shapes.', emoji: '🌸', accent: '#DB2777', font: 'bold', heroBg: 'mint' },
+  { key: 'boho', label: 'Boho', desc: 'Warm & earthy. Soft serif, sage & sand palette.', emoji: '🌿', accent: '#4D7C0F', font: 'classic', heroBg: 'sand' },
+  { key: 'minimal', label: 'Minimal', desc: 'Clean & elegant. Monochrome, sharp lines.', emoji: '⬜', accent: '#0E2A47', font: 'modern', heroBg: 'plain' },
+  { key: 'bold', label: 'Bold', desc: 'High-energy. Vibrant colors, urban vibes.', emoji: '🔥', accent: '#7C3AED', font: 'bold', heroBg: 'accent' },
+  { key: 'paper', label: 'Paper', desc: 'Minimalist & pure. Just your brand and products.', emoji: '📄', accent: '#111827', font: 'classic', heroBg: 'plain' },
+];

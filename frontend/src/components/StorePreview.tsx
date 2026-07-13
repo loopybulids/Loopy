@@ -6,6 +6,15 @@ import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons'
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
 
+// Filter the product grid by the selected tab label (Featured / On Sale / Latest / …).
+function filterByTab(products: any[], tab: string): any[] {
+  const t = (tab || '').toLowerCase();
+  if (t.includes('sale') || t.includes('deal') || t.includes('off')) return products.filter((p) => p.mrp && p.mrp > p.price);
+  if (t.includes('latest') || t.includes('new')) return [...products].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  if (t.includes('best')) return [...products].sort((a, b) => (a.quantity ?? 0) - (b.quantity ?? 0)); // lowest stock ≈ best-selling proxy
+  return products; // Featured / All
+}
+
 function firstImage(p: any): string | null {
   try {
     if (Array.isArray(p.images)) return p.images[0] || null;
@@ -112,9 +121,9 @@ export default function StorePreview({
             <h1 className={`mt-3 font-display text-[40px] font-extrabold leading-tight sm:text-[56px] ${hasHeroMedia ? 'drop-shadow' : ''}`}>{c.hero.headline}</h1>
             {c.hero.subtext && <p className={`mx-auto mt-3 max-w-md text-[15px] ${hasHeroMedia ? 'text-white/85' : 'text-muted'}`}>{c.hero.subtext}</p>}
             {c.hero.ctaLabel && (
-              <button className="mt-6 rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card" style={{ background: accent }}>
+              <a href="#products" className="mt-6 inline-block rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card transition hover:opacity-90" style={{ background: accent }}>
                 {c.hero.ctaLabel} 🛍
-              </button>
+              </a>
             )}
           </div>
         </section>
@@ -150,10 +159,10 @@ export default function StorePreview({
           </div>
 
           <div className={`mx-auto mt-8 grid max-w-5xl gap-4 ${mobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}`}>
-            {products.length === 0 ? (
-              <p className="col-span-full py-8 text-center text-[13px] text-faint">No products yet — add some in your catalog.</p>
+            {filterByTab(products, tab).length === 0 ? (
+              <p className="col-span-full py-10 text-center text-[13.5px] text-faint">No products in “{tab}” yet.</p>
             ) : (
-              products.slice(0, 8).map((p) => (
+              filterByTab(products, tab).slice(0, 8).map((p) => (
                 <a key={p.id} href={username ? `/s/${username}/product/${p.id}` : undefined} className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card">
                   <div className="aspect-square bg-green-soft">
                     {firstImage(p) && <img src={firstImage(p)!} alt="" className="h-full w-full object-cover" />}

@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
+import { useRef } from 'react';
+import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, TEMPLATES, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
 
 const ACCENT_PRESETS = ['#15784A', '#0E2A47', '#7C3AED', '#DB2777', '#EA580C', '#0891B2', '#CA8A04', '#E11D48'];
 import StorePreview from '@/components/StorePreview';
@@ -10,6 +11,7 @@ import MediaInput from '@/components/MediaInput';
 import { Check } from '@/components/icons';
 
 type SectionKey = (typeof SECTION_ORDER)[number]['key'];
+type LeftTab = 'themes' | 'sections' | 'styles';
 
 export default function StoreEditor() {
   const [config, setConfig] = useState<StoreConfig | null>(null);
@@ -17,10 +19,44 @@ export default function StoreEditor() {
   const [storeName, setStoreName] = useState('Your Store');
   const [username, setUsername] = useState('');
   const [active, setActive] = useState<SectionKey>('hero');
+  const [leftTab, setLeftTab] = useState<LeftTab>('sections');
   const [pageId, setPageId] = useState<string | null>(null); // which custom page is open in the Pages editor
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // undo / redo history
+  const hist = useRef<{ past: StoreConfig[]; future: StoreConfig[] }>({ past: [], future: [] });
+  const prevCfg = useRef<StoreConfig | null>(null);
+  const skipHist = useRef(false);
+  const [, bumpHist] = useState(0);
+  useEffect(() => {
+    if (!config) return;
+    if (skipHist.current) { skipHist.current = false; prevCfg.current = config; return; }
+    if (prevCfg.current && prevCfg.current !== config) {
+      hist.current.past.push(prevCfg.current);
+      if (hist.current.past.length > 60) hist.current.past.shift();
+      hist.current.future = [];
+    }
+    prevCfg.current = config;
+    bumpHist((v) => v + 1);
+  }, [config]);
+  const undo = () => {
+    const h = hist.current;
+    if (!h.past.length || !config) return;
+    skipHist.current = true; h.future.push(config);
+    const prev = h.past.pop()!; prevCfg.current = prev; setConfig(prev); bumpHist((v) => v + 1);
+  };
+  const redo = () => {
+    const h = hist.current;
+    if (!h.future.length || !config) return;
+    skipHist.current = true; h.past.push(config);
+    const nxt = h.future.pop()!; prevCfg.current = nxt; setConfig(nxt); bumpHist((v) => v + 1);
+  };
+
+  const applyTemplate = (t: (typeof TEMPLATES)[number]) =>
+    setConfig((c) => (c ? { ...c, theme: { ...c.theme, accent: t.accent, font: t.font, heroBg: t.heroBg } } : c));
+  const activeTemplate = TEMPLATES.find((t) => config?.theme.accent === t.accent && config?.theme.font === t.font && config?.theme.heroBg === t.heroBg);
 
   useEffect(() => {
     Promise.all([api.myProfile().catch(() => null), api.myProducts().catch(() => [])]).then(([p, prods]) => {
@@ -53,48 +89,88 @@ export default function StoreEditor() {
 
   if (!config) return <p className="py-10 text-center text-[13px] text-faint">Loading store editor…</p>;
 
+  const tabs: [LeftTab, string, JSX.Element][] = [
+    ['themes', 'Themes', <ISparkle key="t" />],
+    ['sections', 'Sections', <ILayers key="s" />],
+    ['styles', 'Styles', <IPalette key="y" />],
+  ];
+
   return (
     <div className="-mx-5 -my-6 flex flex-col sm:-mx-8 sm:-my-8 lg:h-[calc(100vh-69px)]">
       {/* toolbar */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-line bg-white px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="font-display text-[16px] font-extrabold text-navy">Store Editor</h1>
-          <p className="text-[12px] text-faint">Customize your storefront, then publish.</p>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-white px-4 py-3 sm:px-6">
+        <h1 className="font-display text-[16px] font-extrabold text-navy">Store Editor</h1>
         <div className="ml-auto flex items-center gap-1 rounded-lg bg-paper p-1 text-[13px] font-bold ring-1 ring-line">
           {(['desktop', 'mobile'] as const).map((d) => (
             <button key={d} onClick={() => setDevice(d)} className={`rounded-md px-3 py-1.5 capitalize transition-colors ${device === d ? 'bg-navy text-white' : 'text-muted hover:text-navy'}`}>{d}</button>
           ))}
         </div>
-        {username && <Link href={`/s/${username}`} target="_blank" className="btn-ghost px-3 py-2 text-[13px]">View store</Link>}
-        <button onClick={publish} disabled={saving} className="btn-green px-4 py-2 text-[13px] disabled:opacity-60">
-          {saving ? 'Publishing…' : saved ? <><Check size={15} /> Published</> : 'Publish'}
+        {username && <Link href={`/s/${username}`} target="_blank" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-bold text-muted hover:text-navy">Preview <IExternal /></Link>}
+        <div className="flex items-center rounded-lg ring-1 ring-line">
+          <button onClick={undo} disabled={!hist.current.past.length} className="grid h-9 w-9 place-items-center text-muted transition-colors hover:text-navy disabled:opacity-30" title="Undo"><IUndo /></button>
+          <span className="h-5 w-px bg-line" />
+          <button onClick={redo} disabled={!hist.current.future.length} className="grid h-9 w-9 place-items-center text-muted transition-colors hover:text-navy disabled:opacity-30" title="Redo"><IRedo /></button>
+        </div>
+        <button onClick={publish} disabled={saving} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-[13px] font-bold text-white shadow-card transition hover:opacity-95 disabled:opacity-60">
+          {saving ? 'Publishing…' : saved ? <><Check size={15} /> Published</> : <><ILock /><ISend /> Publish</>}
         </button>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* sections list */}
-        <aside className="order-1 w-full shrink-0 border-b border-line bg-white p-3 lg:w-52 lg:border-b-0 lg:border-r lg:overflow-y-auto">
-          <div className="px-2 pb-2 text-[11px] font-bold uppercase tracking-wide text-faint">Page Sections</div>
-          {SECTION_ORDER.map((s) => {
-            const on = active === s.key;
-            const sec = (config as any)[s.key];
-            const toggleable = s.key !== 'theme' && s.key !== 'footer' && 'enabled' in (sec || {});
-            return (
-              <div key={s.key} className={`group flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] font-semibold ${on ? 'bg-green-soft text-green' : 'text-navy/70 hover:bg-paper'}`}>
-                <button onClick={() => setActive(s.key)} className="flex-1 text-left">{s.label}</button>
-                {toggleable && (
-                  <button
-                    onClick={() => set(s.key as keyof StoreConfig, 'enabled', !sec.enabled)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${sec.enabled ? 'bg-green' : 'bg-line'}`}
-                    title={sec.enabled ? 'Visible' : 'Hidden'}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-card transition-transform ${sec.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+        {/* left panel with tabs */}
+        <aside className="order-1 w-full shrink-0 border-b border-line bg-white lg:w-64 lg:border-b-0 lg:border-r lg:overflow-y-auto">
+          <div className="grid grid-cols-3 border-b border-line">
+            {tabs.map(([key, label, icon]) => (
+              <button key={key} onClick={() => setLeftTab(key)} className={`flex flex-col items-center gap-1 py-3 text-[11px] font-bold uppercase tracking-wide transition-colors ${leftTab === key ? 'border-b-2 border-navy text-navy' : 'text-faint hover:text-muted'}`}>
+                {icon}{label}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-3">
+            {leftTab === 'themes' && (
+              <>
+                <div className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wide text-faint">Choose a design</div>
+                <div className="space-y-2.5">
+                  {TEMPLATES.map((t) => {
+                    const on = activeTemplate?.key === t.key;
+                    return (
+                      <button key={t.key} onClick={() => applyTemplate(t)} className={`w-full rounded-xl border p-3 text-left transition ${on ? 'border-violet-500 ring-2 ring-violet-200' : 'border-line hover:border-navy/30'}`}>
+                        <div className="mb-2 grid h-14 place-items-center rounded-lg text-2xl" style={{ background: `linear-gradient(135deg, ${t.accent}20, ${t.accent}06)` }}>{t.emoji}</div>
+                        <div className="flex items-center justify-between"><span className="font-display text-[14px] font-extrabold text-navy">{t.label}</span>{on && <Check size={15} className="text-violet-600" />}</div>
+                        <p className="mt-0.5 text-[11.5px] leading-snug text-muted">{t.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {leftTab === 'sections' && (
+              <>
+                <div className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wide text-faint">Page sections</div>
+                {SECTION_ORDER.filter((s) => s.key !== 'theme').map((s) => {
+                  const on = active === s.key;
+                  const sec = (config as any)[s.key];
+                  const toggleable = s.key !== 'footer' && s.key !== 'pages' && 'enabled' in (sec || {});
+                  return (
+                    <div key={s.key} className={`group flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] font-semibold ${on ? 'bg-green-soft text-green' : 'text-navy/70 hover:bg-paper'}`}>
+                      <button onClick={() => setActive(s.key)} className="flex-1 text-left">{s.label}</button>
+                      {toggleable && (
+                        <button onClick={() => set(s.key as keyof StoreConfig, 'enabled', !sec.enabled)} className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${sec.enabled ? 'bg-green' : 'bg-line'}`} title={sec.enabled ? 'Visible' : 'Hidden'}>
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-card transition-transform ${sec.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {leftTab === 'styles' && (
+              <Fields active="theme" config={config} set={set} setConfig={setConfig} storeName={storeName} pageId={pageId} setPageId={setPageId} />
+            )}
+          </div>
         </aside>
 
         {/* live preview */}
@@ -104,14 +180,26 @@ export default function StoreEditor() {
           </div>
         </main>
 
-        {/* field editor */}
-        <aside className="order-2 w-full shrink-0 border-t border-line bg-white p-5 lg:order-3 lg:w-80 lg:border-t-0 lg:border-l lg:overflow-y-auto">
-          <Fields active={active} config={config} set={set} setConfig={setConfig} storeName={storeName} pageId={pageId} setPageId={setPageId} />
-        </aside>
+        {/* field editor — only when editing a section */}
+        {leftTab === 'sections' && (
+          <aside className="order-2 w-full shrink-0 border-t border-line bg-white p-5 lg:order-3 lg:w-80 lg:border-t-0 lg:border-l lg:overflow-y-auto">
+            <Fields active={active} config={config} set={set} setConfig={setConfig} storeName={storeName} pageId={pageId} setPageId={setPageId} />
+          </aside>
+        )}
       </div>
     </div>
   );
 }
+
+/* small toolbar / tab icons */
+const IExternal = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></svg>;
+const IUndo = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-4" /></svg>;
+const IRedo = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h4" /></svg>;
+const ILock = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>;
+const ISend = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
+const ISparkle = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.4L18 8l-4.4 1.6L12 14l-1.6-4.4L6 8l4.4-1.6L12 2Z" /></svg>;
+const ILayers = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 17l9 5 9-5" /></svg>;
+const IPalette = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="8" r="1" fill="currentColor" stroke="none" /><circle cx="16" cy="10" r="1" fill="currentColor" stroke="none" /></svg>;
 
 function safeParse(s: string) { try { return JSON.parse(s); } catch { return null; } }
 
