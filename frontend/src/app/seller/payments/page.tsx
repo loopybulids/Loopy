@@ -93,7 +93,7 @@ export default function Payments() {
               <input value={pd.payoutPhone} onChange={(e) => setP('payoutPhone', e.target.value)} placeholder="9995559990" className="c-input mt-1.5" />
             </PField>
 
-            <button onClick={savePd} disabled={savingPd} className="rounded-lg bg-violet-600 px-4 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-60">{savingPd ? 'Saving…' : savedPd ? <span className="inline-flex items-center gap-1.5"><Check size={16} /> Saved</span> : 'Save payout details'}</button>
+            <button onClick={savePd} disabled={savingPd} className="btn-green disabled:opacity-60">{savingPd ? 'Saving…' : savedPd ? <><Check size={16} /> Saved</> : 'Save payout details'}</button>
           </div>
         </Panel>
       ) : (
