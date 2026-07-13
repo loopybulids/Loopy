@@ -100,7 +100,7 @@ export default function Shipping() {
               {s.expressShip && <input type="number" min={0} value={s.expressFee} onChange={(e) => setS('expressFee', e.target.value)} placeholder="Express fee (₹)" className="c-input mt-3" />}
             </div>
 
-            <button onClick={saveSettings} disabled={saving} className="rounded-lg bg-violet-600 px-4 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-60">{saving ? 'Saving…' : saved ? <span className="inline-flex items-center gap-1.5"><Check size={16} /> Saved</span> : 'Save shipping settings'}</button>
+            <button onClick={saveSettings} disabled={saving} className="btn-green disabled:opacity-60">{saving ? 'Saving…' : saved ? <><Check size={16} /> Saved</> : 'Save shipping settings'}</button>
           </div>
         </Panel>
       </div>
@@ -148,7 +148,7 @@ function SToggle({ label, sub, on, set }: { label: string; sub: string; on: bool
   return (
     <div className="flex items-start justify-between gap-4">
       <div><div className="text-[14px] font-bold text-navy">{label}</div><p className="mt-0.5 text-[12px] text-muted">{sub}</p></div>
-      <button onClick={() => set(!on)} className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${on ? 'bg-violet-600' : 'bg-line'}`}>
+      <button onClick={() => set(!on)} className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${on ? 'bg-green' : 'bg-line'}`}>
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-card transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
       </button>
     </div>
