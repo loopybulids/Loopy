@@ -67,12 +67,10 @@ export class SellersService {
 
   async updateProfile(sellerId: string, data: any) {
     const upd: any = {};
-    for (const k of ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl', 'address', 'payoutEmail', 'payoutMethod', 'payoutUpi', 'payoutAccount', 'payoutName', 'payoutPhone', 'published']) {
-      if (data?.[k] !== undefined) upd[k] = data[k];
-    }
-    if (data?.shippingFee !== undefined && data.shippingFee !== null && data.shippingFee !== '') {
-      upd.shippingFee = Math.max(0, Math.round(Number(data.shippingFee) || 0));
-    }
+    const strBool = ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl', 'address', 'payoutEmail', 'payoutMethod', 'payoutUpi', 'payoutAccount', 'payoutName', 'payoutPhone', 'published', 'freeShipEnabled', 'expressShip'];
+    for (const k of strBool) if (data?.[k] !== undefined) upd[k] = data[k];
+    const nums = ['shippingFee', 'minOrderAmount', 'shipDays', 'freeShipThreshold', 'expressFee'];
+    for (const k of nums) if (data?.[k] !== undefined && data[k] !== null && data[k] !== '') upd[k] = Math.max(0, Math.round(Number(data[k]) || 0));
     await this.prisma.seller.update({ where: { id: sellerId }, data: upd });
     return { ok: true };
   }

@@ -52,8 +52,14 @@ model Seller {
   payoutAccount String?
   payoutName    String?
   payoutPhone   String?
-  // flat shipping fee (rupees) the seller charges
-  shippingFee   Int?
+  // shipping settings
+  shippingFee       Int?     // flat shipping charge per order (rupees)
+  minOrderAmount    Int?     // minimum cart subtotal required to check out
+  shipDays          Int?     // estimated days to dispatch (shown on product pages)
+  freeShipEnabled   Boolean  @default(false)
+  freeShipThreshold Int?     // orders above this ship free (when enabled)
+  expressShip       Boolean  @default(false)
+  expressFee        Int?     // premium express-shipping fee
   createdAt   DateTime @default(now())
 
   user      User      @relation(fields: [userId], references: [id])

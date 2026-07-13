@@ -118,8 +118,12 @@ export class CustomersService {
       return { productId: p.id, title: i.size ? `${p.title} (${i.size})` : p.title, unitPrice: p.price, quantity: qty };
     });
     const commissionAmount = Math.round((itemsAmount * this.commissionPct) / 100);
-    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId }, select: { shippingFee: true } });
-    const shippingCharge = seller?.shippingFee != null ? seller.shippingFee : this.shippingFlat;
+    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId }, select: { shippingFee: true, minOrderAmount: true, freeShipEnabled: true, freeShipThreshold: true } });
+    if (seller?.minOrderAmount && itemsAmount < seller.minOrderAmount) {
+      throw new BadRequestException(`Minimum order is ₹${seller.minOrderAmount.toLocaleString('en-IN')} — add more items to check out.`);
+    }
+    let shippingCharge = seller?.shippingFee != null ? seller.shippingFee : this.shippingFlat;
+    if (seller?.freeShipEnabled && seller.freeShipThreshold != null && itemsAmount >= seller.freeShipThreshold) shippingCharge = 0;
     const totalAmount = itemsAmount + shippingCharge;
     const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
 

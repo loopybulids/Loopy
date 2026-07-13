@@ -15,21 +15,44 @@ export default function Shipping() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
-  const [fee, setFee] = useState('');
-  const [address, setAddress] = useState('');
+  const [s, setSData] = useState({ shippingFee: '', minOrderAmount: '', shipDays: '', address: '', freeShipEnabled: false, freeShipThreshold: '', expressShip: false, expressFee: '' });
+  const setS = (k: keyof typeof s, v: any) => setSData((p) => ({ ...p, [k]: v }));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const load = () => api.myOrders().then((o) => { setOrders(o || []); setLoading(false); }).catch(() => setLoading(false));
   useEffect(() => {
     load();
-    api.myProfile().then((p) => { setFee(p?.shippingFee != null ? String(p.shippingFee) : ''); setAddress(p?.address || ''); }).catch(() => {});
+    api.myProfile().then((p) => {
+      if (!p) return;
+      setSData({
+        shippingFee: p.shippingFee != null ? String(p.shippingFee) : '',
+        minOrderAmount: p.minOrderAmount != null ? String(p.minOrderAmount) : '',
+        shipDays: p.shipDays != null ? String(p.shipDays) : '',
+        address: p.address || '',
+        freeShipEnabled: !!p.freeShipEnabled,
+        freeShipThreshold: p.freeShipThreshold != null ? String(p.freeShipThreshold) : '',
+        expressShip: !!p.expressShip,
+        expressFee: p.expressFee != null ? String(p.expressFee) : '',
+      });
+    }).catch(() => {});
   }, []);
 
   const saveSettings = async () => {
     setSaving(true); setSaved(false);
-    try { await api.updateProfile({ shippingFee: fee === '' ? 0 : Number(fee), address }); setSaved(true); setTimeout(() => setSaved(false), 2000); }
-    catch { /* ignore */ } finally { setSaving(false); }
+    try {
+      await api.updateProfile({
+        shippingFee: s.shippingFee === '' ? 0 : Number(s.shippingFee),
+        minOrderAmount: s.minOrderAmount === '' ? 0 : Number(s.minOrderAmount),
+        shipDays: s.shipDays === '' ? 0 : Number(s.shipDays),
+        address: s.address,
+        freeShipEnabled: s.freeShipEnabled,
+        freeShipThreshold: s.freeShipThreshold === '' ? 0 : Number(s.freeShipThreshold),
+        expressShip: s.expressShip,
+        expressFee: s.expressFee === '' ? 0 : Number(s.expressFee),
+      });
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    } catch { /* ignore */ } finally { setSaving(false); }
   };
 
   const ship = async (id: string) => {
@@ -51,20 +74,36 @@ export default function Shipping() {
         <StatCard label="Delivered" value={delivered} />
       </div>
 
-      <Panel className="mt-6" title="Shipping settings">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Flat shipping fee (₹)</label>
-            <input type="number" min={0} value={fee} onChange={(e) => setFee(e.target.value)} placeholder="0 for free shipping" className="c-input mt-1.5" />
-            <p className="mt-1 text-[11px] text-faint">Charged to customers per order. Set 0 for free shipping.</p>
+      <div className="mt-6 max-w-xl">
+        <Panel title="Shipping settings">
+          <div className="space-y-5">
+            <SField label="Flat shipping charge per order (₹)" hint="Charged on every order unless the free-shipping threshold below is met.">
+              <input type="number" min={0} value={s.shippingFee} onChange={(e) => setS('shippingFee', e.target.value)} placeholder="0" className="c-input mt-1.5" />
+            </SField>
+            <SField label="Minimum order amount (₹)" hint="Buyers can't check out unless their cart subtotal reaches this amount. Set to 0 to disable.">
+              <input type="number" min={0} value={s.minOrderAmount} onChange={(e) => setS('minOrderAmount', e.target.value)} placeholder="0" className="c-input mt-1.5" />
+            </SField>
+            <SField label="Days to ship" hint="Estimated number of days you take to dispatch an order. Shown to buyers on product pages.">
+              <input type="number" min={0} value={s.shipDays} onChange={(e) => setS('shipDays', e.target.value)} placeholder="0" className="c-input mt-1.5" />
+            </SField>
+            <SField label="Pickup address" hint="Where couriers collect your parcels.">
+              <textarea value={s.address} onChange={(e) => setS('address', e.target.value)} rows={2} placeholder="Building, street, city, pincode" className="c-input mt-1.5" />
+            </SField>
+
+            <div className="border-t border-line pt-4">
+              <SToggle label="Offer free shipping above a threshold" sub="Optional. When enabled, orders above the amount below ship for free." on={s.freeShipEnabled} set={(v) => setS('freeShipEnabled', v)} />
+              {s.freeShipEnabled && <input type="number" min={0} value={s.freeShipThreshold} onChange={(e) => setS('freeShipThreshold', e.target.value)} placeholder="Free shipping above ₹…" className="c-input mt-3" />}
+            </div>
+
+            <div className="border-t border-line pt-4">
+              <SToggle label="Enable Express Shipping" sub="When enabled, buyers can choose express shipping at checkout for a premium fee." on={s.expressShip} set={(v) => setS('expressShip', v)} />
+              {s.expressShip && <input type="number" min={0} value={s.expressFee} onChange={(e) => setS('expressFee', e.target.value)} placeholder="Express fee (₹)" className="c-input mt-3" />}
+            </div>
+
+            <button onClick={saveSettings} disabled={saving} className="rounded-lg bg-violet-600 px-4 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-60">{saving ? 'Saving…' : saved ? <span className="inline-flex items-center gap-1.5"><Check size={16} /> Saved</span> : 'Save shipping settings'}</button>
           </div>
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Pickup address</label>
-            <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} placeholder="Where couriers pick up your parcels" className="c-input mt-1.5" />
-          </div>
-        </div>
-        <button onClick={saveSettings} disabled={saving} className="btn-green mt-4 disabled:opacity-60">{saving ? 'Saving…' : saved ? <><Check size={16} /> Saved</> : 'Save shipping settings'}</button>
-      </Panel>
+        </Panel>
+      </div>
 
       <Panel className="mt-6" title="Fulfillment queue">
         {loading ? (
@@ -91,6 +130,27 @@ export default function Shipping() {
       </Panel>
 
       <p className="mt-4 text-center text-[12px] text-faint">Courier integrations (Shiprocket · Delhivery · Blue Dart) connect in Settings.</p>
+    </div>
+  );
+}
+
+function SField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[14px] font-bold text-navy">{label}</label>
+      {children}
+      {hint && <p className="mt-1.5 text-[12px] text-muted">{hint}</p>}
+    </div>
+  );
+}
+
+function SToggle({ label, sub, on, set }: { label: string; sub: string; on: boolean; set: (v: boolean) => void }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div><div className="text-[14px] font-bold text-navy">{label}</div><p className="mt-0.5 text-[12px] text-muted">{sub}</p></div>
+      <button onClick={() => set(!on)} className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${on ? 'bg-violet-600' : 'bg-line'}`}>
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-card transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
+      </button>
     </div>
   );
 }
