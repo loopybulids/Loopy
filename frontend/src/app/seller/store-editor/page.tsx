@@ -98,21 +98,20 @@ export default function StoreEditor() {
   return (
     <div className="-mx-5 -my-6 flex flex-col sm:-mx-8 sm:-my-8 lg:h-[calc(100vh-69px)]">
       {/* toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-white px-4 py-3 sm:px-6">
-        <h1 className="font-display text-[16px] font-extrabold text-navy">Store Editor</h1>
-        <div className="ml-auto flex items-center gap-1 rounded-lg bg-paper p-1 text-[13px] font-bold ring-1 ring-line">
+      <div className="flex items-center gap-4 border-b border-line bg-white px-4 py-1.5 sm:px-6">
+        <h1 className="text-[13.5px] font-bold text-navy">Store Editor</h1>
+        <div className="ml-auto flex items-center gap-0.5 rounded-lg bg-paper p-0.5 text-[12px] font-semibold">
           {(['desktop', 'mobile'] as const).map((d) => (
-            <button key={d} onClick={() => setDevice(d)} className={`rounded-md px-3 py-1.5 capitalize transition-colors ${device === d ? 'bg-navy text-white' : 'text-muted hover:text-navy'}`}>{d}</button>
+            <button key={d} onClick={() => setDevice(d)} className={`rounded-md px-2.5 py-1 capitalize transition-colors ${device === d ? 'bg-white text-navy shadow-sm' : 'text-faint hover:text-navy'}`}>{d}</button>
           ))}
         </div>
-        {username && <Link href={`/s/${username}`} target="_blank" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-bold text-muted hover:text-navy">Preview <IExternal /></Link>}
-        <div className="flex items-center rounded-lg ring-1 ring-line">
-          <button onClick={undo} disabled={!hist.current.past.length} className="grid h-9 w-9 place-items-center text-muted transition-colors hover:text-navy disabled:opacity-30" title="Undo"><IUndo /></button>
-          <span className="h-5 w-px bg-line" />
-          <button onClick={redo} disabled={!hist.current.future.length} className="grid h-9 w-9 place-items-center text-muted transition-colors hover:text-navy disabled:opacity-30" title="Redo"><IRedo /></button>
+        {username && <Link href={`/s/${username}`} target="_blank" className="flex items-center gap-1 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">Preview <IExternal /></Link>}
+        <div className="flex items-center gap-0.5">
+          <button onClick={undo} disabled={!hist.current.past.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Undo"><IUndo /></button>
+          <button onClick={redo} disabled={!hist.current.future.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Redo"><IRedo /></button>
         </div>
-        <button onClick={publish} disabled={saving} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-[13px] font-bold text-white shadow-card transition hover:opacity-95 disabled:opacity-60">
-          {saving ? 'Publishing…' : saved ? <><Check size={15} /> Published</> : <><ILock /><ISend /> Publish</>}
+        <button onClick={publish} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3.5 py-1.5 text-[12.5px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-60">
+          {saving ? 'Publishing…' : saved ? <><Check size={14} /> Published</> : <><ISend /> Publish</>}
         </button>
       </div>
 
@@ -195,8 +194,7 @@ export default function StoreEditor() {
 const IExternal = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></svg>;
 const IUndo = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-4" /></svg>;
 const IRedo = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h4" /></svg>;
-const ILock = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>;
-const ISend = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
+const ISend = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
 const ISparkle = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.4L18 8l-4.4 1.6L12 14l-1.6-4.4L6 8l4.4-1.6L12 2Z" /></svg>;
 const ILayers = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 17l9 5 9-5" /></svg>;
 const IPalette = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="8" r="1" fill="currentColor" stroke="none" /><circle cx="16" cy="10" r="1" fill="currentColor" stroke="none" /></svg>;
