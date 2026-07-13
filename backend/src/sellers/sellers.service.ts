@@ -67,7 +67,7 @@ export class SellersService {
 
   async updateProfile(sellerId: string, data: any) {
     const upd: any = {};
-    for (const k of ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl', 'address', 'payoutUpi', 'payoutAccount', 'payoutName', 'published']) {
+    for (const k of ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl', 'address', 'payoutEmail', 'payoutMethod', 'payoutUpi', 'payoutAccount', 'payoutName', 'payoutPhone', 'published']) {
       if (data?.[k] !== undefined) upd[k] = data[k];
     }
     if (data?.shippingFee !== undefined && data.shippingFee !== null && data.shippingFee !== '') {

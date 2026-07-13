@@ -46,9 +46,12 @@ model Seller {
   storeConfig String?  // JSON string — storefront builder config (sections, theme, hero…)
   published   Boolean  @default(false) // store is live once the seller publishes
   // payout details
+  payoutEmail   String?
+  payoutMethod  String? // upi | bank
   payoutUpi     String?
   payoutAccount String?
   payoutName    String?
+  payoutPhone   String?
   // flat shipping fee (rupees) the seller charges
   shippingFee   Int?
   createdAt   DateTime @default(now())

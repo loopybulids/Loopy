@@ -176,11 +176,17 @@ export const FONT_CLASS: Record<FontChoice, string> = {
 };
 
 /* One-tap design templates — set accent, font and hero background together. */
-export type TemplateKey = 'kawaii' | 'boho' | 'minimal' | 'bold' | 'paper';
+export type TemplateKey = 'kawaii' | 'boho' | 'minimal' | 'bold' | 'paper' | 'luxe' | 'ocean' | 'sunset' | 'forest' | 'mono' | 'candy';
 export const TEMPLATES: { key: TemplateKey; label: string; desc: string; emoji: string; accent: string; font: FontChoice; heroBg: HeroBg }[] = [
   { key: 'kawaii', label: 'Kawaii', desc: 'Cute & playful. Pastel tones, rounded shapes.', emoji: '🌸', accent: '#DB2777', font: 'bold', heroBg: 'mint' },
   { key: 'boho', label: 'Boho', desc: 'Warm & earthy. Soft serif, sage & sand palette.', emoji: '🌿', accent: '#4D7C0F', font: 'classic', heroBg: 'sand' },
   { key: 'minimal', label: 'Minimal', desc: 'Clean & elegant. Monochrome, sharp lines.', emoji: '⬜', accent: '#0E2A47', font: 'modern', heroBg: 'plain' },
   { key: 'bold', label: 'Bold', desc: 'High-energy. Vibrant colors, urban vibes.', emoji: '🔥', accent: '#7C3AED', font: 'bold', heroBg: 'accent' },
   { key: 'paper', label: 'Paper', desc: 'Minimalist & pure. Just your brand and products.', emoji: '📄', accent: '#111827', font: 'classic', heroBg: 'plain' },
+  { key: 'luxe', label: 'Luxe', desc: 'Elegant & premium. Gold accents on dark.', emoji: '👑', accent: '#A16207', font: 'classic', heroBg: 'dark' },
+  { key: 'ocean', label: 'Ocean', desc: 'Cool & calm. Aqua tones, airy and fresh.', emoji: '🌊', accent: '#0891B2', font: 'modern', heroBg: 'mint' },
+  { key: 'sunset', label: 'Sunset', desc: 'Warm & vibrant. Coral and amber glow.', emoji: '🌅', accent: '#EA580C', font: 'bold', heroBg: 'sand' },
+  { key: 'forest', label: 'Forest', desc: 'Natural & grounded. Deep greens.', emoji: '🌲', accent: '#15803D', font: 'bold', heroBg: 'mint' },
+  { key: 'mono', label: 'Mono', desc: 'Black & white. Ultra-minimal, no fuss.', emoji: '⚫', accent: '#18181B', font: 'modern', heroBg: 'plain' },
+  { key: 'candy', label: 'Candy', desc: 'Sweet & bright. Bubbly purple pop.', emoji: '🍬', accent: '#9333EA', font: 'bold', heroBg: 'accent' },
 ];

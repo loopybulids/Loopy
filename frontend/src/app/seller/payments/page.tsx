@@ -9,9 +9,10 @@ export default function Payments() {
   const [orders, setOrders] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [pd, setPd] = useState({ payoutName: '', payoutUpi: '', payoutAccount: '' });
+  const [pd, setPd] = useState({ payoutEmail: '', payoutMethod: 'upi', payoutName: '', payoutUpi: '', payoutAccount: '', payoutPhone: '' });
   const [savingPd, setSavingPd] = useState(false);
   const [savedPd, setSavedPd] = useState(false);
+  const [payTab, setPayTab] = useState<'details' | 'gateway'>('details');
   const setP = (k: keyof typeof pd, v: string) => setPd((s) => ({ ...s, [k]: v }));
 
   const load = () => Promise.all([
@@ -20,7 +21,7 @@ export default function Payments() {
     api.myProfile().catch(() => null),
   ]).then(([w, o, p]) => {
     setWallet(w); setOrders(o || []);
-    if (p) setPd({ payoutName: p.payoutName || '', payoutUpi: p.payoutUpi || '', payoutAccount: p.payoutAccount || '' });
+    if (p) setPd({ payoutEmail: p.payoutEmail || '', payoutMethod: p.payoutMethod || 'upi', payoutName: p.payoutName || '', payoutUpi: p.payoutUpi || '', payoutAccount: p.payoutAccount || '', payoutPhone: p.payoutPhone || '' });
   });
 
   useEffect(() => { load(); }, []);
@@ -50,23 +51,61 @@ export default function Payments() {
         <StatCard label="Settled" value={money(wallet?.settled ?? 0)} />
       </div>
 
-      <Panel className="mt-6" title="Payout details">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Account holder name</label>
-            <input value={pd.payoutName} onChange={(e) => setP('payoutName', e.target.value)} placeholder="As per bank" className="c-input mt-1.5" />
+      {/* tabs */}
+      <div className="mt-6 inline-flex rounded-xl bg-paper p-1 text-[13px] font-bold ring-1 ring-line">
+        {([['details', 'Payout Details'], ['gateway', 'Direct Gateway (BYOG)']] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setPayTab(k)} className={`rounded-lg px-4 py-2 transition-colors ${payTab === k ? 'bg-white text-navy shadow-sm' : 'text-muted hover:text-navy'}`}>{label}</button>
+        ))}
+      </div>
+
+      {payTab === 'details' ? (
+        <Panel className="mt-4" title="Payout details">
+          <div className="max-w-xl space-y-5">
+            <PField label="Email for payment queries" hint="Business or personal email — we'll use this for invoices, payouts and payment-related questions.">
+              <input type="email" value={pd.payoutEmail} onChange={(e) => setP('payoutEmail', e.target.value)} placeholder="payments@yourbusiness.com" className="c-input mt-1.5" />
+            </PField>
+
+            <div>
+              <label className="block text-[14px] font-bold text-navy">Payout Method</label>
+              <div className="mt-2 inline-flex rounded-xl bg-paper p-1 text-[13px] font-bold ring-1 ring-line">
+                {([['upi', 'UPI ID'], ['bank', 'Bank Account']] as const).map(([k, label]) => (
+                  <button key={k} onClick={() => setP('payoutMethod', k)} className={`rounded-lg px-4 py-2 transition-colors ${pd.payoutMethod === k ? 'bg-white text-navy shadow-sm' : 'text-muted hover:text-navy'}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+
+            {pd.payoutMethod === 'upi' ? (
+              <PField label="UPI ID" hint="Payouts from your store will be sent to this UPI ID.">
+                <input value={pd.payoutUpi} onChange={(e) => setP('payoutUpi', e.target.value)} placeholder="yourname@okhdfcbank" className="c-input mt-1.5" />
+              </PField>
+            ) : (
+              <PField label="Bank account & IFSC" hint="Account number and IFSC of the account to receive payouts.">
+                <input value={pd.payoutAccount} onChange={(e) => setP('payoutAccount', e.target.value)} placeholder="Account number · IFSC" className="c-input mt-1.5" />
+              </PField>
+            )}
+
+            <PField label="Account holder name" hint="Must match the name registered with your bank / UPI ID.">
+              <input value={pd.payoutName} onChange={(e) => setP('payoutName', e.target.value)} placeholder="Full name as on bank account" className="c-input mt-1.5" />
+            </PField>
+
+            <PField label="Mobile number" hint="Used to verify payouts and create your payout beneficiary.">
+              <input value={pd.payoutPhone} onChange={(e) => setP('payoutPhone', e.target.value)} placeholder="9995559990" className="c-input mt-1.5" />
+            </PField>
+
+            <button onClick={savePd} disabled={savingPd} className="btn-green disabled:opacity-60">{savingPd ? 'Saving…' : savedPd ? <><Check size={16} /> Saved</> : 'Save payout details'}</button>
           </div>
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">UPI ID</label>
-            <input value={pd.payoutUpi} onChange={(e) => setP('payoutUpi', e.target.value)} placeholder="you@upi" className="c-input mt-1.5" />
+        </Panel>
+      ) : (
+        <Panel className="mt-4" title="Direct Gateway (BYOG)">
+          <div className="max-w-xl">
+            <p className="text-[13.5px] leading-relaxed text-muted">Bring your own gateway — connect your own <b className="text-navy">Razorpay</b>, <b className="text-navy">Cashfree</b> or <b className="text-navy">Stripe</b> account so customer payments land <b className="text-navy">directly in your account</b> with no platform hold.</p>
+            <div className="mt-4 rounded-xl border border-dashed border-line bg-paper p-5 text-center">
+              <span className="chip-amber">Coming soon</span>
+              <p className="mt-2 text-[13px] text-muted">We’re rolling this out shortly. For now, payouts settle via Loopy escrow using your payout details.</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Bank account / IFSC</label>
-            <input value={pd.payoutAccount} onChange={(e) => setP('payoutAccount', e.target.value)} placeholder="Acc no · IFSC" className="c-input mt-1.5" />
-          </div>
-        </div>
-        <button onClick={savePd} disabled={savingPd} className="btn-green mt-4 disabled:opacity-60">{savingPd ? 'Saving…' : savedPd ? <><Check size={16} /> Saved</> : 'Save payout details'}</button>
-      </Panel>
+        </Panel>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.6fr]">
         <Panel title="Withdraw">
@@ -98,6 +137,16 @@ export default function Payments() {
           )}
         </Panel>
       </div>
+    </div>
+  );
+}
+
+function PField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[14px] font-bold text-navy">{label}</label>
+      {children}
+      {hint && <p className="mt-1.5 text-[12px] text-muted">{hint}</p>}
     </div>
   );
 }
