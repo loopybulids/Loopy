@@ -42,6 +42,14 @@ model Seller {
   ratingCount Int      @default(0)
   city        String?
   address     String?  // pickup / business address
+  // public profile
+  category        String?  // store niche, e.g. "Vintage & Thrift"
+  tagline         String?  // short one-liner
+  contactPhone    String?  // public contact number
+  contactEmail    String?  // public contact email
+  instagram       String?
+  whatsapp        String?
+  establishedYear Int?
   kycStatus   String   @default("approved") // pending | approved | rejected
   storeConfig String?  // JSON string — storefront builder config (sections, theme, hero…)
   published   Boolean  @default(false) // store is live once the seller publishes

@@ -7,7 +7,7 @@ import MediaInput from '@/components/MediaInput';
 import { Verified, Check } from '@/components/icons';
 
 export default function SellerProfile() {
-  const [p, setP] = useState({ storeName: '', username: '', description: '', city: '', logoUrl: '', bannerUrl: '' });
+  const [p, setP] = useState({ storeName: '', username: '', tagline: '', category: '', description: '', city: '', establishedYear: '', contactEmail: '', contactPhone: '', instagram: '', whatsapp: '', logoUrl: '', bannerUrl: '' });
   const [stats, setStats] = useState({ rating: 0, ratingCount: 0 });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -17,8 +17,10 @@ export default function SellerProfile() {
   useEffect(() => {
     api.myProfile().then((d) => {
       setP({
-        storeName: d.storeName || '', username: d.username || '', description: d.description || '',
-        city: d.city || '', logoUrl: d.logoUrl || '', bannerUrl: d.bannerUrl || '',
+        storeName: d.storeName || '', username: d.username || '', tagline: d.tagline || '', category: d.category || '',
+        description: d.description || '', city: d.city || '', establishedYear: d.establishedYear != null ? String(d.establishedYear) : '',
+        contactEmail: d.contactEmail || '', contactPhone: d.contactPhone || '', instagram: d.instagram || '', whatsapp: d.whatsapp || '',
+        logoUrl: d.logoUrl || '', bannerUrl: d.bannerUrl || '',
       });
       setStats({ rating: d.rating ?? 0, ratingCount: d.ratingCount ?? 0 });
       setLoading(false);
@@ -28,7 +30,12 @@ export default function SellerProfile() {
   const save = async () => {
     setBusy(true); setSaved(false);
     try {
-      await api.updateProfile({ storeName: p.storeName, description: p.description, city: p.city, logoUrl: p.logoUrl, bannerUrl: p.bannerUrl });
+      await api.updateProfile({
+        storeName: p.storeName, tagline: p.tagline, category: p.category, description: p.description, city: p.city,
+        establishedYear: p.establishedYear === '' ? null : Number(p.establishedYear),
+        contactEmail: p.contactEmail, contactPhone: p.contactPhone, instagram: p.instagram, whatsapp: p.whatsapp,
+        logoUrl: p.logoUrl, bannerUrl: p.bannerUrl,
+      });
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch { /* ignore */ } finally { setBusy(false); }
   };
@@ -54,7 +61,8 @@ export default function SellerProfile() {
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 font-display text-[19px] font-extrabold text-navy">{p.storeName || 'Your Store'} <Verified size={16} className="text-green-600" /></div>
-            <div className="text-[13px] text-muted">{p.city || '—'} · ★ {stats.rating}/5 ({stats.ratingCount})</div>
+            {p.tagline && <div className="truncate text-[13px] text-navy/80">{p.tagline}</div>}
+            <div className="text-[12.5px] text-muted">{[p.category, p.city, p.establishedYear && `Since ${p.establishedYear}`].filter(Boolean).join(' · ') || '—'} · ★ {stats.rating}/5 ({stats.ratingCount})</div>
           </div>
         </div>
       </div>
@@ -65,12 +73,26 @@ export default function SellerProfile() {
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store URL</label>
           <div className="mt-1.5 c-input break-all bg-paper text-muted">{p.username ? storeUrl : '—'}</div>
         </div>
-        <Field label="City" value={p.city} onChange={(v) => set('city', v)} placeholder="Mumbai" />
+        <Field label="Tagline" value={p.tagline} onChange={(v) => set('tagline', v)} placeholder="Thrifted fashion, curated with love" />
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <Field label="Category" value={p.category} onChange={(v) => set('category', v)} placeholder="Vintage & Thrift" />
+          <Field label="City" value={p.city} onChange={(v) => set('city', v)} placeholder="Mumbai" />
+          <Field label="Established (year)" value={p.establishedYear} onChange={(v) => set('establishedYear', v.replace(/[^0-9]/g, ''))} placeholder="2023" />
+        </div>
         <div className="mt-4">
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Bio / description</label>
           <textarea value={p.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" placeholder="Curated vintage & thrift, quality-checked." />
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+
+        <div className="mt-6 text-[12px] font-bold uppercase tracking-wide text-faint">Contact & socials</div>
+        <div className="mt-2 grid gap-4 sm:grid-cols-2">
+          <Field label="Contact email" value={p.contactEmail} onChange={(v) => set('contactEmail', v)} placeholder="hello@store.com" />
+          <Field label="Contact phone" value={p.contactPhone} onChange={(v) => set('contactPhone', v)} placeholder="+91 98765 43210" />
+          <Field label="Instagram" value={p.instagram} onChange={(v) => set('instagram', v)} placeholder="@yourstore" />
+          <Field label="WhatsApp" value={p.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+91 98765 43210" />
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Logo</label>
             <div className="mt-1.5"><MediaInput value={p.logoUrl} onChange={(v) => set('logoUrl', v)} /></div>
