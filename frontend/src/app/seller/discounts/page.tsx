@@ -49,6 +49,7 @@ export default function Discounts() {
   };
 
   const remove = async (id: string) => { if (!confirm('Delete this coupon?')) return; await api.deleteCoupon(id); if (f.id === id) setF({ ...BLANK }); load(); };
+  const toggleActive = async (c: any) => { setCoupons((cs) => cs.map((x) => (x.id === c.id ? { ...x, active: !x.active } : x))); try { await api.updateCoupon(c.id, { active: !c.active }); } catch { load(); } };
 
   return (
     <div>
@@ -106,7 +107,10 @@ export default function Discounts() {
                         {c.type === 'percent' ? `${c.value}% off` : `₹${c.value} off`}{c.minOrder ? ` · min ₹${c.minOrder}` : ''} · <span className={r.expired ? 'text-rose' : r.none ? '' : 'text-navy/70'}>{r.label}</span>
                       </div>
                     </div>
-                    <span className={r.expired ? 'chip-rose' : 'chip-green'}>{r.expired ? 'Expired' : 'Active'}</span>
+                    <span className={r.expired ? 'chip-rose' : !c.active ? 'chip-navy' : 'chip-green'}>{r.expired ? 'Expired' : !c.active ? 'Inactive' : 'Active'}</span>
+                    <button onClick={() => toggleActive(c)} title={c.active ? 'Deactivate' : 'Activate'} className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${c.active ? 'bg-green' : 'bg-line'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-card transition-transform ${c.active ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                    </button>
                     <button onClick={() => edit(c)} className="text-[12px] font-bold text-green-600 hover:underline">Edit</button>
                     <button onClick={() => remove(c.id)} className="text-[12px] font-bold text-rose hover:underline">Delete</button>
                   </div>
