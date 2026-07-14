@@ -251,15 +251,20 @@ model Dispute {
 }
 
 model Coupon {
-  id        String    @id @default(cuid())
-  sellerId  String
-  code      String
-  type      String    @default("percent") // percent | fixed
-  value     Int
-  minOrder  Int       @default(0)
-  expiresAt DateTime?
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now())
+  id               String    @id @default(cuid())
+  sellerId         String
+  code             String
+  type             String    @default("percent") // percent | fixed
+  value            Int
+  maxDiscount      Int? // cap on a percentage discount
+  minOrder         Int       @default(0)
+  usageLimit       Int? // total redemptions allowed (null = unlimited)
+  perCustomerLimit Int? // redemptions per customer (null = unlimited)
+  usedCount        Int       @default(0)
+  startsAt         DateTime?
+  expiresAt        DateTime?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
 
   @@unique([sellerId, code])
   @@index([sellerId])

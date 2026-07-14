@@ -181,15 +181,29 @@ export class SellersService {
     const now = Date.now();
     return coupons.map((c) => ({ ...c, expired: c.expiresAt ? c.expiresAt.getTime() < now : false }));
   }
+  private optInt(v: any): number | null {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Math.round(Number(v));
+    return isNaN(n) ? null : Math.max(0, n);
+  }
   async createCoupon(sellerId: string, dto: any) {
     const code = String(dto.code || '').toUpperCase().trim();
     if (!code) throw new BadRequestException('Coupon code is required');
-    const value = Math.max(0, Math.round(Number(dto.value) || 0));
-    const minOrder = Math.max(0, Math.round(Number(dto.minOrder) || 0));
-    const type = dto.type === 'fixed' ? 'fixed' : 'percent';
-    const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     try {
-      return await this.prisma.coupon.create({ data: { sellerId, code, type, value, minOrder, expiresAt } });
+      return await this.prisma.coupon.create({
+        data: {
+          sellerId, code,
+          type: dto.type === 'fixed' ? 'fixed' : 'percent',
+          value: Math.max(0, Math.round(Number(dto.value) || 0)),
+          maxDiscount: this.optInt(dto.maxDiscount),
+          minOrder: this.optInt(dto.minOrder) ?? 0,
+          usageLimit: this.optInt(dto.usageLimit),
+          perCustomerLimit: this.optInt(dto.perCustomerLimit),
+          startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
+          expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+          active: dto.active !== undefined ? !!dto.active : true,
+        },
+      });
     } catch {
       throw new BadRequestException('A coupon with that code already exists');
     }
@@ -201,9 +215,13 @@ export class SellersService {
     if (dto.code !== undefined) data.code = String(dto.code).toUpperCase().trim();
     if (dto.type !== undefined) data.type = dto.type === 'fixed' ? 'fixed' : 'percent';
     if (dto.value !== undefined) data.value = Math.max(0, Math.round(Number(dto.value) || 0));
-    if (dto.minOrder !== undefined) data.minOrder = Math.max(0, Math.round(Number(dto.minOrder) || 0));
-    if (dto.active !== undefined) data.active = !!dto.active;
+    if (dto.maxDiscount !== undefined) data.maxDiscount = this.optInt(dto.maxDiscount);
+    if (dto.minOrder !== undefined) data.minOrder = this.optInt(dto.minOrder) ?? 0;
+    if (dto.usageLimit !== undefined) data.usageLimit = this.optInt(dto.usageLimit);
+    if (dto.perCustomerLimit !== undefined) data.perCustomerLimit = this.optInt(dto.perCustomerLimit);
+    if (dto.startsAt !== undefined) data.startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
     if (dto.expiresAt !== undefined) data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+    if (dto.active !== undefined) data.active = !!dto.active;
     return this.prisma.coupon.update({ where: { id }, data });
   }
   async deleteCoupon(sellerId: string, id: string) {
