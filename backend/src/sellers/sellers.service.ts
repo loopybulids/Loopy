@@ -187,7 +187,7 @@ export class SellersService {
     const value = Math.max(0, Math.round(Number(dto.value) || 0));
     const minOrder = Math.max(0, Math.round(Number(dto.minOrder) || 0));
     const type = dto.type === 'fixed' ? 'fixed' : 'percent';
-    const expiresAt = this.durationToDate(dto.days, dto.hours);
+    const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     try {
       return await this.prisma.coupon.create({ data: { sellerId, code, type, value, minOrder, expiresAt } });
     } catch {
@@ -203,7 +203,7 @@ export class SellersService {
     if (dto.value !== undefined) data.value = Math.max(0, Math.round(Number(dto.value) || 0));
     if (dto.minOrder !== undefined) data.minOrder = Math.max(0, Math.round(Number(dto.minOrder) || 0));
     if (dto.active !== undefined) data.active = !!dto.active;
-    if (dto.days !== undefined || dto.hours !== undefined) data.expiresAt = this.durationToDate(dto.days, dto.hours);
+    if (dto.expiresAt !== undefined) data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     return this.prisma.coupon.update({ where: { id }, data });
   }
   async deleteCoupon(sellerId: string, id: string) {
@@ -212,13 +212,6 @@ export class SellersService {
     await this.prisma.coupon.delete({ where: { id } });
     return { ok: true };
   }
-  private durationToDate(days: any, hours: any): Date | null {
-    const d = Math.max(0, Math.round(Number(days) || 0));
-    const h = Math.max(0, Math.round(Number(hours) || 0));
-    if (d === 0 && h === 0) return null; // no expiry
-    return new Date(Date.now() + (d * 24 + h) * 60 * 60 * 1000);
-  }
-
   // ── notifications ──
   async getNotifications(sellerId: string) {
     const items = await this.prisma.notification.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' }, take: 40 });

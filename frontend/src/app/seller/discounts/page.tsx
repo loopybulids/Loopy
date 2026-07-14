@@ -4,15 +4,21 @@ import { api } from '@/lib/api';
 import { PageHead, Panel, Empty } from '@/components/seller-ui';
 import { Plus, Tag, Check } from '@/components/icons';
 
-const BLANK = { id: '', code: '', type: 'percent', value: '10', minOrder: '0', days: '', hours: '' };
+const BLANK = { id: '', code: '', type: 'percent', value: '10', minOrder: '0', expiresAt: '' };
 
-function remaining(expiresAt: string | null): { label: string; expired: boolean; none: boolean } {
+// ISO → "YYYY-MM-DDTHH:mm" (local) for a datetime-local input
+function toLocalInput(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function expiryInfo(expiresAt: string | null): { label: string; expired: boolean; none: boolean } {
   if (!expiresAt) return { label: 'No expiry', expired: false, none: true };
-  const ms = new Date(expiresAt).getTime() - Date.now();
-  if (ms <= 0) return { label: 'Expired', expired: true, none: false };
-  const d = Math.floor(ms / 86400000);
-  const h = Math.floor((ms % 86400000) / 3600000);
-  return { label: `Expires in ${d > 0 ? `${d}d ` : ''}${h}h`, expired: false, none: false };
+  const expired = new Date(expiresAt).getTime() <= Date.now();
+  const label = `${expired ? 'Expired' : 'Valid until'} ${new Date(expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+  return { label, expired, none: false };
 }
 
 export default function Discounts() {
@@ -31,7 +37,7 @@ export default function Discounts() {
     setErr('');
     if (!f.code.trim()) return setErr('Enter a coupon code.');
     setBusy(true);
-    const body = { code: f.code, type: f.type, value: Number(f.value) || 0, minOrder: Number(f.minOrder) || 0, days: Number(f.days) || 0, hours: Number(f.hours) || 0 };
+    const body = { code: f.code, type: f.type, value: Number(f.value) || 0, minOrder: Number(f.minOrder) || 0, expiresAt: f.expiresAt ? new Date(f.expiresAt).toISOString() : null };
     try {
       if (editing) await api.updateCoupon(f.id, body); else await api.createCoupon(body);
       setF({ ...BLANK }); setSaved(true); setTimeout(() => setSaved(false), 1500); await load();
@@ -39,10 +45,7 @@ export default function Discounts() {
   };
 
   const edit = (c: any) => {
-    const ms = c.expiresAt ? new Date(c.expiresAt).getTime() - Date.now() : 0;
-    const days = ms > 0 ? Math.floor(ms / 86400000) : 0;
-    const hours = ms > 0 ? Math.floor((ms % 86400000) / 3600000) : 0;
-    setF({ id: c.id, code: c.code, type: c.type, value: String(c.value), minOrder: String(c.minOrder), days: days ? String(days) : '', hours: hours ? String(hours) : '' });
+    setF({ id: c.id, code: c.code, type: c.type, value: String(c.value), minOrder: String(c.minOrder), expiresAt: toLocalInput(c.expiresAt) });
   };
 
   const remove = async (id: string) => { if (!confirm('Delete this coupon?')) return; await api.deleteCoupon(id); if (f.id === id) setF({ ...BLANK }); load(); };
@@ -73,12 +76,12 @@ export default function Discounts() {
           <label className="mt-4 block text-[12px] font-bold uppercase tracking-wide text-faint">Minimum order (₹)</label>
           <input type="number" value={f.minOrder} onChange={(e) => set('minOrder', e.target.value)} className="c-input mt-1.5" />
 
-          <label className="mt-4 block text-[12px] font-bold uppercase tracking-wide text-faint">Available for</label>
-          <div className="mt-1.5 grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-2"><input type="number" min={0} value={f.days} onChange={(e) => set('days', e.target.value)} placeholder="0" className="c-input" /><span className="text-[13px] text-muted">days</span></div>
-            <div className="flex items-center gap-2"><input type="number" min={0} value={f.hours} onChange={(e) => set('hours', e.target.value)} placeholder="0" className="c-input" /><span className="text-[13px] text-muted">hours</span></div>
+          <label className="mt-4 block text-[12px] font-bold uppercase tracking-wide text-faint">Expires on</label>
+          <div className="mt-1.5 flex items-center gap-2">
+            <input type="datetime-local" value={f.expiresAt} onChange={(e) => set('expiresAt', e.target.value)} className="c-input" />
+            {f.expiresAt && <button onClick={() => set('expiresAt', '')} className="text-[12px] font-semibold text-rose hover:underline">Clear</button>}
           </div>
-          <p className="mt-1 text-[11px] text-faint">Leave both at 0 for a coupon that never expires.</p>
+          <p className="mt-1 text-[11px] text-faint">Pick a date &amp; time. Leave empty for a coupon that never expires.</p>
 
           {err && <p className="mt-3 text-[13px] font-semibold text-rose">{err}</p>}
           <div className="mt-5 flex gap-2">
@@ -93,7 +96,7 @@ export default function Discounts() {
           ) : (
             <div className="space-y-3">
               {coupons.map((c) => {
-                const r = remaining(c.expiresAt);
+                const r = expiryInfo(c.expiresAt);
                 return (
                   <div key={c.id} className="flex items-center gap-3 rounded-xl border border-line bg-paper px-4 py-3.5">
                     <span className="grid h-9 w-9 place-items-center rounded-lg bg-green-soft text-green-600"><Tag size={16} /></span>
