@@ -123,8 +123,8 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
 
 html { scroll-behavior: smooth; }
 
-@keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-.animate-slideLeft { animation: slideInLeft .28s cubic-bezier(.22, 1, .36, 1); }
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.animate-slideRight { animation: slideInRight .28s cubic-bezier(.22, 1, .36, 1); }
 
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {

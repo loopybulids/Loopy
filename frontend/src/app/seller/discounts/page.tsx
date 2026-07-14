@@ -127,9 +127,9 @@ function CouponModal({ f, setF, onClose, onSaved }: { f: Form; setF: (u: Form) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="animate-slideLeft relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white p-6 shadow-2xl">
+      <div className="animate-slideRight relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-[20px] font-extrabold text-navy">{editing ? 'Edit Coupon' : 'New Coupon'}</h2>
           <button onClick={onClose} className="text-muted hover:text-navy">✕</button>
