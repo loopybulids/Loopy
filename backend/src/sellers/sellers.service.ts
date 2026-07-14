@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
@@ -173,6 +173,50 @@ export class SellersService {
     const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
     if (!review || review.sellerId !== sellerId) throw new NotFoundException('Review not found');
     return this.prisma.review.update({ where: { id: reviewId }, data: { response, respondedAt: new Date() } });
+  }
+
+  // ── coupons ──
+  async getCoupons(sellerId: string) {
+    const coupons = await this.prisma.coupon.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } });
+    const now = Date.now();
+    return coupons.map((c) => ({ ...c, expired: c.expiresAt ? c.expiresAt.getTime() < now : false }));
+  }
+  async createCoupon(sellerId: string, dto: any) {
+    const code = String(dto.code || '').toUpperCase().trim();
+    if (!code) throw new BadRequestException('Coupon code is required');
+    const value = Math.max(0, Math.round(Number(dto.value) || 0));
+    const minOrder = Math.max(0, Math.round(Number(dto.minOrder) || 0));
+    const type = dto.type === 'fixed' ? 'fixed' : 'percent';
+    const expiresAt = this.durationToDate(dto.days, dto.hours);
+    try {
+      return await this.prisma.coupon.create({ data: { sellerId, code, type, value, minOrder, expiresAt } });
+    } catch {
+      throw new BadRequestException('A coupon with that code already exists');
+    }
+  }
+  async updateCoupon(sellerId: string, id: string, dto: any) {
+    const c = await this.prisma.coupon.findUnique({ where: { id } });
+    if (!c || c.sellerId !== sellerId) throw new NotFoundException('Coupon not found');
+    const data: any = {};
+    if (dto.code !== undefined) data.code = String(dto.code).toUpperCase().trim();
+    if (dto.type !== undefined) data.type = dto.type === 'fixed' ? 'fixed' : 'percent';
+    if (dto.value !== undefined) data.value = Math.max(0, Math.round(Number(dto.value) || 0));
+    if (dto.minOrder !== undefined) data.minOrder = Math.max(0, Math.round(Number(dto.minOrder) || 0));
+    if (dto.active !== undefined) data.active = !!dto.active;
+    if (dto.days !== undefined || dto.hours !== undefined) data.expiresAt = this.durationToDate(dto.days, dto.hours);
+    return this.prisma.coupon.update({ where: { id }, data });
+  }
+  async deleteCoupon(sellerId: string, id: string) {
+    const c = await this.prisma.coupon.findUnique({ where: { id } });
+    if (!c || c.sellerId !== sellerId) throw new NotFoundException('Coupon not found');
+    await this.prisma.coupon.delete({ where: { id } });
+    return { ok: true };
+  }
+  private durationToDate(days: any, hours: any): Date | null {
+    const d = Math.max(0, Math.round(Number(days) || 0));
+    const h = Math.max(0, Math.round(Number(hours) || 0));
+    if (d === 0 && h === 0) return null; // no expiry
+    return new Date(Date.now() + (d * 24 + h) * 60 * 60 * 1000);
   }
 
   // ── notifications ──

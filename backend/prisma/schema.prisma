@@ -250,6 +250,21 @@ model Dispute {
   @@index([status])
 }
 
+model Coupon {
+  id        String    @id @default(cuid())
+  sellerId  String
+  code      String
+  type      String    @default("percent") // percent | fixed
+  value     Int
+  minOrder  Int       @default(0)
+  expiresAt DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  @@unique([sellerId, code])
+  @@index([sellerId])
+}
+
 model Payout {
   id        String   @id @default(cuid())
   sellerId  String

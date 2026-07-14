@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { SellersService } from './sellers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -65,6 +65,30 @@ export class SellersController {
   @Get('me/customers')
   myCustomers(@Req() req: any) {
     return this.sellers.getCustomers(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/coupons')
+  coupons(@Req() req: any) {
+    return this.sellers.getCoupons(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/coupons')
+  createCoupon(@Req() req: any, @Body() body: any) {
+    return this.sellers.createCoupon(req.user.sellerId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('me/coupons/:id')
+  updateCoupon(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    return this.sellers.updateCoupon(req.user.sellerId, id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/coupons/:id')
+  deleteCoupon(@Req() req: any, @Param('id') id: string) {
+    return this.sellers.deleteCoupon(req.user.sellerId, id);
   }
 
   // Authenticated seller — own profile

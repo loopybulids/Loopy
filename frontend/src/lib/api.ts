@@ -73,6 +73,10 @@ export const api = {
   myNotifications: () => req<any>(`/sellers/me/notifications`),
   readNotifications: () => req<any>(`/sellers/me/notifications/read`, { method: 'POST' }),
   myCustomers: () => req<any[]>(`/sellers/me/customers`),
+  myCoupons: () => req<any[]>(`/sellers/me/coupons`),
+  createCoupon: (body: any) => req<any>(`/sellers/me/coupons`, { method: 'POST', body: JSON.stringify(body) }),
+  updateCoupon: (id: string, body: any) => req<any>(`/sellers/me/coupons/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCoupon: (id: string) => req<any>(`/sellers/me/coupons/${id}`, { method: 'DELETE' }),
   recordVisit: (username: string, session: string, source?: string, referrer?: string) =>
     req<any>(`/sellers/${username}/visit`, { method: 'POST', body: JSON.stringify({ session, source, referrer }) }),
   requestPayout: () => req<any>(`/sellers/me/payouts`, { method: 'POST' }),
