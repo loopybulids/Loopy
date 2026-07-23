@@ -1,5 +1,6 @@
 'use client';
 import { Plus } from '@/components/icons';
+import { SizeSelector } from '@/components/sizes';
 
 export type Variant = { label: string; price: string; stock: string };
 
@@ -15,12 +16,19 @@ export function toEditorVariants(v: any[]): Variant[] {
   return (v || []).map((x) => ({ label: x.label || '', price: x.price != null ? String(x.price) : '', stock: x.stock != null ? String(x.stock) : '' }));
 }
 
-export function VariantsEditor({ variants, setVariants }: { variants: Variant[]; setVariants: (v: Variant[]) => void }) {
+export function VariantsEditor({ variants, setVariants, sizes, setSizes }: { variants: Variant[]; setVariants: (v: Variant[]) => void; sizes?: string[]; setSizes?: (v: string[]) => void }) {
   const upd = (i: number, k: keyof Variant, val: string) => setVariants(variants.map((v, j) => (j === i ? { ...v, [k]: val } : v)));
   return (
     <div>
       <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Variants (optional)</label>
       <p className="mb-1.5 text-[11px] text-muted">Add sizes/colors — each can have its own price &amp; stock.</p>
+
+      {setSizes && (
+        <div className="mb-4 rounded-xl border border-line bg-paper/50 p-3">
+          <SizeSelector value={sizes || []} onChange={setSizes} />
+        </div>
+      )}
+
       <div className="space-y-2">
         {variants.map((v, i) => (
           <div key={i} className="flex gap-2">

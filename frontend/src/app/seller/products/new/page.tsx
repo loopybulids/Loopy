@@ -6,7 +6,7 @@ import { PageHead, Panel, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
 import { VariantsEditor, cleanVariants, type Variant } from '@/components/VariantsEditor';
-import { SizeSelector, SizeStrip } from '@/components/sizes';
+import { SizeStrip } from '@/components/sizes';
 import { Heart, ShieldLock, Camera, Sparkle, Verified } from '@/components/icons';
 
 export default function AddProduct() {
@@ -75,11 +75,8 @@ export default function AddProduct() {
             </div>
           </div>
 
-          {/* sizes */}
-          <div className="mt-5"><SizeSelector value={sizes} onChange={setSizes} /></div>
-
-          {/* variants */}
-          <div className="mt-5"><VariantsEditor variants={variants} setVariants={setVariants} /></div>
+          {/* variants (with sizes) */}
+          <div className="mt-5"><VariantsEditor variants={variants} setVariants={setVariants} sizes={sizes} setSizes={setSizes} /></div>
 
           {/* size chart */}
           <div className="mt-5">

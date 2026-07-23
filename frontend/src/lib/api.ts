@@ -17,6 +17,14 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     cache: 'no-store',
   });
   if (!res.ok) {
+    // Session expired / invalid token on an authenticated request → send to login.
+    if (res.status === 401 && typeof window !== 'undefined' && localStorage.getItem('loopy_token')) {
+      const role = localStorage.getItem('loopy_role');
+      localStorage.removeItem('loopy_token');
+      const dest = role === 'admin' ? '/admin/login' : '/seller/login';
+      if (!location.pathname.includes('/login')) location.href = dest;
+      throw new Error('Your session expired — please sign in again.');
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.message || `Request failed (${res.status})`);
   }

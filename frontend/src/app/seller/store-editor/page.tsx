@@ -24,6 +24,7 @@ export default function StoreEditor() {
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [publishErr, setPublishErr] = useState('');
 
   // undo / redo history
   const hist = useRef<{ past: StoreConfig[]; future: StoreConfig[] }>({ past: [], future: [] });
@@ -75,13 +76,22 @@ export default function StoreEditor() {
 
   const publish = async () => {
     if (!config) return;
-    setSaving(true); setSaved(false);
+    setSaving(true); setSaved(false); setPublishErr('');
     try {
-      await api.updateStoreConfig(config);
-      await api.updateProfile({ published: true }).catch(() => {}); // mark store live
+      await api.updateStoreConfig(config); // always save the design
+      // gate going LIVE on shipping + payout being configured
+      const p = await api.myProfile().catch(() => null);
+      const hasShipping = p?.shippingFee !== null && p?.shippingFee !== undefined;
+      const hasPayout = !!(p?.payoutUpi || p?.payoutAccount);
+      if (!hasShipping || !hasPayout) {
+        const missing = [!hasShipping && 'shipping', !hasPayout && 'payout'].filter(Boolean).join(' & ');
+        setPublishErr(`Design saved. Add your ${missing} details to make your store live.`);
+        return;
+      }
+      await api.updateProfile({ published: true });
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     }
-    catch { /* surfaced below */ }
+    catch { setPublishErr('Could not publish — please try again.'); }
     finally { setSaving(false); }
   };
 
@@ -105,7 +115,7 @@ export default function StoreEditor() {
             <button key={d} onClick={() => setDevice(d)} className={`rounded-md px-2.5 py-1 capitalize transition-colors ${device === d ? 'bg-white text-navy shadow-sm' : 'text-faint hover:text-navy'}`}>{d}</button>
           ))}
         </div>
-        {username && <Link href={`/s/${username}`} target="_blank" className="flex items-center gap-1 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">Preview <IExternal /></Link>}
+        {username && <Link href={`/s/${username}?preview=1`} target="_blank" className="flex items-center gap-1 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">Preview <IExternal /></Link>}
         <div className="flex items-center gap-0.5">
           <button onClick={undo} disabled={!hist.current.past.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Undo"><IUndo /></button>
           <button onClick={redo} disabled={!hist.current.future.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Redo"><IRedo /></button>
@@ -114,6 +124,14 @@ export default function StoreEditor() {
           {saving ? 'Publishing…' : saved ? <><Check size={14} /> Published</> : <><ISend /> Publish</>}
         </button>
       </div>
+
+      {publishErr && (
+        <div className="flex items-center gap-2 border-b border-amber/30 bg-amber-soft px-4 py-2 text-[12.5px] font-semibold text-navy/80 sm:px-6">
+          ⚠️ {publishErr}
+          <Link href="/seller/shipping" className="ml-auto rounded-md bg-white px-2.5 py-1 text-[11.5px] font-bold text-navy hover:bg-paper">Shipping</Link>
+          <Link href="/seller/payments" className="rounded-md bg-white px-2.5 py-1 text-[11.5px] font-bold text-navy hover:bg-paper">Payments</Link>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* left panel with tabs */}
@@ -222,6 +240,9 @@ function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }
 
       {active === 'header' && (
         <>
+          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store logo</label>
+          <div className="mt-1.5"><MediaInput value={config.header.logoUrl || ''} onChange={(v) => set('header', 'logoUrl', v)} /></div>
+          <p className="mb-4 mt-1 text-[11px] text-faint">Shown in your storefront header. Leave empty to use the first letter of your store name.</p>
           <Toggle label="Show search icon" value={config.header.showSearch} onChange={(v) => set('header', 'showSearch', v)} />
           <div className="mt-4 text-[12px] font-bold uppercase tracking-wide text-faint">Nav links</div>
           {config.header.nav.map((n, i) => (

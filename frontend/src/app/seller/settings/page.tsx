@@ -4,7 +4,11 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { PageHead, Panel } from '@/components/seller-ui';
-import { Share } from '@/components/icons';
+import { Share, Eye } from '@/components/icons';
+
+const EyeOff = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.9 4.24A9 9 0 0 1 12 4c7 0 10 8 10 8a13.2 13.2 0 0 1-1.67 2.68M6.6 6.6A13.3 13.3 0 0 0 2 12s3 8 10 8a9 9 0 0 0 5.4-1.6" /><path d="m2 2 20 20M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>
+);
 
 /* localStorage-backed store toggles (scaffold until backed by the API) */
 const TOGGLE_KEYS = {
@@ -104,7 +108,7 @@ export default function Settings() {
                 placeholder="New password"
                 className="c-input pr-10"
               />
-              <button onClick={() => setShowPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-navy">{showPw ? '🙈' : '👁'}</button>
+              <button type="button" onClick={() => setShowPw((s) => !s)} title={showPw ? 'Hide' : 'Show'} className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-navy">{showPw ? <EyeOff /> : <Eye size={16} />}</button>
             </div>
             <button onClick={updatePassword} disabled={pwBusy} className="btn-navy px-4 py-3 disabled:opacity-60">{pwBusy ? 'Saving…' : 'Update Password'}</button>
           </div>

@@ -6,7 +6,6 @@ import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
 import { VariantsEditor, cleanVariants, toEditorVariants, type Variant } from '@/components/VariantsEditor';
-import { SizeSelector } from '@/components/sizes';
 import { Plus, Tag, Heart, ShieldLock, Check } from '@/components/icons';
 
 function firstImage(p: any): string | null {
@@ -192,9 +191,7 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
           </div>
           <Field label="Brand (optional)" value={f.brand} onChange={(v) => set('brand', v)} />
 
-          <SizeSelector value={sizes} onChange={setSizes} />
-
-          <VariantsEditor variants={variants} setVariants={setVariants} />
+          <VariantsEditor variants={variants} setVariants={setVariants} sizes={sizes} setSizes={setSizes} />
 
           <div>
             <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Size chart (optional)</label>

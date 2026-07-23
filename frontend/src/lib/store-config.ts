@@ -31,7 +31,7 @@ export type FontChoice = 'modern' | 'bold' | 'classic';
 export interface StoreConfig {
   theme: { accent: string; heroBg: HeroBg; font: FontChoice };
   announcement: { enabled: boolean; text: string };
-  header: { enabled: boolean; showSearch: boolean; nav: NavLink[] };
+  header: { enabled: boolean; showSearch: boolean; nav: NavLink[]; logoUrl?: string };
   hero: {
     enabled: boolean;
     eyebrow: string;
@@ -72,6 +72,7 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
     header: {
       enabled: true,
       showSearch: true,
+      logoUrl: '',
       nav: [
         { label: 'Home', href: '#' },
         { label: 'All Products', href: '#products' },

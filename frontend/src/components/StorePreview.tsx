@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
 import { SizeStrip } from '@/components/sizes';
+import AutoImages from '@/components/AutoImages';
 import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
@@ -69,9 +70,9 @@ export default function StorePreview({
         <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-line bg-white/85 px-5 py-3.5 backdrop-blur-md sm:px-8">
           {/* brand: logo mark + name */}
           <a href={home} className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>
-              {storeName.charAt(0).toUpperCase()}
-            </span>
+            {c.header.logoUrl
+              ? <img src={c.header.logoUrl} alt={storeName} className="h-9 w-9 rounded-xl object-cover shadow-card" />
+              : <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>{storeName.charAt(0).toUpperCase()}</span>}
             <span className="font-display text-[21px] font-extrabold tracking-tight text-navy">{storeName}</span>
           </a>
 
@@ -164,8 +165,8 @@ export default function StorePreview({
             ) : (
               filterByTab(products, tab).slice(0, 8).map((p) => (
                 <a key={p.id} href={username ? `/s/${username}/product/${p.id}` : undefined} className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card">
-                  <div className="aspect-square bg-green-soft">
-                    {firstImage(p) && <img src={firstImage(p)!} alt="" className="h-full w-full object-cover" />}
+                  <div className="relative aspect-square overflow-hidden bg-green-soft">
+                    <AutoImages images={Array.isArray(p.images) ? p.images : (firstImage(p) ? [firstImage(p)] : [])} />
                   </div>
                   <div className="p-3">
                     <div className="truncate font-display text-[14px] font-bold">{p.title || p.name}</div>

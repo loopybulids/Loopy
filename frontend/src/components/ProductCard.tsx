@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { motion } from '@/components/motion';
 import { rupees } from '@/lib/api';
 import { SizeStrip } from '@/components/sizes';
+import AutoImages from '@/components/AutoImages';
 import { Heart, Shield } from './icons';
 
 const grad = ['from-[#caa07a] to-[#6b4a2f]', 'from-[#9fb4c9] to-[#3a4a5e]', 'from-[#d9c7a0] to-[#9c7d4a]', 'from-[#c7b8d6] to-[#7a5e94]'];
@@ -14,10 +15,8 @@ export default function ProductCard({ product, index = 0 }: { product: any; inde
     <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}>
       <Link href={`/product/${product.id}`} className="group block overflow-hidden rounded-3xl">
         <div className={`relative aspect-[4/5] overflow-hidden rounded-3xl bg-gradient-to-br ${grad[index % grad.length]} shadow-card transition-shadow duration-500 group-hover:shadow-lift`}>
-          {img && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={img} alt={product.title} className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 ${sold ? 'grayscale' : ''}`} onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
-          )}
+          <AutoImages images={product.images?.length ? product.images : (img ? [img] : [])} />
+          {sold && <span className="absolute inset-0 bg-white/0" />}
           {/* soft bottom scrim for legibility of the floating info card */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-navy/35 to-transparent" />
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-green/90 px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-wide text-white shadow backdrop-blur"><Shield size={11} /> Loopy Protected</span>

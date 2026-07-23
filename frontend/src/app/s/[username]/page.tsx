@@ -10,10 +10,24 @@ import { Clock, Share, Star, Verified } from '@/components/icons';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StorePage({ params }: { params: Promise<{ username: string }> }) {
+export default async function StorePage({ params, searchParams }: { params: Promise<{ username: string }>; searchParams: Promise<{ preview?: string }> }) {
   const { username } = await params;
+  const preview = (await searchParams)?.preview;
   const store = await getStoreSSR(username);
   if (!store) return <ApiDown what="This store" />;
+
+  // Store isn't live until it's published AND has shipping + payout set up.
+  if (store.live === false && !preview) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-paper px-6 text-center">
+        <div>
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-green-soft text-3xl">🚀</div>
+          <h1 className="font-display text-[26px] font-extrabold text-navy">{store.storeName} is launching soon</h1>
+          <p className="mt-2 text-muted">This store isn’t open for orders just yet. Check back shortly!</p>
+        </div>
+      </main>
+    );
+  }
 
   // If the seller has published a Store Editor config, render that storefront.
   if (store.storeConfig) {

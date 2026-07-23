@@ -60,6 +60,9 @@ export class SellersService {
       ratingCount: seller.ratingCount,
       city: seller.city,
       kycStatus: seller.kycStatus,
+      published: seller.published,
+      // a store is "live" only once it's published AND has shipping + payout set up
+      live: seller.published && seller.shippingFee !== null && !!(seller.payoutUpi || seller.payoutAccount),
       storeConfig: seller.storeConfig ? safeParseObj(seller.storeConfig) : null,
       products: seller.products.map(shapeProduct),
     };
