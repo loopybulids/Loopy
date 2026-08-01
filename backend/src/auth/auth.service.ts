@@ -111,7 +111,8 @@ export class AuthService {
   async loginWithSupabase(token: string) {
     if (!token) throw new UnauthorizedException('Missing token');
     const base = process.env.SUPABASE_URL;
-    const apikey = process.env.SUPABASE_ANON_KEY;
+    // Supabase renamed the anon key → publishable key (sb_publishable_…); accept either.
+    const apikey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
     if (!base || !apikey) throw new UnauthorizedException('Supabase auth not configured');
 
     let supaUser: any;

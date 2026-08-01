@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { PageHead, Panel, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
+import ImageCarousel from '@/components/ImageCarousel';
 import { VariantsEditor, cleanVariants, type Variant } from '@/components/VariantsEditor';
 import { SizeStrip } from '@/components/sizes';
 import { Heart, ShieldLock, Camera, Sparkle, Verified } from '@/components/icons';
@@ -106,12 +107,12 @@ export default function AddProduct() {
             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-green-600"><span className="h-2 w-2 animate-pulse rounded-full bg-green-500" /> Updating live</span>
           </div>
           <div className="card mx-auto max-w-[280px] overflow-hidden">
-            <div className="relative grid max-h-56 place-items-center bg-green-soft">
-              {media[0]
-                ? <img src={media[0]} alt="" className="max-h-56 w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+            <div className="relative bg-green-soft">
+              {media.length
+                ? <ImageCarousel media={media} className="h-56 w-full" fit="contain" />
                 : <div className="aspect-square w-full" />}
-              <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white"><ShieldLock size={11} /> Loopy Protected</span>
-              {discount > 0 && <span className="absolute right-2.5 top-2.5 rounded-md bg-rose px-2 py-0.5 text-[10px] font-bold text-white">{discount}% OFF</span>}
+              <span className="pointer-events-none absolute left-2.5 top-2.5 z-20 inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white"><ShieldLock size={11} /> Loopy Protected</span>
+              {discount > 0 && <span className="pointer-events-none absolute right-2.5 top-2.5 z-20 rounded-md bg-rose px-2 py-0.5 text-[10px] font-bold text-white">{discount}% OFF</span>}
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between">

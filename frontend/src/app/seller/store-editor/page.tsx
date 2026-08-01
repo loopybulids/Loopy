@@ -79,6 +79,8 @@ export default function StoreEditor() {
     setSaving(true); setSaved(false); setPublishErr('');
     try {
       await api.updateStoreConfig(config); // always save the design
+      // keep the store's brand logo/avatar (Seller.logoUrl) in sync with the header logo
+      await api.updateProfile({ logoUrl: config.header.logoUrl || null }).catch(() => {});
       // gate going LIVE on shipping + payout being configured
       const p = await api.myProfile().catch(() => null);
       const hasShipping = p?.shippingFee !== null && p?.shippingFee !== undefined;
@@ -242,7 +244,7 @@ function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }
         <>
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store logo</label>
           <div className="mt-1.5"><MediaInput value={config.header.logoUrl || ''} onChange={(v) => set('header', 'logoUrl', v)} /></div>
-          <p className="mb-4 mt-1 text-[11px] text-faint">Shown in your storefront header. Leave empty to use the first letter of your store name.</p>
+          <p className="mb-4 mt-1 text-[11px] text-faint">Your store logo — shown in the storefront header and as your store avatar. Upload an image or paste a URL. Leave empty to use the first letter of your store name.</p>
           <Toggle label="Show search icon" value={config.header.showSearch} onChange={(v) => set('header', 'showSearch', v)} />
           <div className="mt-4 text-[12px] font-bold uppercase tracking-wide text-faint">Nav links</div>
           {config.header.nav.map((n, i) => (

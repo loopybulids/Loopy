@@ -8,6 +8,7 @@ import { addToCart, custApi, getCust } from '@/lib/customer';
 import { SIZES } from '@/components/sizes';
 import CustomerAuth from '@/components/store/CustomerAuth';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
+import ImageCarousel from '@/components/ImageCarousel';
 import { Heart, ShieldLock, Truck, ArrowRight } from '@/components/icons';
 
 export default function ProductPage() {
@@ -31,7 +32,6 @@ export default function ProductPage() {
   if (!p) return <main className="grid min-h-screen place-items-center bg-paper text-muted">Loading…</main>;
 
   const images: string[] = p.images || [];
-  const media = images[active];
   const availSizes: string[] = p.sizes || [];
   const needSize = availSizes.length > 0;
 
@@ -61,12 +61,19 @@ export default function ProductPage() {
         <div className="mt-4 grid gap-8 md:grid-cols-2">
           {/* gallery */}
           <div>
-            <div className="aspect-square overflow-hidden rounded-2xl border border-line bg-white">
-              {media ? (isVideo(media)
-                ? <video src={media} className="h-full w-full object-contain" controls muted loop autoPlay playsInline />
-                : <img src={media} alt={p.title} className="h-full w-full object-contain" />)
-                : <div className="grid h-full place-items-center text-faint">No image</div>}
-            </div>
+            {images.length ? (
+              <ImageCarousel
+                media={images}
+                index={active}
+                onIndexChange={setActive}
+                fit="contain"
+                showDots={false}
+                className="aspect-square w-full"
+                rounded="rounded-2xl border border-line bg-white"
+              />
+            ) : (
+              <div className="grid aspect-square place-items-center rounded-2xl border border-line bg-white text-faint">No image</div>
+            )}
             {images.length > 1 && (
               <div className="mt-3 flex gap-2 overflow-x-auto">
                 {images.map((im, i) => (
