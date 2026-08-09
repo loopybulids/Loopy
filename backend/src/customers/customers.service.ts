@@ -154,7 +154,39 @@ export class CustomersService {
 
   async me(user: any) {
     const { customerId } = this.assertCustomer(user);
-    return this.prisma.customer.findUnique({ where: { id: customerId }, include: { addresses: { orderBy: { isDefault: 'desc' } } } });
+    return this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, name: true, email: true, phone: true, createdAt: true,
+                addresses: { orderBy: { isDefault: 'desc' } } },
+    });
+  }
+
+  /**
+   * Shopper edits their own profile. Email is intentionally not editable — it's
+   * the account's identity within a store (`@@unique([sellerId, email])`) and is
+   * what Google sign-in matches on.
+   */
+  async updateMe(user: any, dto: { name?: string; phone?: string }) {
+    const { customerId } = this.assertCustomer(user);
+    const data: { name?: string; phone?: string | null } = {};
+
+    if (dto?.name !== undefined) {
+      const name = String(dto.name).trim();
+      if (!name) throw new BadRequestException('Name cannot be empty');
+      data.name = name;
+    }
+    if (dto?.phone !== undefined) {
+      const phone = String(dto.phone).trim();
+      if (phone && !/^[0-9+\-\s()]{6,20}$/.test(phone)) throw new BadRequestException('Enter a valid phone number');
+      data.phone = phone || null;
+    }
+    if (!Object.keys(data).length) throw new BadRequestException('Nothing to update');
+
+    return this.prisma.customer.update({
+      where: { id: customerId },
+      data,
+      select: { id: true, name: true, email: true, phone: true },
+    });
   }
 
   // ── wishlist ──

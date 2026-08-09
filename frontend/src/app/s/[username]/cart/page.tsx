@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api, rupees } from '@/lib/api';
 import { getCart, updateQty, applyLinkItems, parseLinkItems, type CartItem } from '@/lib/customer';
-import StoreAccountBar from '@/components/store/StoreAccountBar';
+import AccountShell from '@/components/store/AccountShell';
 import { Bag, ArrowRight } from '@/components/icons';
 
 export default function CartPage() {
@@ -53,22 +53,19 @@ export default function CartPage() {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
   return (
-    <main className="min-h-screen bg-paper">
-      <StoreAccountBar username={username} />
-      <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
-        <h1 className="font-display text-[24px] font-extrabold text-navy">Your cart</h1>
+    <AccountShell username={username} title="Your cart" requireAuth={false}>
 
         {filling ? (
-          <p className="mt-8 text-center text-[13px] text-faint">Adding the items from your link…</p>
+          <p className="text-center text-[13px] text-faint">Adding the items from your link…</p>
         ) : cart.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-dashed border-line bg-white py-16 text-center">
+          <div className="rounded-2xl border border-dashed border-line bg-white py-16 text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-soft text-green-600"><Bag size={24} /></span>
             <p className="mt-3 font-display text-[16px] font-bold text-navy">Your cart is empty</p>
             <Link href={`/s/${username}`} className="btn-green mt-4 inline-flex">Browse products</Link>
           </div>
         ) : (
           <>
-            <div className="mt-5 space-y-3">
+            <div className="space-y-3">
               {cart.map((i) => (
                 <div key={i.productId + (i.size || '')} className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
                   <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-green-soft">{i.image && <img src={i.image} alt="" className="h-full w-full object-cover" />}</span>
@@ -94,7 +91,6 @@ export default function CartPage() {
             </div>
           </>
         )}
-      </div>
-    </main>
+    </AccountShell>
   );
 }

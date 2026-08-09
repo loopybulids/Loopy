@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -31,6 +31,10 @@ export class CustomersController {
   @UseGuards(JwtAuthGuard)
   @Get('customer/me')
   me(@Req() req: any) { return this.customers.me(req.user); }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('customer/me')
+  updateMe(@Req() req: any, @Body() body: any) { return this.customers.updateMe(req.user, body); }
 
   @UseGuards(JwtAuthGuard)
   @Get('customer/wishlist')

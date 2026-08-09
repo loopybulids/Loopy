@@ -60,6 +60,8 @@ export const custApi = {
   verifySignup: (u: string, email: string, code: string) => authReq(u, 'verify', { email, code }),
   login: (u: string, email: string, password: string) => authReq(u, 'login', { email, password }),
   me: (u: string) => custReq(u, '/customer/me'),
+  updateMe: (u: string, body: { name?: string; phone?: string }) =>
+    custReq(u, '/customer/me', { method: 'PUT', body: JSON.stringify(body) }),
   wishlist: (u: string) => custReq(u, '/customer/wishlist'),
   wishlistIds: (u: string) => custReq(u, '/customer/wishlist/ids'),
   // The header badge listens for 'wishlist-change' to refresh its count.

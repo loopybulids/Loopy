@@ -93,7 +93,7 @@ export default function StoreAccountControls({ username, storeName, accent }: {
               </div>
               <div className="h-px bg-line" />
               <Link
-                href={username ? `/s/${username}/orders` : '#'}
+                href={username ? `/s/${username}/account` : '#'}
                 onClick={() => setMenu(false)}
                 className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-navy transition-colors hover:bg-paper"
               >
