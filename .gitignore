@@ -55,3 +55,9 @@ Assets/
 Thumbs.db
 desktop.ini
 *.swp
+
+# ---- confidential credentials reference (never commit) ----
+LOOPY-CREDENTIALS.pdf
+*CREDENTIALS*.pdf
+*CREDENTIALS*.md
+*-secrets.*
