@@ -1,10 +1,10 @@
 // Loopy data model — based on PRD §13.
-// Dev uses SQLite for zero-infra local runs. To go to Postgres (PRD spec):
-//   1. change provider below to "postgresql"
-//   2. set DATABASE_URL to your Postgres connection string
-//   3. (optional) convert the JSON-string `images` field to Json and the
-//      status/role/condition strings to native enums.
-// Amounts are stored as integer rupees to keep money math exact.
+// Postgres (Neon). Amounts are stored as integer rupees to keep money math exact.
+//
+// The JSON-ish columns (`images`, `variants`, `sizes`, `storeConfig`) are still
+// String-encoded JSON rather than native `Json`. That's deliberate for now — the
+// app code reads/writes them with JSON.parse/stringify everywhere, so switching
+// the column type is a separate change with its own data backfill.
 
 generator client {
   provider      = "prisma-client-js"
@@ -14,7 +14,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Pooled (PgBouncer) endpoint — used by the running app.
+  url       = env("DATABASE_URL")
+  // Unpooled endpoint — Prisma needs a direct connection for schema changes
+  // (`db push` / `migrate`), which don't work through a transaction pooler.
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -84,6 +88,7 @@ model Customer {
   email     String?
   name      String?
   phone     String?
+  password  String?  // bcrypt hash — null for Google-only shoppers
   createdAt DateTime @default(now())
 
   seller    Seller         @relation(fields: [sellerId], references: [id])
@@ -92,6 +97,27 @@ model Customer {
 
   @@unique([sellerId, email])
   @@index([sellerId])
+}
+
+// A shopper who entered email + password but hasn't typed their 6-digit code
+// yet. Nothing is written to Customer until the code checks out, so an
+// unverified email can never occupy an account.
+//
+// This lives in the DB rather than in memory so codes survive a backend restart
+// and still work when more than one instance is running.
+model PendingSignup {
+  id           String   @id @default(cuid())
+  sellerId     String
+  email        String
+  name         String?
+  passwordHash String
+  codeHash     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@unique([sellerId, email])
+  @@index([expiresAt])
 }
 
 model Address {

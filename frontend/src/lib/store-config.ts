@@ -113,13 +113,14 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
 
 /* Merge a (possibly partial / older) saved config onto the defaults so the
    renderer never hits undefined sections. */
-export function withDefaults(storeName: string, saved?: Partial<StoreConfig> | null): StoreConfig {
+export function withDefaults(storeName: string, saved?: Partial<StoreConfig> | null, fallbackLogoUrl?: string | null): StoreConfig {
   const d = defaultConfig(storeName);
-  if (!saved) return d;
+  const logoUrl = saved?.header?.logoUrl || fallbackLogoUrl || '';
+  if (!saved) return { ...d, header: { ...d.header, logoUrl } };
   return {
     theme: { ...d.theme, ...saved.theme },
     announcement: { ...d.announcement, ...saved.announcement },
-    header: { ...d.header, ...saved.header, nav: saved.header?.nav ?? d.header.nav },
+    header: { ...d.header, ...saved.header, logoUrl, nav: saved.header?.nav ?? d.header.nav },
     hero: { ...d.hero, ...saved.hero },
     banners: { ...d.banners, ...saved.banners, images: saved.banners?.images ?? d.banners.images },
     productTabs: { ...d.productTabs, ...saved.productTabs, tabs: saved.productTabs?.tabs ?? d.productTabs.tabs },

@@ -29,10 +29,13 @@ function detectSource(): { source: string; referrer: string } {
 export default function VisitPing({ username }: { username: string }) {
   useEffect(() => {
     if (!username) return;
-    let sid = localStorage.getItem('loopy_sid');
-    if (!sid) { sid = Math.random().toString(36).slice(2); localStorage.setItem('loopy_sid', sid); }
-    const { source, referrer } = detectSource();
-    api.recordVisit(username, sid, source, referrer).catch(() => {});
+    const timer = setTimeout(() => {
+      let sid = localStorage.getItem('loopy_sid');
+      if (!sid) { sid = Math.random().toString(36).slice(2); localStorage.setItem('loopy_sid', sid); }
+      const { source, referrer } = detectSource();
+      api.recordVisit(username, sid, source, referrer).catch(() => {});
+    }, 100);
+    return () => clearTimeout(timer);
   }, [username]);
   return null;
 }

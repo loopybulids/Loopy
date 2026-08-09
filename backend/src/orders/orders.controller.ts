@@ -37,15 +37,24 @@ export class OrdersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/reject')
+  reject(@Param('id') id: string, @Req() req: any, @Body() body: { reason?: string }) {
+    return this.orders.rejectOrder(id, req.user.sellerId, body?.reason);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':id/ship')
   ship(@Param('id') id: string, @Req() req: any) {
     return this.orders.transition(id, req.user.sellerId, 'Shipped');
   }
 
-  // Stub for the Shiprocket delivered webhook (open for demo convenience).
+  // Stands in for the Shiprocket "delivered" webhook — the seller marks it from
+  // their order queue. Guarded: this used to be fully open, which let anyone who
+  // knew an order id mark it delivered.
+  @UseGuards(JwtAuthGuard)
   @Post(':id/deliver')
-  deliver(@Param('id') id: string) {
-    return this.orders.markDelivered(id);
+  deliver(@Param('id') id: string, @Req() req: any) {
+    return this.orders.markDelivered(id, req.user?.sellerId);
   }
 
   @Post(':id/confirm-delivery')

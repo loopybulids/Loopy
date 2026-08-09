@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic, Tilt } from '@/components/motion';
 import RedirectAuthed from '@/components/RedirectAuthed';
+import Logo from '@/components/Logo';
 import {
   ArrowRight, Bolt, Check, Loop, Plus, Share,
   ShieldLock, Star, Store, Truck, Verified, Wallet,
@@ -61,10 +62,7 @@ export default function Landing() {
 
       {/* ───── top bar ───── */}
       <header className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-5 sm:px-8">
-        <div className="flex items-center gap-2 font-display text-[26px] font-extrabold tracking-tight">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-green-mint"><Loop size={20} /></span>
-          Loopy
-        </div>
+        <Logo height={34} />
         <nav className="hidden items-center gap-1 text-[15px] font-semibold text-navy/75 md:flex">
           <a href="#how" className="rounded-full px-3 py-2 transition-colors hover:text-navy">How it works</a>
           <a href="#faq" className="rounded-full px-3 py-2 transition-colors hover:text-navy">FAQ</a>
@@ -270,10 +268,7 @@ export default function Landing() {
       <footer className="border-t border-line/70 bg-white/40">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2 font-display text-[22px] font-extrabold tracking-tight">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={17} /></span>
-              Loopy
-            </div>
+            <Logo height={30} />
             <p className="mt-3 max-w-xs text-[13.5px] leading-relaxed text-muted">Conversational commerce that turns Instagram DMs and WhatsApp chats into real, protected orders.</p>
           </div>
           <div>

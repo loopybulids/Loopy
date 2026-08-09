@@ -6,10 +6,26 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class CustomersController {
   constructor(private customers: CustomersService) {}
 
-  // Public — shopper signs in / signs up for a store (Supabase Google / email OTP)
-  @Post('stores/:username/customer-auth')
-  auth(@Param('username') username: string, @Body() body: { token: string }) {
-    return this.customers.authSupabase(username, body?.token);
+  // Public — shopper signs in / signs up for a store.
+  @Post('stores/:username/customer-auth/google')
+  authGoogle(@Param('username') username: string, @Body() body: { token: string }) {
+    return this.customers.authGoogle(username, body?.token);
+  }
+
+  // Signup is two steps: register emails a 6-digit code, verify creates the account.
+  @Post('stores/:username/customer-auth/register')
+  authRegister(@Param('username') username: string, @Body() body: any) {
+    return this.customers.registerCustomer(username, body);
+  }
+
+  @Post('stores/:username/customer-auth/verify')
+  authVerify(@Param('username') username: string, @Body() body: any) {
+    return this.customers.verifySignup(username, body?.email, body?.code);
+  }
+
+  @Post('stores/:username/customer-auth/login')
+  authLogin(@Param('username') username: string, @Body() body: any) {
+    return this.customers.loginCustomer(username, body?.email, body?.password);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -43,4 +59,8 @@ export class CustomersController {
   @UseGuards(JwtAuthGuard)
   @Post('customer/checkout')
   checkout(@Req() req: any, @Body() body: any) { return this.customers.checkout(req.user, body); }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('customer/orders')
+  orders(@Req() req: any) { return this.customers.getOrders(req.user); }
 }

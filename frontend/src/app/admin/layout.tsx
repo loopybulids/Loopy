@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Icon } from '@/components/admin/AdminKit';
+import Logo from '@/components/Logo';
 import { Loop } from '@/components/icons';
 
 const NAV = [
@@ -40,10 +41,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-navy-deep text-white lg:flex">
         <div className="flex h-16 items-center gap-2 px-5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-green-600 text-white"><Loop size={20} /></span>
+          {/* dark sidebar → the original white-wordmark artwork */}
           <div className="leading-tight">
-            <div className="font-display text-[17px] font-extrabold">Loopy</div>
-            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-green-mint">Command Center</div>
+            <Logo height={24} tone="light" />
+            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-green-mint">Command Center</div>
           </div>
         </div>
         <nav className="mt-2 flex-1 space-y-1 px-3">

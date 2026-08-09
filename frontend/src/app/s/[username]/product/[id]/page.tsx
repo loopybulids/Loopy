@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api, rupees } from '@/lib/api';
 import { isVideo } from '@/lib/store-config';
-import { addToCart, custApi, getCust } from '@/lib/customer';
+import { addToCart, custApi, getCart, getCust } from '@/lib/customer';
 import { SIZES } from '@/components/sizes';
 import CustomerAuth from '@/components/store/CustomerAuth';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
@@ -39,9 +39,16 @@ export default function ProductPage() {
 
   const add = (buyNow = false) => {
     if (needSize && !size) { notify('Please select a size'); return; }
-    addToCart(username, { productId: p.id, title: p.title, price: p.price, image: images[0], size: size || undefined, qty });
-    if (buyNow) router.push(`/s/${username}/cart`);
-    else notify('Added to cart ✓');
+    const sz = size || undefined;
+    const alreadyIn = getCart(username).some((c) => c.productId === p.id && c.size === sz);
+    if (buyNow) {
+      // Buy now: don't stack a duplicate if it's already in the cart — just go there.
+      if (!alreadyIn) addToCart(username, { productId: p.id, title: p.title, price: p.price, image: images[0], size: sz, qty });
+      router.push(`/s/${username}/cart`);
+    } else {
+      addToCart(username, { productId: p.id, title: p.title, price: p.price, image: images[0], size: sz, qty });
+      notify('Added to cart ✓');
+    }
   };
 
   const toggleWish = async () => {
@@ -66,10 +73,10 @@ export default function ProductPage() {
                 media={images}
                 index={active}
                 onIndexChange={setActive}
-                fit="contain"
+                fit="cover"
                 showDots={false}
                 className="aspect-square w-full"
-                rounded="rounded-2xl border border-line bg-white"
+                rounded="rounded-2xl border border-line bg-paper"
               />
             ) : (
               <div className="grid aspect-square place-items-center rounded-2xl border border-line bg-white text-faint">No image</div>
@@ -146,8 +153,6 @@ export default function ProductPage() {
               <span className="flex items-center gap-1.5"><Truck size={14} className="text-green-600" /> Tracked shipping</span>
             </div>
 
-            {p.description && <p className="mt-5 whitespace-pre-line border-t border-line pt-5 text-[14px] leading-relaxed text-navy">{p.description}</p>}
-
             {p.sizeChartUrl && (
               <details className="mt-4">
                 <summary className="cursor-pointer text-[13px] font-bold text-green-600">View size chart</summary>
@@ -156,10 +161,46 @@ export default function ProductPage() {
             )}
           </div>
         </div>
+
+        {/* full-width product details — keeps the page full on mobile & desktop */}
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl border border-line bg-white p-6 lg:col-span-2">
+            <h2 className="font-display text-[16px] font-extrabold text-navy">Product details</h2>
+            <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-navy/80">
+              {p.description?.trim() ? p.description : 'No description provided for this product.'}
+            </p>
+            {(p.brand || p.category || p.condition || availSizes.length > 0) && (
+              <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-line pt-4 sm:grid-cols-3">
+                {p.brand && <Attr label="Brand" value={p.brand} />}
+                {p.category && <Attr label="Category" value={p.category} />}
+                {p.condition && <Attr label="Condition" value={p.condition} />}
+                {availSizes.length > 0 && <Attr label="Sizes" value={availSizes.join(', ')} />}
+                <Attr label="Availability" value={p.quantity > 0 ? `${p.quantity} in stock` : 'Out of stock'} />
+              </dl>
+            )}
+          </div>
+          <div className="rounded-2xl border border-line bg-white p-6">
+            <h3 className="font-display text-[15px] font-extrabold text-navy">Why buy here</h3>
+            <ul className="mt-3 space-y-3 text-[13px] text-navy/80">
+              <li className="flex items-start gap-2.5"><ShieldLock size={16} className="mt-0.5 shrink-0 text-green-600" /> Payment held in Loopy escrow until you confirm delivery.</li>
+              <li className="flex items-start gap-2.5"><Truck size={16} className="mt-0.5 shrink-0 text-green-600" /> Tracked shipping on every order.</li>
+              <li className="flex items-start gap-2.5"><Heart size={16} className="mt-0.5 shrink-0 text-green-600" /> Save items to your wishlist and buy later.</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       {toast && <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-navy px-5 py-2.5 text-[13px] font-bold text-white shadow-lift">{toast}</div>}
       {authOpen && <CustomerAuth username={username} storeName={p.seller?.storeName} onClose={() => setAuthOpen(false)} onAuthed={() => { setAuthOpen(false); toggleWish(); }} />}
     </main>
+  );
+}
+
+function Attr({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-bold uppercase tracking-wide text-faint">{label}</dt>
+      <dd className="mt-0.5 text-[13px] font-semibold text-navy">{value}</dd>
+    </div>
   );
 }

@@ -1,3 +1,9 @@
+// Load .env BEFORE any other import evaluates. Feature modules call
+// JwtModule.register({ secret: process.env.JWT_SECRET }) at import time, which
+// runs before ConfigModule.forRoot() — so without this, tokens get SIGNED with
+// the fallback secret but VERIFIED with the real .env secret → every guarded
+// route 401s. Preloading env here makes both use the same secret.
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';

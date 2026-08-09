@@ -1,6 +1,6 @@
 'use client';
 import { create } from 'zustand';
-import { api } from '@/lib/api';
+import { api, clearApiCache } from '@/lib/api';
 
 /**
  * Frictionless, role-based auth.
@@ -20,7 +20,9 @@ import { api } from '@/lib/api';
 const SELLER_PHONE = '9876500210';
 const MASTER_CODE = '0000';
 
-export type Role = 'buyer' | 'seller';
+// 'admin' only ever arrives via Google sign-in / hydrate — the role-picker
+// flows below still deal exclusively in buyer|seller.
+export type Role = 'buyer' | 'seller' | 'admin';
 
 export interface SessionUser {
   id: string;
@@ -38,7 +40,8 @@ interface AuthState {
   hydrate: () => void;
   signIn: (role: Role, name: string) => Promise<void>;
   loginEmail: (email: string, password: string) => Promise<void>;
-  loginWithSupabase: (token: string) => Promise<void>;
+  /** Resolves with the signed-in role so the caller can route to the right console. */
+  loginWithGoogle: (idToken: string) => Promise<Role>;
   register: (body: { name: string; email: string; password: string; storeName: string }) => Promise<void>;
   signOut: () => void;
 }
@@ -123,13 +126,17 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 
-  // Exchange a verified Supabase session (Google / email OTP) for a Loopy JWT.
-  loginWithSupabase: async (token) => {
+  // Exchange a Google ID token for a Loopy JWT. An admin signing in with Google
+  // keeps their admin role rather than being handed a store.
+  loginWithGoogle: async (idToken) => {
     set({ busy: true });
     try {
-      const r = await api.loginWithSupabase(token);
-      const display = persistSession(r, 'seller', 'Your Store');
-      set({ ready: true, role: 'seller', user: r.user, name: display, busy: false });
+      const r = await api.loginWithGoogle(idToken);
+      const role: Role = r.user?.role === 'admin' ? 'admin' : 'seller';
+      const display = persistSession(r, role, role === 'admin' ? 'Admin' : 'Your Store');
+      clearApiCache();
+      set({ ready: true, role, user: r.user, name: display, busy: false });
+      return role;
     } catch (e) {
       set({ busy: false });
       throw e;
@@ -149,6 +156,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   signOut: () => {
+    clearApiCache();
     if (typeof window !== 'undefined') {
       ['loopy_token', 'loopy_user', 'loopy_role', 'loopy_name'].forEach((k) =>
         localStorage.removeItem(k),

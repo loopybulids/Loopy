@@ -1,12 +1,14 @@
 'use client';
 import { useRef, useState } from 'react';
 import { isVideo } from '@/lib/store-config';
+import { compressImage } from '@/lib/compress-image';
 import { Camera } from '@/components/icons';
 
 /**
- * Media field: paste an image/video URL OR upload a file. Files are read as
- * data-URLs (no external storage, original bytes preserved — no resize/compress).
- * `dropzone` renders a large clickable box; otherwise a compact button.
+ * Media field: paste an image/video URL OR upload a file. Files are stored
+ * inline as data-URLs. Images are downscaled and re-encoded first — storing
+ * originals meant multi-MB rows that had to be pulled from Neon on every page
+ * render. `dropzone` renders a large clickable box; otherwise a compact button.
  */
 // Kept under Vercel's ~4.5MB serverless body limit once base64-inflated (~1.35x).
 const MAX_MB = 2.5;
@@ -23,7 +25,7 @@ export default function MediaInput({
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const pickFile = (f?: File) => {
+  const pickFile = async (f?: File) => {
     setErr('');
     if (!f) return;
     if (f.size > MAX_MB * 1024 * 1024) {
@@ -31,10 +33,13 @@ export default function MediaInput({
       return;
     }
     setBusy(true);
-    const reader = new FileReader();
-    reader.onload = () => { onChange(String(reader.result)); setBusy(false); };
-    reader.onerror = () => { setErr('Could not read that file.'); setBusy(false); };
-    reader.readAsDataURL(f);
+    try {
+      onChange(await compressImage(f));
+    } catch {
+      setErr('Could not read that file.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const isData = value.startsWith('data:');

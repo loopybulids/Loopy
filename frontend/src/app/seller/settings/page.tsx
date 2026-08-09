@@ -39,6 +39,12 @@ export default function Settings() {
 
   const [copied, setCopied] = useState(false);
 
+  // store handle editing
+  const [editUrl, setEditUrl] = useState(false);
+  const [handle, setHandle] = useState('');
+  const [urlBusy, setUrlBusy] = useState(false);
+  const [urlErr, setUrlErr] = useState('');
+
   useEffect(() => {
     api.myProfile().then(setProfile).catch(() => {});
     const b = (k: string, d: boolean) => (localStorage.getItem(k) ?? String(d)) === 'true';
@@ -72,6 +78,21 @@ export default function Settings() {
     const full = root ? `https://${username}.${root}` : `${origin}/s/${username}`;
     await navigator.clipboard.writeText(full).catch(() => {});
     setCopied(true); setTimeout(() => setCopied(false), 1500);
+  };
+
+  const startEditUrl = () => { setHandle(profile?.username || ''); setUrlErr(''); setEditUrl(true); };
+  const saveHandle = async () => {
+    setUrlErr('');
+    const slug = handle.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (slug.length < 3) { setUrlErr('Handle must be at least 3 characters (letters, numbers or hyphens).'); return; }
+    setUrlBusy(true);
+    try {
+      await api.updateProfile({ username: slug });
+      const p = await api.myProfile().catch(() => null);
+      if (p) setProfile(p);
+      setEditUrl(false);
+    } catch (e: any) { setUrlErr(e?.message || 'Could not save handle.'); }
+    finally { setUrlBusy(false); }
   };
 
   const saveGst = () => { localStorage.setItem('loopy_set_gstpct', gstPct); setGstSaved(true); setTimeout(() => setGstSaved(false), 1600); };
@@ -117,14 +138,33 @@ export default function Settings() {
       </Panel>
 
       {/* store url */}
-      <Panel title="Store URL" action={<button className="text-[13px] font-bold text-green-600 hover:underline">✎ Edit</button>} className="mb-6">
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-paper px-4 py-3">
-          <span className="font-mono text-[14px] text-navy">{storeUrl}</span>
-          <div className="ml-auto flex items-center gap-3 text-[13px] font-bold text-navy/70">
-            <button onClick={copyUrl} className="hover:text-navy">{copied ? 'Copied!' : 'Copy'}</button>
-            <button className="flex items-center gap-1 hover:text-navy"><Share size={14} /> Share</button>
+      <Panel title="Store URL" action={!editUrl ? <button onClick={startEditUrl} className="text-[13px] font-bold text-green-600 hover:underline">✎ Edit</button> : null} className="mb-6">
+        {!profile?.username && !editUrl && (
+          <p className="mb-3 rounded-lg bg-amber-soft px-3 py-2 text-[12.5px] font-semibold text-navy/80">Set a store handle to get your public link and enable the Preview button.</p>
+        )}
+        {editUrl ? (
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store handle</label>
+            <div className="mt-1.5 flex items-center gap-2">
+              {!root && <span className="whitespace-nowrap font-mono text-[13px] text-faint">{origin.replace(/^https?:\/\//, '')}/s/</span>}
+              <input autoFocus value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="your-store" className="c-input flex-1" />
+            </div>
+            <p className="mt-1 text-[11px] text-faint">Lowercase letters, numbers and hyphens — this becomes your public store link.</p>
+            {urlErr && <p className="mt-1.5 text-[12.5px] font-semibold text-rose">{urlErr}</p>}
+            <div className="mt-3 flex gap-2">
+              <button onClick={saveHandle} disabled={urlBusy} className="btn-green px-4 py-2.5 text-[13px] disabled:opacity-60">{urlBusy ? 'Saving…' : 'Save handle'}</button>
+              <button onClick={() => setEditUrl(false)} className="btn-ghost px-4 py-2.5 text-[13px]">Cancel</button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-paper px-4 py-3">
+            <span className="font-mono text-[14px] text-navy">{storeUrl}</span>
+            <div className="ml-auto flex items-center gap-3 text-[13px] font-bold text-navy/70">
+              {profile?.username && <a href={`/s/${username}?preview=1`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-navy"><Share size={14} /> Preview</a>}
+              <button onClick={copyUrl} className="hover:text-navy">{copied ? 'Copied!' : 'Copy'}</button>
+            </div>
+          </div>
+        )}
       </Panel>
 
       {/* toggles */}

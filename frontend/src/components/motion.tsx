@@ -76,22 +76,63 @@ export function CountUp({ to, suffix = '', prefix = '', decimals = 0, className 
   return <span ref={ref} className={className}>{prefix}{val.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
 }
 
+/* ── pointer-tracking helpers ───────────────────────────────────────────────
+ * Magnetic/Tilt wrap real CTAs, so anything they do on mousemove is felt as
+ * input lag. Two rules keep them cheap:
+ *   1. Measure the element ONCE on enter. getBoundingClientRect() per mousemove
+ *      forces a synchronous layout on every event — the classic jank source.
+ *   2. Coalesce to one update per animation frame. Mice fire well above 60Hz.
+ * They also stay inert for touch/pen and for users who asked for less motion.
+ */
+function useHoverFx() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setOn(fine && !calm);
+  }, []);
+  return on;
+}
+
+/** Returns a mousemove handler that runs `fn` at most once per frame. */
+function useRafMove(fn: (e: { clientX: number; clientY: number }) => void) {
+  const frame = useRef(0);
+  const last = useRef({ clientX: 0, clientY: 0 });
+  useEffect(() => () => { if (frame.current) cancelAnimationFrame(frame.current); }, []);
+  return (e: { clientX: number; clientY: number }) => {
+    last.current = { clientX: e.clientX, clientY: e.clientY };
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      fn(last.current);
+    });
+  };
+}
+
 /* Magnetic wrapper — element drifts toward the cursor */
 export function Magnetic({ children, strength = 0.35, className = '' }: { children: ReactNode; strength?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const box = useRef<DOMRect | null>(null);
+  const active = useHoverFx();
   const x = useSpring(0, { stiffness: 200, damping: 15 });
   const y = useSpring(0, { stiffness: 200, damping: 15 });
+
+  const onMove = useRafMove((p) => {
+    const r = box.current;
+    if (!r) return;
+    x.set((p.clientX - (r.left + r.width / 2)) * strength);
+    y.set((p.clientY - (r.top + r.height / 2)) * strength);
+  });
+
   return (
     <motion.div
       ref={ref}
       style={{ x, y }}
       className={className}
-      onMouseMove={(e) => {
-        const r = ref.current!.getBoundingClientRect();
-        x.set((e.clientX - (r.left + r.width / 2)) * strength);
-        y.set((e.clientY - (r.top + r.height / 2)) * strength);
-      }}
-      onMouseLeave={() => { x.set(0); y.set(0); }}
+      onMouseEnter={active ? () => { box.current = ref.current?.getBoundingClientRect() ?? null; } : undefined}
+      onMouseMove={active ? onMove : undefined}
+      onMouseLeave={active ? () => { box.current = null; x.set(0); y.set(0); } : undefined}
     >
       {children}
     </motion.div>
@@ -101,21 +142,28 @@ export function Magnetic({ children, strength = 0.35, className = '' }: { childr
 /* 3D tilt card that follows the pointer */
 export function Tilt({ children, className = '', max = 12 }: { children: ReactNode; className?: string; max?: number }) {
   const ref = useRef<HTMLDivElement>(null);
+  const box = useRef<DOMRect | null>(null);
+  const active = useHoverFx();
   const mx = useMotionValue(0.5);
   const my = useMotionValue(0.5);
   const rx = useSpring(useTransform(my, [0, 1], [max, -max]), { stiffness: 150, damping: 18 });
   const ry = useSpring(useTransform(mx, [0, 1], [-max, max]), { stiffness: 150, damping: 18 });
+
+  const onMove = useRafMove((p) => {
+    const r = box.current;
+    if (!r || !r.width || !r.height) return;
+    mx.set((p.clientX - r.left) / r.width);
+    my.set((p.clientY - r.top) / r.height);
+  });
+
   return (
     <motion.div
       ref={ref}
       className={className}
       style={{ rotateX: rx, rotateY: ry, transformPerspective: 900 }}
-      onMouseMove={(e) => {
-        const r = ref.current!.getBoundingClientRect();
-        mx.set((e.clientX - r.left) / r.width);
-        my.set((e.clientY - r.top) / r.height);
-      }}
-      onMouseLeave={() => { mx.set(0.5); my.set(0.5); }}
+      onMouseEnter={active ? () => { box.current = ref.current?.getBoundingClientRect() ?? null; } : undefined}
+      onMouseMove={active ? onMove : undefined}
+      onMouseLeave={active ? () => { box.current = null; mx.set(0.5); my.set(0.5); } : undefined}
     >
       {children}
     </motion.div>

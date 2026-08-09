@@ -1,55 +1,34 @@
 'use client';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getCust, clearCust, cartCount, setCust, custApi, type Cust } from '@/lib/customer';
-import { supabase } from '@/lib/supabase';
-import CustomerAuth from './CustomerAuth';
-import { Heart, Bag, Users } from '@/components/icons';
+import StoreAccountControls from './StoreAccountControls';
+import { Back } from '@/components/icons';
 
-export default function StoreAccountBar({ username, storeName }: { username: string; storeName?: string }) {
-  const [cust, setCustState] = useState<Cust | null>(null);
-  const [count, setCount] = useState(0);
-  const [authOpen, setAuthOpen] = useState(false);
-
-  useEffect(() => {
-    const sync = () => { setCustState(getCust(username)); setCount(cartCount(username)); };
-    sync();
-    window.addEventListener('cust-change', sync);
-    window.addEventListener('cart-change', sync);
-    window.addEventListener('storage', sync);
-    return () => { window.removeEventListener('cust-change', sync); window.removeEventListener('cart-change', sync); window.removeEventListener('storage', sync); };
-  }, [username]);
-
-  // Complete a Google login that redirected back to the store.
-  useEffect(() => {
-    if (!supabase) return;
-    if (sessionStorage.getItem('loopy_cust_oauth') !== username) return;
-    supabase.auth.getSession().then(async ({ data }) => {
-      const t = data.session?.access_token;
-      if (!t) return;
-      sessionStorage.removeItem('loopy_cust_oauth');
-      sessionStorage.removeItem('loopy_cust_return');
-      try { const r = await custApi.authSupabase(username, t); setCust(username, r); } catch { /* ignore */ }
-    });
-  }, [username]);
-
+/**
+ * Header for the storefront's inner pages (cart, wishlist, orders, checkout),
+ * which don't render the full store header.
+ *
+ * This used to be a coloured strip carrying wishlist/cart/account above the
+ * header — but the header already had wishlist and cart icons, so everything
+ * appeared twice. The strip is gone; the controls now live in one place
+ * (StoreAccountControls) and are shared with the real header.
+ */
+export default function StoreAccountBar({ username, storeName, accent }: {
+  username: string; storeName?: string; accent?: string;
+}) {
   return (
-    <>
-      <div className="flex h-9 items-center justify-end gap-4 bg-navy px-5 text-[12px] font-semibold text-white/85 sm:px-8">
-        <Link href={`/s/${username}/wishlist`} className="flex items-center gap-1.5 hover:text-white"><Heart size={13} /> Wishlist</Link>
-        <Link href={`/s/${username}/cart`} className="flex items-center gap-1.5 hover:text-white">
-          <Bag size={13} /> Cart{count > 0 && <span className="rounded-full bg-green-500 px-1.5 text-[10px] font-bold text-white">{count}</span>}
-        </Link>
-        {cust ? (
-          <span className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5"><Users size={13} /> {cust.customer.name || 'Account'}</span>
-            <button onClick={() => clearCust(username)} className="text-white/60 hover:text-white">Sign out</button>
-          </span>
-        ) : (
-          <button onClick={() => setAuthOpen(true)} className="flex items-center gap-1.5 hover:text-white"><Users size={13} /> Sign in</button>
-        )}
+    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-white/90 px-4 py-3 backdrop-blur sm:px-8">
+      <Link href={`/s/${username}`} className="flex items-center gap-1.5 font-display text-[15px] font-extrabold text-navy transition-opacity hover:opacity-70">
+        <Back size={16} /> {storeName || 'Back to store'}
+      </Link>
+
+      <nav className="ml-auto hidden items-center gap-4 text-[13px] font-semibold text-muted sm:flex">
+        <Link href={`/s/${username}`} className="hover:text-navy">Home</Link>
+        <Link href={`/s/${username}/orders`} className="hover:text-navy">Orders</Link>
+      </nav>
+
+      <div className="ml-auto sm:ml-3">
+        <StoreAccountControls username={username} storeName={storeName} accent={accent} />
       </div>
-      {authOpen && <CustomerAuth username={username} storeName={storeName} onClose={() => setAuthOpen(false)} onAuthed={() => setAuthOpen(false)} />}
-    </>
+    </div>
   );
 }

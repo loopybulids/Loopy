@@ -19,6 +19,8 @@ out/
 **/.env
 **/.env.*
 !**/.env.example
+DEPLOYMENT_REFERENCE.md
+DEPLOYMENT_REFERENCE.pdf
 
 # ---- database (local SQLite dev) ----
 *.db

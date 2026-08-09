@@ -1,12 +1,16 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
+function token(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('loopy_token');
+}
+
 function authHeader(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const t = localStorage.getItem('loopy_token');
+  const t = token();
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+async function send<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
@@ -21,6 +25,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     if (res.status === 401 && typeof window !== 'undefined' && localStorage.getItem('loopy_token')) {
       const role = localStorage.getItem('loopy_role');
       localStorage.removeItem('loopy_token');
+      clearApiCache();
       const dest = role === 'admin' ? '/admin/login' : '/seller/login';
       if (!location.pathname.includes('/login')) location.href = dest;
       throw new Error('Your session expired — please sign in again.');
@@ -31,7 +36,70 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+/* ───────────────────────── read cache ─────────────────────────
+ * Every console page is a client component that fetches on mount, so bouncing
+ * Dashboard → Orders → Dashboard used to mean three full round trips and three
+ * "Loading…" flashes. GETs are now cached for a few seconds and de-duplicated
+ * while in flight, so re-entering a page you just left paints instantly. Any
+ * write (POST/PUT/DELETE) drops the cache so the next read is fresh.
+ */
+const TTL = 15_000;
+const cache = new Map<string, { at: number; data: any }>();
+const inflight = new Map<string, Promise<any>>();
+
+export function clearApiCache() {
+  cache.clear();
+  inflight.clear();
+}
+
+// Hand out a copy — callers keep the result in component state and some of them
+// edit it in place (store editor, variant editor), which would poison the cache.
+function clone<T>(v: T): T {
+  if (v === null || typeof v !== 'object') return v;
+  try {
+    return structuredClone(v);
+  } catch {
+    return JSON.parse(JSON.stringify(v));
+  }
+}
+
+/** `noInvalidate` — for fire-and-forget writes (visit pings) that change nothing we read. */
+async function req<T>(path: string, init?: RequestInit & { noInvalidate?: boolean }): Promise<T> {
+  const method = (init?.method || 'GET').toUpperCase();
+
+  if (method !== 'GET') {
+    const { noInvalidate, ...rest } = init || {};
+    const out = await send<T>(path, rest);
+    if (!noInvalidate) clearApiCache();
+    return out;
+  }
+
+  const key = `${path}|${token() || ''}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return clone(hit.data);
+
+  const pending = inflight.get(key);
+  if (pending) return pending.then(clone);
+
+  const p = send<T>(path, init).then(
+    (data) => {
+      cache.set(key, { at: Date.now(), data });
+      inflight.delete(key);
+      return data;
+    },
+    (err) => {
+      inflight.delete(key);
+      throw err;
+    },
+  );
+  inflight.set(key, p);
+  return p.then(clone);
+}
+
 export const api = {
+  /** Drop cached reads — call before a manual refresh to force a round trip. */
+  invalidate: clearApiCache,
+
   // storefront / products
   getStore: (username: string) => req<any>(`/sellers/${username}`),
   getProduct: (id: string) => req<any>(`/products/${id}`),
@@ -53,8 +121,8 @@ export const api = {
     req<any>(`/auth/register`, { method: 'POST', body: JSON.stringify(body) }),
   loginEmail: (email: string, password: string) =>
     req<any>(`/auth/login-email`, { method: 'POST', body: JSON.stringify({ email, password }) }),
-  loginWithSupabase: (token: string) =>
-    req<any>(`/auth/supabase`, { method: 'POST', body: JSON.stringify({ token }) }),
+  loginWithGoogle: (token: string) =>
+    req<any>(`/auth/google`, { method: 'POST', body: JSON.stringify({ token }) }),
 
   // order actions
   deliverOrder: (id: string) => req<any>(`/orders/${id}/deliver`, { method: 'POST' }),
@@ -86,7 +154,7 @@ export const api = {
   updateCoupon: (id: string, body: any) => req<any>(`/sellers/me/coupons/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteCoupon: (id: string) => req<any>(`/sellers/me/coupons/${id}`, { method: 'DELETE' }),
   recordVisit: (username: string, session: string, source?: string, referrer?: string) =>
-    req<any>(`/sellers/${username}/visit`, { method: 'POST', body: JSON.stringify({ session, source, referrer }) }),
+    req<any>(`/sellers/${username}/visit`, { method: 'POST', noInvalidate: true, body: JSON.stringify({ session, source, referrer }) }),
   requestPayout: () => req<any>(`/sellers/me/payouts`, { method: 'POST' }),
   createProduct: (body: any) =>
     req<any>(`/products`, { method: 'POST', body: JSON.stringify(body) }),
@@ -97,6 +165,8 @@ export const api = {
   updateProfile: (body: any) =>
     req<any>(`/sellers/me/profile`, { method: 'PUT', body: JSON.stringify(body) }),
   acceptOrder: (id: string) => req<any>(`/orders/${id}/accept`, { method: 'POST' }),
+  rejectOrder: (id: string, reason?: string) =>
+    req<any>(`/orders/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
   shipOrder: (id: string) => req<any>(`/orders/${id}/ship`, { method: 'POST' }),
 
   // admin (auth required, role=admin)

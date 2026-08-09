@@ -70,6 +70,14 @@ export class SellersService {
 
   async updateProfile(sellerId: string, data: any) {
     const upd: any = {};
+    // Store handle (username) → your public /s/<handle> URL. Slugified + unique.
+    if (typeof data?.username === 'string') {
+      const slug = data.username.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (slug.length < 3) throw new BadRequestException('Handle must be at least 3 characters (letters, numbers or hyphens).');
+      const taken = await this.prisma.seller.findFirst({ where: { username: slug, NOT: { id: sellerId } }, select: { id: true } });
+      if (taken) throw new BadRequestException('That handle is already taken — try another.');
+      upd.username = slug;
+    }
     const strBool = ['storeName', 'description', 'city', 'logoUrl', 'bannerUrl', 'address', 'category', 'tagline', 'contactPhone', 'contactEmail', 'instagram', 'whatsapp', 'payoutEmail', 'payoutMethod', 'payoutUpi', 'payoutAccount', 'payoutName', 'payoutPhone', 'published', 'freeShipEnabled', 'expressShip'];
     for (const k of strBool) if (data?.[k] !== undefined) upd[k] = data[k];
     const nums = ['shippingFee', 'minOrderAmount', 'shipDays', 'freeShipThreshold', 'expressFee', 'establishedYear'];
@@ -275,7 +283,18 @@ export class SellersService {
       include: { items: true },
       orderBy: { createdAt: 'desc' },
     });
-    return orders;
+
+    // Order stores a customerId but has no declared relation to Customer, so
+    // attach the shopper's contact details in one extra query rather than N.
+    const ids = [...new Set(orders.map((o) => o.customerId).filter(Boolean))] as string[];
+    if (!ids.length) return orders.map((o) => ({ ...o, customer: null }));
+
+    const customers = await this.prisma.customer.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, email: true, phone: true },
+    });
+    const byId = new Map(customers.map((c) => [c.id, c]));
+    return orders.map((o) => ({ ...o, customer: (o.customerId && byId.get(o.customerId)) || null }));
   }
 
   async getMe(sellerId: string) {

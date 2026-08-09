@@ -3,14 +3,38 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
+import OrderDetail, { paymentState, statusLabel, statusChip } from '@/components/store/OrderDetail';
 import { Bag, Share, Plus } from '@/components/icons';
 
+// Values are the stored Order.status; labels come from statusLabel().
 const FILTERS = ['All', 'Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed', 'Cancelled'];
 
 export default function Orders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
+  const [actErr, setActErr] = useState('');
+
+  // Move an order along the fulfilment chain and swap the updated row in place,
+  // so the queue reflects the new status without a full refetch.
+  const act = async (order: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected', reason?: string) => {
+    setActErr('');
+    setActing(order.id);
+    try {
+      const updated =
+        to === 'Accepted' ? await api.acceptOrder(order.id)
+        : to === 'Shipped' ? await api.shipOrder(order.id)
+        : to === 'Delivered' ? await api.deliverOrder(order.id)
+        : await api.rejectOrder(order.id, reason);
+      setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, ...updated } : o)));
+    } catch (e: any) {
+      setActErr(e?.message || 'Could not update this order.');
+    } finally {
+      setActing(null);
+    }
+  };
 
   useEffect(() => {
     api.myOrders().then((o) => { setOrders(o || []); setLoading(false); }).catch(() => setLoading(false));
@@ -31,7 +55,7 @@ export default function Orders() {
               filter === f ? 'bg-green text-white' : 'bg-white text-muted ring-1 ring-line hover:text-navy'
             }`}
           >
-            {f}
+            {f === 'All' ? 'All' : statusLabel(f)}
           </button>
         ))}
       </div>
@@ -48,22 +72,137 @@ export default function Orders() {
           />
         ) : (
           <div className="divide-y divide-line">
-            {shown.map((o) => (
-              <div key={o.id} className="flex items-center gap-3 py-3.5">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-green-soft text-green-600"><Bag size={16} /></span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-display text-[14px] font-bold text-navy">#{String(o.id).slice(-6).toUpperCase()}</div>
-                  <div className="truncate text-[12px] text-faint">
-                    {o.buyer?.name || o.customer?.name || 'Customer'} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '—'}
-                  </div>
+            {shown.map((o) => {
+              const pay = paymentState(o);
+              const open = expanded === o.id;
+              return (
+                <div key={o.id}>
+                  <button
+                    onClick={() => setExpanded(open ? null : o.id)}
+                    className="flex w-full items-center gap-3 py-3.5 text-left transition-colors hover:bg-paper/60"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-green-soft text-green-600"><Bag size={16} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display text-[14px] font-bold text-navy">#{String(o.id).slice(-6).toUpperCase()}</div>
+                      <div className="truncate text-[12px] text-faint">
+                        {o.customer?.name || o.buyerName || o.buyer?.name || 'Customer'}{o.buyerPhone || o.customer?.phone ? ` · ${o.buyerPhone || o.customer.phone}` : ''} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '—'}
+                      </div>
+                    </div>
+                    <span
+                      title={pay.paid ? `${pay.label} — collected` : `${pay.label} — not collected yet`}
+                      className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${pay.paid ? 'bg-green-soft text-green-600' : 'bg-amber-soft text-amber'}`}
+                    >
+                      {pay.short}{pay.paid ? '' : ' · due'}
+                    </span>
+                    <span className="text-[14px] font-bold text-navy">{money(o.totalAmount ?? o.total ?? o.amount ?? 0)}</span>
+                    <span className={`${statusChip(o.status)} ml-1`}>{statusLabel(o.status)}</span>
+                    <span className={`ml-1 shrink-0 text-faint transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+                  </button>
+                  {open && (
+                    <div className="mb-3 rounded-xl border border-line bg-paper/50 p-4">
+                      <OrderDetail order={o} />
+                      <OrderActions order={o} busy={acting === o.id} onAct={act} err={acting === o.id ? actErr : ''} />
+                    </div>
+                  )}
                 </div>
-                <span className="text-[14px] font-bold text-navy">{money(o.total || o.amount || 0)}</span>
-                <span className="chip-green ml-2">{o.status}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Panel>
+    </div>
+  );
+}
+
+/**
+ * Fulfilment controls. Only the single legal next step is offered, so the seller
+ * can't skip Accepted → Shipped or move an order backwards.
+ */
+const NEXT: Record<string, { to: 'Accepted' | 'Shipped' | 'Delivered'; label: string; hint: string }> = {
+  Paid: { to: 'Accepted', label: 'Accept order', hint: 'Confirm you have this item and will fulfil it.' },
+  Accepted: { to: 'Shipped', label: 'Mark as shipped', hint: 'Generates a tracking number for the buyer.' },
+  Shipped: { to: 'Delivered', label: 'Mark as delivered', hint: 'Buyer confirms to release your payout.' },
+};
+
+function OrderActions({ order, busy, onAct, err }: {
+  order: any; busy: boolean; err: string;
+  onAct: (o: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected', reason?: string) => void;
+}) {
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState('');
+  const step = NEXT[order.status];
+  const pay = paymentState(order);
+  // On a COD order, "delivered" is also the moment the cash is collected.
+  const codOnDelivery = step?.to === 'Delivered' && !pay.paid && pay.short === 'COD';
+  // Once it's shipped, declining isn't a rejection any more — it's a refund.
+  const canReject = ['Paid', 'PendingPayment', 'Accepted'].includes(order.status);
+
+  return (
+    <div className="mt-4 border-t border-line pt-4">
+      {order.awbNumber && (
+        <p className="mb-3 text-[12.5px] text-muted">
+          Tracking number <b className="font-mono text-navy">{order.awbNumber}</b>
+        </p>
+      )}
+      {step ? (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <button onClick={() => onAct(order, step.to)} disabled={busy} className="btn-green px-4 py-2.5 text-[13px] disabled:opacity-60">
+              {busy ? 'Updating…' : step.label}
+            </button>
+            {canReject && (
+              <button
+                onClick={() => setRejecting((r) => !r)}
+                disabled={busy}
+                className="rounded-lg border border-rose/30 px-4 py-2.5 text-[13px] font-bold text-rose transition-colors hover:bg-rose-soft disabled:opacity-60"
+              >
+                Reject order
+              </button>
+            )}
+            <span className="text-[12px] text-muted">
+              {codOnDelivery
+                ? `Marks the ${money(order.totalAmount ?? 0)} cash as collected.`
+                : step.hint}
+            </span>
+          </div>
+
+          {rejecting && (
+            <div className="mt-3 rounded-xl border border-rose/30 bg-rose-soft/40 p-3.5">
+              <p className="text-[12.5px] font-semibold text-navy">
+                Reject this order? Stock goes back to your catalogue and the customer is emailed.
+              </p>
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Reason (optional) — shown to the customer"
+                className="c-input mt-2.5 text-[13px]"
+              />
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  onClick={() => { setRejecting(false); onAct(order, 'Rejected', reason.trim() || undefined); }}
+                  disabled={busy}
+                  className="rounded-lg bg-rose px-4 py-2 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  {busy ? 'Rejecting…' : 'Confirm rejection'}
+                </button>
+                <button onClick={() => setRejecting(false)} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy">
+                  Keep order
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-[12.5px] font-semibold text-muted">
+          {order.status === 'Delivered'
+            ? (pay.short === 'COD'
+                ? `Delivered — ${money(order.totalAmount ?? 0)} collected in cash.`
+                : 'Delivered — waiting for the buyer to confirm and release payment.')
+            : order.status === 'Completed' ? 'Completed. Payout released.'
+            : `No further action while this order is ${order.status}.`}
+        </p>
+      )}
+      {err && <p className="mt-2 text-[13px] font-semibold text-rose">{err}</p>}
     </div>
   );
 }

@@ -59,20 +59,59 @@ export default function StoreEditor() {
     setConfig((c) => (c ? { ...c, theme: { ...c.theme, accent: t.accent, font: t.font, heroBg: t.heroBg } } : c));
   const activeTemplate = TEMPLATES.find((t) => config?.theme.accent === t.accent && config?.theme.font === t.font && config?.theme.heroBg === t.heroBg);
 
+  // Logo already persisted on the server — lets Preview skip re-uploading a
+  // multi-hundred-KB base64 data URI when nothing about it changed.
+  const savedLogo = useRef<string | null>(null);
+
   useEffect(() => {
     Promise.all([api.myProfile().catch(() => null), api.myProducts().catch(() => [])]).then(([p, prods]) => {
       const name = p?.storeName || 'Your Store';
       setStoreName(name);
       setUsername(p?.username || '');
       const parsed = typeof p?.storeConfig === 'string' ? safeParse(p.storeConfig) : p?.storeConfig;
-      setConfig(withDefaults(name, parsed));
+      setConfig(withDefaults(name, parsed, p?.logoUrl));
       setProducts(prods || []);
+      savedLogo.current = p?.logoUrl || null;
     });
   }, []);
 
   // generic deep-ish setter for a section field
   const set = (section: keyof StoreConfig, field: string, value: any) =>
     setConfig((c) => (c ? { ...c, [section]: { ...(c as any)[section], [field]: value } } : c));
+
+  useEffect(() => {
+    if (config && username) {
+      try { localStorage.setItem(`loopy_draft_${username}`, JSON.stringify(config)); } catch { /* ignore */ }
+    }
+  }, [config, username]);
+
+  /**
+   * Open the preview tab *synchronously*, then save in the background.
+   *
+   * Two reasons this must not await first: the tab has to be opened inside the
+   * click's own call stack or popup blockers kill it, and waiting on two Neon
+   * round trips (one of them re-uploading a base64 logo) made the button feel
+   * dead for seconds.
+   *
+   * Nothing is lost by not waiting — `?preview=1` makes the storefront read the
+   * draft out of localStorage, which is already written on every edit.
+   */
+  const handlePreview = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (config && username) {
+      try { localStorage.setItem(`loopy_draft_${username}`, JSON.stringify(config)); } catch { /* ignore */ }
+    }
+    window.open(`/s/${username}?preview=1`, '_blank');
+
+    if (!config) return;
+    // Persist in the background so a reload of the preview still shows this design.
+    api.updateStoreConfig(config).catch(() => {});
+    const logo = config.header?.logoUrl;
+    if (logo && logo !== savedLogo.current) {
+      savedLogo.current = logo;
+      api.updateProfile({ logoUrl: logo }).catch(() => { savedLogo.current = null; });
+    }
+  };
 
   const publish = async () => {
     if (!config) return;
@@ -117,7 +156,9 @@ export default function StoreEditor() {
             <button key={d} onClick={() => setDevice(d)} className={`rounded-md px-2.5 py-1 capitalize transition-colors ${device === d ? 'bg-white text-navy shadow-sm' : 'text-faint hover:text-navy'}`}>{d}</button>
           ))}
         </div>
-        {username && <Link href={`/s/${username}?preview=1`} target="_blank" className="flex items-center gap-1 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">Preview <IExternal /></Link>}
+        {username
+          ? <button onClick={handlePreview} className="flex items-center gap-1 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">Preview <IExternal /></button>
+          : <Link href="/seller/settings" className="flex items-center gap-1 text-[12.5px] font-semibold text-amber transition-colors hover:text-navy">Set a handle to preview <IExternal /></Link>}
         <div className="flex items-center gap-0.5">
           <button onClick={undo} disabled={!hist.current.past.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Undo"><IUndo /></button>
           <button onClick={redo} disabled={!hist.current.future.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Redo"><IRedo /></button>

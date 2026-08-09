@@ -175,7 +175,7 @@ export class AdminService {
         { name: 'API', status: 'Operational' },
         { name: 'Database', status: 'Operational' },
         { name: 'Payment Gateway', status: 'Operational' },
-        { name: 'Auth (Supabase)', status: 'Operational' },
+        { name: 'Auth (Google)', status: 'Operational' },
       ],
     };
   }

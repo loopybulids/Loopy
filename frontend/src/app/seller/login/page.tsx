@@ -4,54 +4,39 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
-import { supabase, supabaseEnabled } from '@/lib/supabase';
+import { googleEnabled } from '@/lib/google';
+import GoogleButton from '@/components/GoogleButton';
+import PasswordInput from '@/components/PasswordInput';
+import Logo from '@/components/Logo';
 import { ArrowRight, Loop, Store } from '@/components/icons';
 
 type Mode = 'login' | 'register';
 
 export default function SellerAuth() {
   const router = useRouter();
-  const { register, loginWithSupabase, busy } = useAuth();
+  const { register, loginWithGoogle, busy } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', storeName: '' });
   const [err, setErr] = useState('');
   const [pwBusy, setPwBusy] = useState(false);
-
-  // email-OTP flow
-  const [showCode, setShowCode] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
-  const [otpEmail, setOtpEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [supaBusy, setSupaBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // Only auto-complete a Google login right after the user clicked "Continue with
-  // Google" (we set a one-shot flag before redirecting), so a lingering Supabase
-  // session doesn't silently log the user in on every visit.
-  useEffect(() => {
-    if (!supabase) return;
-    if (sessionStorage.getItem('loopy_oauth_pending') !== '1') return;
-    sessionStorage.removeItem('loopy_oauth_pending');
-    supabase.auth.getSession().then(async ({ data }) => {
-      const token = data.session?.access_token;
-      if (token) {
-        try { await loginWithSupabase(token); router.replace('/seller'); }
-        catch (e: any) { setErr(e?.message || 'Sign-in failed.'); }
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const google = async () => {
+  // Google Identity Services hands the ID token straight to this callback —
+  // no redirect round trip, so there's no "pending OAuth" state to track.
+  const onGoogleToken = async (idToken: string) => {
     setErr('');
-    if (!supabase) return setErr('Google sign-in isn’t configured yet.');
-    sessionStorage.setItem('loopy_oauth_pending', '1'); // one-shot: auth the session on return
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/seller/login` },
-    });
-    if (error) { sessionStorage.removeItem('loopy_oauth_pending'); setErr(error.message); }
+    setGoogleBusy(true);
+    try {
+      const role = await loginWithGoogle(idToken);
+      router.replace(role === 'admin' ? '/admin' : '/seller');
+    } catch (e: any) {
+      setErr(e?.message || 'Sign-in failed.');
+    } finally {
+      setGoogleBusy(false);
+    }
   };
 
   const submit = async () => {
@@ -90,29 +75,6 @@ export default function SellerAuth() {
     }
   };
 
-  const sendCode = async () => {
-    setErr('');
-    if (!supabase) return setErr('Email code isn’t configured yet.');
-    if (!otpEmail) return setErr('Enter your email.');
-    setSupaBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ email: otpEmail, options: { shouldCreateUser: true } });
-    setSupaBusy(false);
-    if (error) setErr(error.message); else setCodeSent(true);
-  };
-
-  const verifyCode = async () => {
-    setErr('');
-    if (!supabase) return;
-    setSupaBusy(true);
-    const { data, error } = await supabase.auth.verifyOtp({ email: otpEmail, token: otpCode, type: 'email' });
-    if (error) { setSupaBusy(false); return setErr(error.message); }
-    const token = data.session?.access_token;
-    if (!token) { setSupaBusy(false); return setErr('No session returned.'); }
-    try { await loginWithSupabase(token); router.push('/seller'); }
-    catch (e: any) { setErr(e?.message || 'Sign-in failed.'); }
-    finally { setSupaBusy(false); }
-  };
-
   return (
     <main className="relative grid min-h-screen place-items-center overflow-hidden bg-paper px-5 py-10 text-navy">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -123,8 +85,8 @@ export default function SellerAuth() {
       </div>
 
       <div className="relative w-full max-w-md animate-riseIn">
-        <Link href="/" className="mx-auto mb-8 flex w-fit items-center gap-2 font-display text-[26px] font-extrabold tracking-tight text-navy">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-green-mint"><Loop size={20} /></span> Loopy
+        <Link href="/" className="mx-auto mb-8 flex w-fit items-center gap-2">
+          <Logo height={34} />
           <span className="ml-1 rounded-md bg-green-soft px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-green">Seller</span>
         </Link>
 
@@ -137,34 +99,13 @@ export default function SellerAuth() {
             {mode === 'login' ? 'Sign in to your seller console.' : 'Create your account — your storefront goes live instantly.'}
           </p>
 
-          {/* Google + email-code (Supabase) */}
-          {supabaseEnabled && (
+          {/* Google Sign-In */}
+          {googleEnabled && (
             <>
-              <button onClick={google} className="btn-ghost mt-6 w-full justify-center gap-3">
-                <GoogleIcon /> Continue with Google
-              </button>
-
-              {!showCode ? (
-                <button onClick={() => setShowCode(true)} className="mt-2 w-full rounded-lg py-2 text-[13px] font-bold text-navy/70 transition-colors hover:text-navy">
-                  Email me a sign-in code instead
-                </button>
-              ) : (
-                <div className="mt-3 rounded-xl border border-line bg-white/70 p-3">
-                  {!codeSent ? (
-                    <>
-                      <input className="c-input" type="email" placeholder="you@store.com" value={otpEmail} onChange={(e) => setOtpEmail(e.target.value)} />
-                      <button onClick={sendCode} disabled={supaBusy} className="btn-navy mt-2 w-full justify-center disabled:opacity-60">{supaBusy ? 'Sending…' : 'Send code'}</button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-1.5 text-[12px] text-muted">We emailed a 6-digit code to <b className="text-navy">{otpEmail}</b>.</p>
-                      <input className="c-input tracking-[0.3em]" placeholder="••••••" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} />
-                      <button onClick={verifyCode} disabled={supaBusy} className="btn-green mt-2 w-full justify-center disabled:opacity-60">{supaBusy ? 'Verifying…' : 'Verify & enter'}</button>
-                      <button onClick={() => { setCodeSent(false); setOtpCode(''); }} className="mt-1 w-full text-[12px] font-semibold text-muted hover:text-navy">Use a different email</button>
-                    </>
-                  )}
-                </div>
-              )}
+              <div className="mt-6">
+                <GoogleButton onToken={onGoogleToken} onError={setErr} text={mode === 'register' ? 'signup_with' : 'signin_with'} />
+              </div>
+              {googleBusy && <p className="mt-2 text-center text-[12.5px] font-semibold text-muted">Signing you in…</p>}
 
               <div className="my-5 flex items-center gap-3 text-[12px] font-semibold text-faint">
                 <span className="h-px flex-1 bg-line" /> or with password <span className="h-px flex-1 bg-line" />
@@ -184,7 +125,7 @@ export default function SellerAuth() {
           <div className="mt-4 space-y-3">
             {mode === 'register' && <Field label="Your name" value={form.name} onChange={set('name')} placeholder="Riya Mehta" />}
             <Field label="Email" type="email" value={form.email} onChange={set('email')} placeholder="you@store.com" />
-            <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="••••••••" onEnter={submit} />
+            <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="••••••••" onEnter={submit} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
             {mode === 'register' && <Field label="Store name" value={form.storeName} onChange={set('storeName')} placeholder="The Vintage Loop" onEnter={submit} />}
           </div>
 
@@ -199,14 +140,20 @@ export default function SellerAuth() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text', onEnter }: {
+function Field({ label, value, onChange, placeholder, type = 'text', onEnter, autoComplete }: {
   label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string; type?: string; onEnter?: () => void;
+  placeholder?: string; type?: string; onEnter?: () => void; autoComplete?: string;
 }) {
   return (
     <div>
       <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">{label}</label>
-      <input type={type} value={value} onChange={onChange} onKeyDown={(e) => e.key === 'Enter' && onEnter?.()} placeholder={placeholder} className="c-input mt-1.5" />
+      {type === 'password' ? (
+        <div className="mt-1.5">
+          <PasswordInput value={value} onChange={onChange} placeholder={placeholder} onEnter={onEnter} autoComplete={autoComplete || 'current-password'} />
+        </div>
+      ) : (
+        <input type={type} value={value} onChange={onChange} onKeyDown={(e) => e.key === 'Enter' && onEnter?.()} placeholder={placeholder} autoComplete={autoComplete} className="c-input mt-1.5" />
+      )}
     </div>
   );
 }

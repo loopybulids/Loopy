@@ -8,9 +8,27 @@ export type Cust = { token: string; customer: { id: string; name?: string; email
 
 export function getCust(u: string): Cust | null {
   if (typeof window === 'undefined') return null;
-  try { const s = localStorage.getItem(sessKey(u)); return s ? JSON.parse(s) : null; } catch { return null; }
+  try {
+    const s = localStorage.getItem(sessKey(u));
+    if (!s) return null;
+    const r = JSON.parse(s);
+    // Sessions saved before the accessToken/token fix are still in browsers —
+    // read either shape so nobody has to sign out to recover.
+    const token = r?.token ?? r?.accessToken;
+    return token ? { token, customer: r?.customer } : null;
+  } catch { return null; }
 }
-export function setCust(u: string, c: Cust) { localStorage.setItem(sessKey(u), JSON.stringify(c)); window.dispatchEvent(new Event('cust-change')); }
+/**
+ * Accepts the raw auth response. The API returns the JWT as `accessToken`
+ * while everything here reads `token`, so normalise once at the boundary —
+ * otherwise every authenticated call quietly sends `Bearer undefined` and the
+ * backend answers 401.
+ */
+export function setCust(u: string, r: any) {
+  const c: Cust = { token: r?.accessToken ?? r?.token, customer: r?.customer };
+  localStorage.setItem(sessKey(u), JSON.stringify(c));
+  window.dispatchEvent(new Event('cust-change'));
+}
 export function clearCust(u: string) { localStorage.removeItem(sessKey(u)); window.dispatchEvent(new Event('cust-change')); }
 
 async function custReq(u: string, path: string, init?: RequestInit) {
@@ -24,20 +42,35 @@ async function custReq(u: string, path: string, init?: RequestInit) {
   return res.json();
 }
 
+// Unauthenticated POST to a store's customer-auth endpoints.
+async function authReq(u: string, action: string, body: any) {
+  const r = await fetch(`${BASE}/stores/${u}/customer-auth/${action}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({} as any)))?.message || 'Sign-in failed');
+  return r.json();
+}
+
 export const custApi = {
-  authSupabase: async (u: string, token: string) => {
-    const r = await fetch(`${BASE}/stores/${u}/customer-auth`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({} as any)))?.message || 'Sign-in failed');
-    return r.json();
-  },
+  /** Exchange a Google ID token for a per-store customer session. */
+  authGoogle: (u: string, token: string) => authReq(u, 'google', { token }),
+  /** Step 1 of signup — emails a 6-digit code. Returns { pending, sent, devCode? }. */
+  register: (u: string, body: { name?: string; email: string; password: string }) => authReq(u, 'register', body),
+  /** Step 2 of signup — exchanges the code for a session. */
+  verifySignup: (u: string, email: string, code: string) => authReq(u, 'verify', { email, code }),
+  login: (u: string, email: string, password: string) => authReq(u, 'login', { email, password }),
   me: (u: string) => custReq(u, '/customer/me'),
   wishlist: (u: string) => custReq(u, '/customer/wishlist'),
   wishlistIds: (u: string) => custReq(u, '/customer/wishlist/ids'),
-  addWishlist: (u: string, pid: string) => custReq(u, `/customer/wishlist/${pid}`, { method: 'POST' }),
-  removeWishlist: (u: string, pid: string) => custReq(u, `/customer/wishlist/${pid}`, { method: 'DELETE' }),
+  // The header badge listens for 'wishlist-change' to refresh its count.
+  addWishlist: (u: string, pid: string) =>
+    custReq(u, `/customer/wishlist/${pid}`, { method: 'POST' }).then((r) => { window.dispatchEvent(new Event('wishlist-change')); return r; }),
+  removeWishlist: (u: string, pid: string) =>
+    custReq(u, `/customer/wishlist/${pid}`, { method: 'DELETE' }).then((r) => { window.dispatchEvent(new Event('wishlist-change')); return r; }),
   addresses: (u: string) => custReq(u, '/customer/addresses'),
   addAddress: (u: string, body: any) => custReq(u, '/customer/addresses', { method: 'POST', body: JSON.stringify(body) }),
   checkout: (u: string, body: any) => custReq(u, '/customer/checkout', { method: 'POST', body: JSON.stringify(body) }),
+  orders: (u: string) => custReq(u, '/customer/orders'),
 };
 
 /* ── cart (client-side, per store) ── */
@@ -61,3 +94,27 @@ export function updateQty(u: string, productId: string, size: string | undefined
   setCart(u, cart);
 }
 export function clearCart(u: string) { setCart(u, []); }
+
+/**
+ * Apply the items encoded in a seller's checkout link.
+ *
+ * Sets quantities rather than adding to them, so opening the same link twice
+ * doesn't silently double the order. Items already in the cart that aren't part
+ * of the link are left alone.
+ */
+export function applyLinkItems(u: string, items: CartItem[]) {
+  const cart = getCart(u).filter((c) => !items.some((i) => i.productId === c.productId && i.size === c.size));
+  setCart(u, [...cart, ...items]);
+}
+
+/** Parse `?add=<productId>:<qty>,<productId>:<qty>` from a checkout link. */
+export function parseLinkItems(param: string): { productId: string; qty: number }[] {
+  return param
+    .split(',')
+    .map((chunk) => {
+      const [productId, q] = chunk.split(':');
+      if (!productId) return null;
+      return { productId, qty: Math.min(99, Math.max(1, Number(q) || 1)) };
+    })
+    .filter(Boolean) as { productId: string; qty: number }[];
+}

@@ -1,23 +1,16 @@
 'use client';
 import { useRef, useState } from 'react';
 import { isVideo } from '@/lib/store-config';
+import { compressImage } from '@/lib/compress-image';
 import { Plus } from '@/components/icons';
 
 /**
  * Multi-media uploader: several images + at most one video. Files become
- * data-URLs (original quality, no resize/crop). Thumbnails are small and the
- * strip scrolls horizontally. Paste-a-URL is supported too.
+ * data-URLs, with images downscaled and re-encoded first — a product carrying
+ * several full-resolution photos otherwise costs megabytes on every storefront
+ * render. Paste-a-URL is supported too.
  */
 const MAX_MB = 2.5;
-
-function readAsDataURL(f: File): Promise<string> {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(String(r.result));
-    r.onerror = rej;
-    r.readAsDataURL(f);
-  });
-}
 
 export default function MediaGallery({
   value, onChange, max = 8,
@@ -41,7 +34,7 @@ export default function MediaGallery({
       const isVid = f.type.startsWith('video');
       if (isVid && next.some(isVideo)) { setErr('Only one video allowed.'); continue; }
       // eslint-disable-next-line no-await-in-loop
-      next.push(await readAsDataURL(f));
+      next.push(await compressImage(f));
     }
     onChange(next);
     setBusy(false);

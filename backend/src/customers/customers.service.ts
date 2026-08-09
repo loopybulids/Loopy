@@ -1,6 +1,12 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { verifyGoogleIdToken } from '../auth/google-verify';
+import { sendMail, verificationEmail } from '../mail/mailer';
+
+const OTP_TTL_MS = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
 
 function parse(s: string): any[] { try { const v = JSON.parse(s); return Array.isArray(v) ? v : []; } catch { return []; } }
 function shape(p: any) { return { ...p, images: parse(p.images), variants: parse(p.variants), sizes: parse(p.sizes) }; }
@@ -12,38 +18,133 @@ export class CustomersService {
   private commissionPct = Number(process.env.COMMISSION_PERCENT || 5);
   private shippingFlat = Number(process.env.SHIPPING_FLAT || 60);
 
-  private async verifySupabase(token: string): Promise<{ email: string; name: string }> {
-    const base = process.env.SUPABASE_URL;
-    const apikey = process.env.SUPABASE_ANON_KEY;
-    if (!base || !apikey) throw new UnauthorizedException('Auth not configured');
-    let u: any;
-    try {
-      const res = await fetch(`${base}/auth/v1/user`, { headers: { Authorization: `Bearer ${token}`, apikey } });
-      if (!res.ok) throw new Error(String(res.status));
-      u = await res.json();
-    } catch { throw new UnauthorizedException('Invalid session'); }
-    const email = (u?.email || '').toLowerCase().trim();
-    if (!email) throw new UnauthorizedException('No email on account');
-    return { email, name: u?.user_metadata?.full_name || u?.user_metadata?.name || email.split('@')[0] };
-  }
-
-  // Sign in / sign up a shopper for a specific store; notify the seller on first signup.
-  async authSupabase(username: string, token: string) {
+  private async storeId(username: string) {
     const seller = await this.prisma.seller.findUnique({ where: { username }, select: { id: true } });
     if (!seller) throw new NotFoundException('Store not found');
-    const { email, name } = await this.verifySupabase(token);
+    return seller.id;
+  }
 
-    let customer = await this.prisma.customer.findUnique({ where: { sellerId_email: { sellerId: seller.id, email } } });
-    let isNew = false;
-    if (!customer) {
-      customer = await this.prisma.customer.create({ data: { sellerId: seller.id, email, name } });
-      isNew = true;
-      await this.prisma.notification.create({
-        data: { sellerId: seller.id, type: 'new_customer', title: 'New customer 👋', body: `${name} (${email}) signed up on your store.`, link: '/seller/customers' },
-      });
+  private async session(customer: { id: string; name: string | null; email: string | null }, sellerId: string, isNew = false) {
+    const accessToken = await this.jwt.signAsync({ sub: customer.id, role: 'customer', sellerId });
+    return { accessToken, customer: { id: customer.id, name: customer.name, email: customer.email }, isNew };
+  }
+
+  /**
+   * First time a shopper appears on a store, create their per-store account and
+   * ping the seller. Shared by the Google and email/password entry points.
+   */
+  private async findOrCreate(sellerId: string, email: string, name: string, password?: string) {
+    const existing = await this.prisma.customer.findUnique({ where: { sellerId_email: { sellerId, email } } });
+    if (existing) return { customer: existing, isNew: false };
+
+    const customer = await this.prisma.customer.create({
+      data: { sellerId, email, name, password: password ?? null },
+    });
+    await this.prisma.notification.create({
+      data: {
+        sellerId, type: 'new_customer', title: 'New customer 👋',
+        body: `${name} (${email}) signed up on your store.`, link: '/seller/customers',
+      },
+    });
+    return { customer, isNew: true };
+  }
+
+  // ── Google Sign-In ──
+  async authGoogle(username: string, token: string) {
+    const sellerId = await this.storeId(username);
+    const { email, name } = await verifyGoogleIdToken(token);
+    const { customer, isNew } = await this.findOrCreate(sellerId, email, name);
+    return this.session(customer, sellerId, isNew);
+  }
+
+  // ── email + password (with 6-digit email verification on signup) ──
+
+  /**
+   * Step 1 of signup: stash the details and email a code. Deliberately does NOT
+   * create the Customer — an unverified address must not be able to occupy an
+   * account, otherwise anyone could squat on someone else's email.
+   */
+  async registerCustomer(username: string, dto: { name?: string; email?: string; password?: string }) {
+    const sellerId = await this.storeId(username);
+    const email = (dto?.email || '').toLowerCase().trim();
+    const password = dto?.password || '';
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new BadRequestException('Enter a valid email address');
+    if (password.length < 6) throw new BadRequestException('Password must be at least 6 characters');
+
+    const existing = await this.prisma.customer.findUnique({ where: { sellerId_email: { sellerId, email } } });
+    if (existing?.password) throw new ConflictException('You already have an account here — sign in instead.');
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const [passwordHash, codeHash] = await Promise.all([bcrypt.hash(password, 10), bcrypt.hash(code, 10)]);
+    const name = dto?.name?.trim() || existing?.name || email.split('@')[0];
+    const data = {
+      name, passwordHash, codeHash, attempts: 0,
+      expiresAt: new Date(Date.now() + OTP_TTL_MS),
+    };
+    await this.prisma.pendingSignup.upsert({
+      where: { sellerId_email: { sellerId, email } },
+      create: { sellerId, email, ...data },
+      update: data,
+    });
+
+    const store = await this.prisma.seller.findUnique({ where: { id: sellerId }, select: { storeName: true } });
+    const mail = verificationEmail(code, store?.storeName);
+    const sent = await sendMail(email, mail.subject, mail.html, mail.text);
+
+    // With no SMTP configured (or if Gmail is down) hand the code back so local
+    // dev still works. Never leak it once mail is actually being delivered.
+    return { pending: true, email, sent, ...(sent ? {} : { devCode: code }) };
+  }
+
+  /** Step 2 of signup: check the code, then create the real account. */
+  async verifySignup(username: string, email?: string, code?: string) {
+    const sellerId = await this.storeId(username);
+    const mail = (email || '').toLowerCase().trim();
+    const pending = mail
+      ? await this.prisma.pendingSignup.findUnique({ where: { sellerId_email: { sellerId, email: mail } } })
+      : null;
+    if (!pending) throw new BadRequestException('Start again — we don’t have a pending signup for that email.');
+
+    if (pending.expiresAt.getTime() < Date.now()) {
+      await this.prisma.pendingSignup.delete({ where: { id: pending.id } });
+      throw new BadRequestException('That code has expired. Request a new one.');
     }
-    const jwtToken = await this.jwt.signAsync({ sub: customer.id, role: 'customer', sellerId: seller.id });
-    return { accessToken: jwtToken, customer: { id: customer.id, name: customer.name, email: customer.email }, isNew };
+    if (pending.attempts >= MAX_OTP_ATTEMPTS) {
+      await this.prisma.pendingSignup.delete({ where: { id: pending.id } });
+      throw new BadRequestException('Too many incorrect attempts. Request a new code.');
+    }
+    if (!(await bcrypt.compare(String(code || ''), pending.codeHash))) {
+      await this.prisma.pendingSignup.update({ where: { id: pending.id }, data: { attempts: { increment: 1 } } });
+      throw new UnauthorizedException('That code isn’t right.');
+    }
+
+    const existing = await this.prisma.customer.findUnique({ where: { sellerId_email: { sellerId, email: mail } } });
+    let customer;
+    if (existing) {
+      // Signed up with Google first, now adding a password.
+      customer = await this.prisma.customer.update({
+        where: { id: existing.id },
+        data: { password: pending.passwordHash, name: existing.name || pending.name },
+      });
+    } else {
+      customer = (await this.findOrCreate(sellerId, mail, pending.name || mail.split('@')[0], pending.passwordHash)).customer;
+    }
+    await this.prisma.pendingSignup.delete({ where: { id: pending.id } });
+    return this.session(customer, sellerId, !existing);
+  }
+
+  async loginCustomer(username: string, email?: string, password?: string) {
+    const sellerId = await this.storeId(username);
+    const mail = (email || '').toLowerCase().trim();
+    const customer = mail
+      ? await this.prisma.customer.findUnique({ where: { sellerId_email: { sellerId, email: mail } } })
+      : null;
+    // Same message either way so this can't be used to probe which emails exist.
+    if (!customer?.password) throw new UnauthorizedException('Invalid email or password');
+    if (!(await bcrypt.compare(password || '', customer.password))) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    return this.session(customer, sellerId);
   }
 
   private assertCustomer(user: any) {
@@ -127,21 +228,56 @@ export class CustomersService {
     const totalAmount = itemsAmount + shippingCharge;
     const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
 
-    return this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          sellerId, customerId, buyerName: customer?.name || dto.name || 'Customer', buyerPhone: customer?.phone || dto.phone || null,
-          address, itemsAmount, commissionAmount, shippingCharge, totalAmount, status: 'Paid',
-          paymentId: 'pay_stub_' + Math.random().toString(36).slice(2, 10),
-          items: { create: rows },
-        },
-        include: { items: true },
-      });
-      for (const r of rows) await tx.product.update({ where: { id: r.productId }, data: { quantity: { decrement: r.quantity } } });
-      await tx.notification.create({
-        data: { sellerId, type: 'new_order', title: 'New order 🎉', body: `${customer?.name || 'A customer'} placed an order worth ₹${totalAmount.toLocaleString('en-IN')}.`, link: '/seller/orders' },
-      });
-      return order;
+    // Payment method: 'cod' (Cash on Delivery) or 'online:<upi|card|netbanking>'.
+    // Stored in paymentId so no schema migration is needed. COD orders still enter
+    // the seller's queue (status 'Paid' = confirmed) so they can accept & ship; cash
+    // is collected on delivery.
+    const method = dto.paymentMethod === 'online' ? 'online' : 'cod';
+    const paymentId = method === 'online' ? `online:${dto.onlineMethod || 'upi'}` : 'cod';
+
+    // Only the order + stock decrement need to be atomic. The seller
+    // notification is fired after the commit so a slow insert can't roll back a
+    // paid order.
+    //
+    // The timeout is well above Prisma's 5s default on purpose: every statement
+    // is a round trip to Neon, and a suspended Neon compute takes seconds to
+    // wake, which blew the default and 500'd checkout.
+    const order = await this.prisma.$transaction(
+      async (tx) => {
+        const created = await tx.order.create({
+          data: {
+            sellerId, customerId, buyerName: customer?.name || dto.name || 'Customer', buyerPhone: customer?.phone || dto.phone || null,
+            address, itemsAmount, commissionAmount, shippingCharge, totalAmount, status: 'Paid',
+            paymentId,
+            items: { create: rows },
+          },
+          include: { items: true },
+        });
+        for (const r of rows) {
+          await tx.product.update({ where: { id: r.productId }, data: { quantity: { decrement: r.quantity } } });
+        }
+        return created;
+      },
+      { timeout: 20000, maxWait: 15000 },
+    );
+
+    await this.prisma.notification.create({
+      data: {
+        sellerId, type: 'new_order', title: 'New order 🎉',
+        body: `${customer?.name || 'A customer'} placed an order worth ₹${totalAmount.toLocaleString('en-IN')}.`,
+        link: '/seller/orders',
+      },
+    }).catch(() => { /* never fail a placed order over a notification */ });
+
+    return order;
+  }
+
+  async getOrders(user: any) {
+    const { customerId } = this.assertCustomer(user);
+    return this.prisma.order.findMany({
+      where: { customerId },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

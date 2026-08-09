@@ -6,6 +6,8 @@ import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
 import { exitImpersonation } from '@/lib/impersonate';
 import NotificationsBell from '@/components/NotificationsBell';
+import Logo from '@/components/Logo';
+import StoreSwitcher from '@/components/StoreSwitcher';
 import {
   Bag, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
 } from '@/components/icons';
@@ -48,6 +50,8 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
   const [open, setOpen] = useState(false);
   const [impersonating, setImpersonating] = useState<string | null>(null);
   const [username, setUsername] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [published, setPublished] = useState(false);
 
   useEffect(() => {
     setImpersonating(typeof window !== 'undefined' ? localStorage.getItem('loopy_impersonating') : null);
@@ -59,7 +63,11 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
       return;
     }
     setReady(true);
-    api.myProfile().then((p) => setUsername(p?.username || '')).catch(() => {});
+    api.myProfile().then((p) => {
+      setUsername(p?.username || '');
+      setLogoUrl(p?.logoUrl || null);
+      setPublished(!!p?.published);
+    }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ready) {
@@ -78,11 +86,25 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
     <div className="min-h-screen bg-paper text-navy">
       {/* ───── sidebar ───── */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-[248px] border-r border-line bg-white px-4 py-6 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Link href="/" className="mb-8 flex items-center gap-2 px-2 font-display text-[18px] font-extrabold tracking-tight text-navy">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={15} /></span>
-          Loopy
-          <span className="ml-auto rounded-md bg-green-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green">Seller</span>
-        </Link>
+        {/* Brand block: "Seller Console" is the loud part — it says where you are.
+            Loopy stays present but recedes to a small mark above it. */}
+        <div className="mb-4 rounded-2xl bg-gradient-to-b from-green-soft/70 to-transparent p-3 pb-3.5">
+          <div className="mb-2.5 flex items-center justify-between px-0.5">
+            <Link href="/" title="Loopy home" className="transition-opacity hover:opacity-70">
+              <Logo height={19} />
+            </Link>
+            <span className="rounded-full bg-green px-2 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-white">
+              Seller
+            </span>
+          </div>
+
+          <StoreSwitcher
+            storeName={name || 'Your Store'}
+            username={username}
+            logoUrl={logoUrl}
+            published={published}
+          />
+        </div>
 
         <nav className="space-y-0.5">
           {NAV.map((n) => {
@@ -138,7 +160,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
             <p className="text-[12px] text-muted">Welcome back, {(name || 'seller').split(' ')[0]} 👋</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/seller/links" className="btn-green hidden px-4 py-2.5 text-[13px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
+            <Link href="/seller/links" className="btn-green hidden px-3.5 py-2 text-[12.5px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
             <NotificationsBell />
             <Link href={username ? `/s/${username}` : '/seller/profile'} target={username ? '_blank' : undefined} title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>
           </div>

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto';
+import { verifyGoogleIdToken } from './google-verify';
 
 // In MVP scaffold OTPs live in memory. In production this is Redis with a
 // short TTL (PRD §12 Auth). A master code keeps local demos friction-free.
@@ -104,36 +105,24 @@ export class AuthService {
   }
 
   /**
-   * Exchange a Supabase session token (from Google OAuth or email OTP on the
-   * frontend) for a Loopy JWT. Verifies the token via Supabase's /auth/v1/user,
-   * then finds or creates the matching seller account.
+   * Exchange a Google ID token (from "Continue with Google" on the seller
+   * console) for a Loopy JWT, creating the seller account on first sign-in.
+   *
+   * An existing admin signing in with Google keeps their admin role — we only
+   * provision a store for accounts that aren't already something else.
    */
-  async loginWithSupabase(token: string) {
-    if (!token) throw new UnauthorizedException('Missing token');
-    const base = process.env.SUPABASE_URL;
-    // Supabase renamed the anon key → publishable key (sb_publishable_…); accept either.
-    const apikey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
-    if (!base || !apikey) throw new UnauthorizedException('Supabase auth not configured');
-
-    let supaUser: any;
-    try {
-      const res = await fetch(`${base}/auth/v1/user`, {
-        headers: { Authorization: `Bearer ${token}`, apikey },
-      });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      supaUser = await res.json();
-    } catch {
-      throw new UnauthorizedException('Invalid Supabase session');
-    }
-
-    const email = (supaUser?.email || '').toLowerCase().trim();
-    if (!email) throw new UnauthorizedException('Supabase user has no email');
-    const name =
-      supaUser?.user_metadata?.full_name || supaUser?.user_metadata?.name || email.split('@')[0];
+  async loginWithGoogle(idToken: string) {
+    const { email, name } = await verifyGoogleIdToken(idToken);
 
     let user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       user = await this.prisma.user.create({ data: { email, name, role: 'seller' } });
+    } else if (!user.name) {
+      user = await this.prisma.user.update({ where: { id: user.id }, data: { name } });
+    }
+
+    if (user.role === 'admin') {
+      return this.issueSession(user.id, user.name, user.role, null);
     }
 
     let seller = await this.prisma.seller.findUnique({ where: { userId: user.id } });
@@ -142,6 +131,10 @@ export class AuthService {
       seller = await this.prisma.seller.create({
         data: { userId: user.id, storeName: name || 'My Store', username, kycStatus: 'approved' },
       });
+      // A buyer who later opens a store becomes a seller.
+      if (user.role !== 'seller') {
+        user = await this.prisma.user.update({ where: { id: user.id }, data: { role: 'seller' } });
+      }
     }
 
     return this.issueSession(user.id, user.name, user.role, seller.id);

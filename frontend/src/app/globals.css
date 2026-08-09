@@ -11,7 +11,7 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-bold transition-all duration-150 active:scale-[.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[13.5px] font-bold transition-all duration-150 active:scale-[.98];
   }
   .btn-navy { @apply btn bg-navy text-white hover:bg-navy-700; }
   .btn-green { @apply btn bg-green text-white hover:brightness-110; }
@@ -37,7 +37,7 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
 }
 
 @layer utilities {
-  .font-display { font-family: var(--font-jakarta), var(--font-inter), sans-serif; }
+  .font-display { font-family: var(--font-sans), system-ui, sans-serif; letter-spacing: -0.012em; }
   .text-balance { text-wrap: balance; }
   .shimmer-text {
     background: linear-gradient(100deg, #1E9E63 20%, #86EFAC 40%, #1E9E63 60%);
@@ -116,7 +116,7 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
   .c-input::placeholder { color: #9AA2B1; }
   .c-input:focus { outline: none; border-color: rgba(30,158,99,.7); box-shadow: 0 0 0 3px rgba(30,158,99,.16); }
   /* sidebar nav link */
-  .c-nav { @apply flex items-center gap-3 rounded-md px-3 py-[7px] text-[13.5px] font-semibold transition-colors; }
+  .c-nav { @apply flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13.5px] font-semibold transition-colors; }
   .c-nav-off { @apply text-navy/65 hover:bg-green-soft/60 hover:text-navy; }
   .c-nav-on { @apply bg-green-soft text-green ring-1 ring-green/15; }
 }

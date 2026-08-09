@@ -2,17 +2,53 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { rupees } from '@/lib/api';
-import { getCart, updateQty, type CartItem } from '@/lib/customer';
+import { api, rupees } from '@/lib/api';
+import { getCart, updateQty, applyLinkItems, parseLinkItems, type CartItem } from '@/lib/customer';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
 import { Bag, ArrowRight } from '@/components/icons';
 
 export default function CartPage() {
   const { username } = useParams<{ username: string }>();
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [filling, setFilling] = useState(false);
 
   const sync = () => setCart(getCart(username));
   useEffect(() => { sync(); window.addEventListener('cart-change', sync); return () => window.removeEventListener('cart-change', sync); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * A seller's checkout link lands here as `?add=<productId>:<qty>,…`.
+   * Resolve those ids against the live catalogue (never trust prices from a URL),
+   * fill the cart, then strip the param so a refresh can't re-apply it.
+   */
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get('add');
+    if (!param) return;
+    const wanted = parseLinkItems(param);
+    if (!wanted.length) return;
+
+    let cancelled = false;
+    setFilling(true);
+    api.getStore(username)
+      .then((store: any) => {
+        if (cancelled) return;
+        const byId = new Map<string, any>((store?.products || []).map((p: any) => [p.id, p]));
+        const items: CartItem[] = wanted.flatMap(({ productId, qty }) => {
+          const p = byId.get(productId);
+          if (!p) return [];
+          const imgs = Array.isArray(p.images) ? p.images : (() => { try { return JSON.parse(p.images || '[]'); } catch { return []; } })();
+          return [{ productId: p.id, title: p.title, price: p.price, image: imgs[0], qty }];
+        });
+        if (items.length) applyLinkItems(username, items);
+      })
+      .catch(() => { /* bad link — just show whatever's already in the cart */ })
+      .finally(() => {
+        if (cancelled) return;
+        setFilling(false);
+        window.history.replaceState({}, '', `/s/${username}/cart`);
+      });
+
+    return () => { cancelled = true; };
+  }, [username]);
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
@@ -22,7 +58,9 @@ export default function CartPage() {
       <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
         <h1 className="font-display text-[24px] font-extrabold text-navy">Your cart</h1>
 
-        {cart.length === 0 ? (
+        {filling ? (
+          <p className="mt-8 text-center text-[13px] text-faint">Adding the items from your link…</p>
+        ) : cart.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-line bg-white py-16 text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-soft text-green-600"><Bag size={24} /></span>
             <p className="mt-3 font-display text-[16px] font-bold text-navy">Your cart is empty</p>

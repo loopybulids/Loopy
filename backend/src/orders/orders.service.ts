@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto } from './dto';
+import { orderAcceptedEmail, orderRejectedEmail, sendMail } from '../mail/mailer';
 
 @Injectable()
 export class OrdersService {
@@ -85,6 +86,8 @@ export class OrdersService {
     const shippingCharge = Number(dto.shippingCharge ?? this.shippingFlat);
     const totalAmount = itemsAmount + shippingCharge;
 
+    // See the note in customers.service checkout: Prisma's 5s default is too
+    // tight for per-statement round trips to Neon, especially on a cold compute.
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
@@ -105,7 +108,7 @@ export class OrdersService {
         await tx.product.update({ where: { id: row.productId }, data: { quantity: { decrement: row.quantity } } });
       }
       return order;
-    });
+    }, { timeout: 20000, maxWait: 15000 });
   }
 
   // POST /orders/:id/confirm — verify payment + finalize (stubbed).
@@ -132,7 +135,7 @@ export class OrdersService {
         },
         include: { items: true },
       });
-    });
+    }, { timeout: 20000, maxWait: 15000 });
   }
 
   async findOne(id: string) {
@@ -142,6 +145,17 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException('Order not found');
     return order;
+  }
+
+  /** Store name + the buyer's email, for order notification mail. */
+  private async notifyTargets(order: any) {
+    const [seller, customer] = await Promise.all([
+      this.prisma.seller.findUnique({ where: { id: order.sellerId }, select: { storeName: true } }),
+      order.customerId
+        ? this.prisma.customer.findUnique({ where: { id: order.customerId }, select: { email: true } })
+        : Promise.resolve(null),
+    ]);
+    return { storeName: seller?.storeName, email: customer?.email || null };
   }
 
   async transition(id: string, sellerId: string, to: 'Accepted' | 'Shipped') {
@@ -154,13 +168,58 @@ export class OrdersService {
       // Stub AWB. Real impl: Shiprocket order_create → order_ship (PRD §15.2).
       data.awbNumber = 'DL' + Math.floor(1000000000 + Math.random() * 8999999999);
     }
-    return this.prisma.order.update({ where: { id }, data, include: { items: true } });
+    const updated = await this.prisma.order.update({ where: { id }, data, include: { items: true } });
+
+    if (to === 'Accepted') {
+      // Fire-and-forget: a mail failure must never fail the acceptance itself.
+      this.notifyTargets(updated).then(({ storeName, email }) => {
+        if (!email) return;
+        const m = orderAcceptedEmail(updated, storeName);
+        return sendMail(email, m.subject, m.html, m.text);
+      }).catch(() => {});
+    }
+
+    return updated;
+  }
+
+  /**
+   * Seller declines an order: cancel it and put the reserved stock back.
+   *
+   * Only valid before the goods move — once shipped, cancelling is a refund/
+   * dispute matter rather than a rejection.
+   */
+  async rejectOrder(id: string, sellerId: string, reason?: string) {
+    const order = await this.prisma.order.findUnique({ where: { id }, include: { items: true } });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.sellerId !== sellerId) throw new ForbiddenException('Not your order');
+    if (!['Paid', 'PendingPayment', 'Accepted'].includes(order.status)) {
+      throw new BadRequestException(`An order that is already ${order.status} can't be rejected.`);
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      for (const item of order.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { quantity: { increment: item.quantity } },
+        });
+      }
+      return tx.order.update({ where: { id }, data: { status: 'Cancelled' }, include: { items: true } });
+    }, { timeout: 20000, maxWait: 15000 });
+
+    this.notifyTargets(updated).then(({ storeName, email }) => {
+      if (!email) return;
+      const m = orderRejectedEmail(updated, storeName, reason);
+      return sendMail(email, m.subject, m.html, m.text);
+    }).catch(() => {});
+
+    return updated;
   }
 
   // Mark delivered (stands in for the Shiprocket "Delivered" webhook).
-  async markDelivered(id: string) {
+  async markDelivered(id: string, sellerId?: string) {
     const order = await this.prisma.order.findUnique({ where: { id } });
     if (!order) throw new NotFoundException('Order not found');
+    if (sellerId && order.sellerId !== sellerId) throw new ForbiddenException('Not your order');
     return this.prisma.order.update({
       where: { id },
       data: { status: 'Delivered' },

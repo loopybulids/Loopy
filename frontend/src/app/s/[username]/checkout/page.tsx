@@ -6,7 +6,8 @@ import { rupees } from '@/lib/api';
 import { custApi, getCart, getCust, clearCart, type CartItem } from '@/lib/customer';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
 import CustomerAuth from '@/components/store/CustomerAuth';
-import { Check, ShieldLock } from '@/components/icons';
+import OrderDetail from '@/components/store/OrderDetail';
+import { Bag, Check, ShieldLock } from '@/components/icons';
 
 const BLANK = { name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' };
 
@@ -21,6 +22,8 @@ export default function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [placed, setPlaced] = useState<any>(null);
+  const [payMethod, setPayMethod] = useState<'cod' | 'online'>('cod');
+  const [onlineOpt, setOnlineOpt] = useState<'upi' | 'card' | 'netbanking'>('upi');
   const setA = (k: keyof typeof addr, v: string) => setAddr((s) => ({ ...s, [k]: v }));
 
   const load = () => {
@@ -32,6 +35,7 @@ export default function CheckoutPage() {
   useEffect(() => { load(); window.addEventListener('cust-change', load); window.addEventListener('cart-change', () => setCart(getCart(username))); return () => window.removeEventListener('cust-change', load); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const itemCount = cart.reduce((s, i) => s + i.qty, 0);
 
   const place = async () => {
     setErr('');
@@ -44,7 +48,12 @@ export default function CheckoutPage() {
         const saved = await custApi.addAddress(username, addr);
         addressId = saved.id;
       }
-      const order = await custApi.checkout(username, { addressId, items: cart.map((i) => ({ productId: i.productId, quantity: i.qty, size: i.size })) });
+      const order = await custApi.checkout(username, {
+        addressId,
+        items: cart.map((i) => ({ productId: i.productId, quantity: i.qty, size: i.size })),
+        paymentMethod: payMethod,
+        onlineMethod: payMethod === 'online' ? onlineOpt : undefined,
+      });
       clearCart(username);
       setPlaced(order);
     } catch (e: any) { setErr(e?.message || 'Could not place order.'); } finally { setBusy(false); }
@@ -52,13 +61,20 @@ export default function CheckoutPage() {
 
   if (placed) {
     return (
-      <main className="grid min-h-screen place-items-center bg-paper px-5 text-center">
-        <div className="animate-riseIn">
-          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-600 text-white"><Check size={30} /></span>
-          <h1 className="mt-4 font-display text-[26px] font-extrabold text-navy">Order placed!</h1>
-          <p className="mt-1 text-muted">Order #{String(placed.id).slice(-6).toUpperCase()} · {rupees(placed.totalAmount)}</p>
-          <p className="mt-1 text-[13px] text-muted">The seller has been notified and will ship your order soon.</p>
-          <Link href={`/s/${username}`} className="btn-green mt-6 inline-flex">Continue shopping</Link>
+      <main className="min-h-screen bg-paper px-5 py-10">
+        <div className="mx-auto max-w-lg animate-riseIn">
+          <div className="text-center">
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-600 text-white"><Check size={30} /></span>
+            <h1 className="mt-4 font-display text-[26px] font-extrabold text-navy">Order placed!</h1>
+            <p className="mt-1 text-[13px] text-muted">The seller has been notified and will ship your order soon.</p>
+          </div>
+          <div className="mt-6 rounded-2xl border border-line bg-white p-5 text-left shadow-card">
+            <OrderDetail order={placed} />
+          </div>
+          <div className="mt-5 flex justify-center gap-3">
+            <Link href={`/s/${username}/orders`} className="btn-ghost">Track this order</Link>
+            <Link href={`/s/${username}`} className="btn-green">Continue shopping</Link>
+          </div>
         </div>
       </main>
     );
@@ -104,10 +120,10 @@ export default function CheckoutPage() {
                     <input className="c-input" placeholder="Full name" value={addr.name} onChange={(e) => setA('name', e.target.value)} />
                     <input className="c-input" placeholder="Phone" value={addr.phone} onChange={(e) => setA('phone', e.target.value)} />
                     <input className="c-input col-span-2" placeholder="Address line 1" value={addr.line1} onChange={(e) => setA('line1', e.target.value)} />
-                    <input className="c-input col-span-2" placeholder="Address line 2 (optional)" value={addr.line2} onChange={(e) => setA('line2', e.target.value)} />
+                    <input className="c-input col-span-2" placeholder="Address line 2" value={addr.line2} onChange={(e) => setA('line2', e.target.value)} />
                     <input className="c-input" placeholder="City" value={addr.city} onChange={(e) => setA('city', e.target.value)} />
                     <input className="c-input" placeholder="Pincode" value={addr.pincode} onChange={(e) => setA('pincode', e.target.value)} />
-                    <input className="c-input col-span-2" placeholder="State (optional)" value={addr.state} onChange={(e) => setA('state', e.target.value)} />
+                    <input className="c-input col-span-2" placeholder="State" value={addr.state} onChange={(e) => setA('state', e.target.value)} />
                   </div>
                 )}
               </div>
@@ -115,16 +131,58 @@ export default function CheckoutPage() {
 
             {/* summary */}
             <div className="rounded-2xl border border-line bg-white p-5">
-              <h2 className="font-display text-[15px] font-extrabold text-navy">Order summary</h2>
-              <div className="mt-3 space-y-2">
+              <h2 className="font-display text-[15px] font-extrabold text-navy">
+                Order summary <span className="text-[12px] font-semibold text-muted">· {itemCount} item{itemCount === 1 ? '' : 's'}</span>
+              </h2>
+              <div className="mt-3 space-y-3">
                 {cart.map((i) => (
-                  <div key={i.productId + (i.size || '')} className="flex justify-between text-[13px]"><span className="truncate text-navy">{i.title}{i.size ? ` (${i.size})` : ''} ×{i.qty}</span><span className="font-semibold text-navy">{rupees(i.price * i.qty)}</span></div>
+                  <div key={i.productId + (i.size || '')} className="flex gap-3">
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-line bg-paper">
+                      {i.image
+                        ? <img src={i.image} alt={i.title} className="h-full w-full object-cover" />
+                        : <span className="grid h-full w-full place-items-center text-faint"><Bag size={16} /></span>}
+                      <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-navy px-1 text-[10px] font-bold text-white">{i.qty}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold text-navy">{i.title}</div>
+                      {i.size && <div className="text-[11.5px] text-muted">Size: {i.size}</div>}
+                      <div className="text-[11.5px] text-faint">{rupees(i.price)} each</div>
+                    </div>
+                    <span className="whitespace-nowrap text-[13px] font-bold text-navy">{rupees(i.price * i.qty)}</span>
+                  </div>
                 ))}
               </div>
               <div className="mt-3 flex justify-between border-t border-line pt-3 text-[14px]"><span className="text-muted">Subtotal</span><span className="font-bold text-navy">{rupees(subtotal)}</span></div>
               <p className="mt-1 text-[11px] text-faint">+ shipping (added by the store)</p>
+
+              {/* payment method */}
+              <div className="mt-4 border-t border-line pt-3">
+                <div className="text-[12px] font-bold uppercase tracking-wide text-faint">Payment method</div>
+                <div className="mt-2 space-y-2">
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-[13px] font-semibold ${payMethod === 'cod' ? 'border-green bg-green-soft/40' : 'border-line'}`}>
+                    <input type="radio" checked={payMethod === 'cod'} onChange={() => setPayMethod('cod')} className="accent-green-600" />
+                    <span className="flex-1">Cash on Delivery</span>
+                    <span className="text-[11px] font-normal text-muted">Pay when it arrives</span>
+                  </label>
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-[13px] font-semibold ${payMethod === 'online' ? 'border-green bg-green-soft/40' : 'border-line'}`}>
+                    <input type="radio" checked={payMethod === 'online'} onChange={() => setPayMethod('online')} className="accent-green-600" />
+                    <span className="flex-1">Pay online</span>
+                    <span className="text-[11px] font-normal text-muted">UPI · Cards · Netbanking</span>
+                  </label>
+                  {payMethod === 'online' && (
+                    <div className="grid grid-cols-3 gap-2 pl-1">
+                      {(['upi', 'card', 'netbanking'] as const).map((o) => (
+                        <button key={o} type="button" onClick={() => setOnlineOpt(o)} className={`rounded-lg border px-2 py-2 text-[12px] font-semibold capitalize ${onlineOpt === o ? 'border-green bg-green-soft/50 text-green' : 'border-line text-navy hover:border-green/40'}`}>
+                          {o === 'upi' ? 'UPI' : o === 'card' ? 'Card' : 'Netbanking'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {err && <p className="mt-3 text-[13px] font-semibold text-rose">{err}</p>}
-              <button onClick={place} disabled={busy} className="btn-green mt-4 w-full justify-center disabled:opacity-60">{busy ? 'Placing…' : 'Place order'}</button>
+              <button onClick={place} disabled={busy} className="btn-green mt-4 w-full justify-center disabled:opacity-60">{busy ? 'Placing…' : payMethod === 'cod' ? 'Place order · COD' : `Pay ${rupees(subtotal)} online`}</button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-faint"><ShieldLock size={12} /> Loopy-protected payment</p>
             </div>
           </div>

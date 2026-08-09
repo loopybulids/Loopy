@@ -12,7 +12,6 @@ export default function Payments() {
   const [pd, setPd] = useState({ payoutEmail: '', payoutMethod: 'upi', payoutName: '', payoutUpi: '', payoutAccount: '', payoutPhone: '' });
   const [savingPd, setSavingPd] = useState(false);
   const [savedPd, setSavedPd] = useState(false);
-  const [payTab, setPayTab] = useState<'details' | 'gateway'>('details');
   const setP = (k: keyof typeof pd, v: string) => setPd((s) => ({ ...s, [k]: v }));
 
   const load = () => Promise.all([
@@ -53,14 +52,7 @@ export default function Payments() {
 
       {/* payout section — kept as a focused column */}
       <div className="mt-6 max-w-xl">
-      <div className="inline-flex rounded-xl bg-paper p-1 text-[13px] font-bold ring-1 ring-line">
-        {([['details', 'Payout Details'], ['gateway', 'Direct Gateway (BYOG)']] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setPayTab(k)} className={`rounded-lg px-4 py-2 transition-colors ${payTab === k ? 'bg-white text-navy shadow-sm' : 'text-muted hover:text-navy'}`}>{label}</button>
-        ))}
-      </div>
-
-      {payTab === 'details' ? (
-        <Panel className="mt-4" title="Payout details">
+        <Panel title="Payout details">
           <div className="space-y-5">
             <PField label="Email for payment queries" hint="Business or personal email — we'll use this for invoices, payouts and payment-related questions.">
               <input type="email" value={pd.payoutEmail} onChange={(e) => setP('payoutEmail', e.target.value)} placeholder="payments@yourbusiness.com" className="c-input mt-1.5" />
@@ -96,17 +88,6 @@ export default function Payments() {
             <button onClick={savePd} disabled={savingPd} className="btn-green disabled:opacity-60">{savingPd ? 'Saving…' : savedPd ? <><Check size={16} /> Saved</> : 'Save payout details'}</button>
           </div>
         </Panel>
-      ) : (
-        <Panel className="mt-4" title="Direct Gateway (BYOG)">
-          <div>
-            <p className="text-[13.5px] leading-relaxed text-muted">Bring your own gateway — connect your own <b className="text-navy">Razorpay</b>, <b className="text-navy">Cashfree</b> or <b className="text-navy">Stripe</b> account so customer payments land <b className="text-navy">directly in your account</b> with no platform hold.</p>
-            <div className="mt-4 rounded-xl border border-dashed border-line bg-paper p-5 text-center">
-              <span className="chip-amber">Coming soon</span>
-              <p className="mt-2 text-[13px] text-muted">We’re rolling this out shortly. For now, payouts settle via Loopy escrow using your payout details.</p>
-            </div>
-          </div>
-        </Panel>
-      )}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.6fr]">

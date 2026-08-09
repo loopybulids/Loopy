@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import PasswordInput from '@/components/PasswordInput';
+import Logo from '@/components/Logo';
 import { ArrowRight, Loop, ShieldLock } from '@/components/icons';
 
 export default function AdminLogin() {
@@ -37,8 +39,8 @@ export default function AdminLogin() {
       </div>
 
       <div className="relative w-full max-w-md animate-riseIn">
-        <Link href="/" className="mx-auto mb-8 flex w-fit items-center gap-2 font-display text-[26px] font-extrabold tracking-tight text-navy">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-green-mint"><Loop size={20} /></span> Loopy
+        <Link href="/" className="mx-auto mb-8 flex w-fit items-center gap-2">
+          <Logo height={34} />
           <span className="ml-1 rounded-md bg-navy px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-green-mint">Admin</span>
         </Link>
 
@@ -54,7 +56,7 @@ export default function AdminLogin() {
             </div>
             <div>
               <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} placeholder="••••••••" className="c-input mt-1.5" />
+              <div className="mt-1.5"><PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} onEnter={go} /></div>
             </div>
           </div>
 

@@ -29,10 +29,10 @@ export class AuthController {
     return this.auth.loginEmail(dto.email, dto.password);
   }
 
-  // ── Supabase session exchange (Google / email OTP) ──
-  @Post('supabase')
-  supabase(@Body() body: { token: string }) {
-    return this.auth.loginWithSupabase(body?.token);
+  // ── Google Sign-In (ID token from Google Identity Services) ──
+  @Post('google')
+  google(@Body() body: { token: string }) {
+    return this.auth.loginWithGoogle(body?.token);
   }
 
   @UseGuards(JwtAuthGuard)

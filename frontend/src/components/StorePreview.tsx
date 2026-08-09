@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
 import { SizeStrip } from '@/components/sizes';
 import AutoImages from '@/components/AutoImages';
-import { Search, Heart, Bag, ShieldLock, Truck, Star } from '@/components/icons';
+import StoreAccountControls from '@/components/store/StoreAccountControls';
+import { Search, ShieldLock, Truck, Star } from '@/components/icons';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
 
@@ -41,12 +43,34 @@ export default function StorePreview({
   username?: string;        // when set, nav links point at real storefront routes
   page?: StorePage | null;  // when set, render this custom page instead of the home layout
 }) {
-  const c = config;
+  const [overrideConfig, setOverrideConfig] = useState<StoreConfig | null>(null);
+
+  // Sync draft edits live between editor and preview tabs
+  useEffect(() => {
+    if (typeof window === 'undefined' || !username) return;
+    const syncDraft = () => {
+      try {
+        const raw = localStorage.getItem(`loopy_draft_${username}`);
+        if (raw) setOverrideConfig(JSON.parse(raw));
+      } catch { /* ignore */ }
+    };
+    if (window.location.search.includes('preview=1')) syncDraft();
+    window.addEventListener('storage', syncDraft);
+    return () => window.removeEventListener('storage', syncDraft);
+  }, [username]);
+
+  const c = overrideConfig || config;
   const accent = c.theme.accent;
   const home = username ? `/s/${username}` : '#';
   const pageLinks = (c.pages || []).filter((p) => p.showInNav).map((p) => ({ label: p.title, href: username ? `/s/${username}/${p.slug}` : '#' }));
   const navLinks = [
-    ...c.header.nav.map((n) => ({ label: n.label, href: username && (n.href === '#' || n.href === '') ? home : n.href })),
+    ...c.header.nav.map((n) => {
+      let href = n.href;
+      if (username && (href === '#' || href === '')) href = home;
+      // "Track Order" (legacy default href) → the store's real order-tracking page
+      else if (href === '/orders') href = username ? `/s/${username}/orders` : '#';
+      return { label: n.label, href };
+    }),
     ...pageLinks,
   ];
   const hasHeroMedia = !!c.hero.imageUrl;
@@ -60,29 +84,27 @@ export default function StorePreview({
 
   return (
     <div className={`bg-paper text-navy ${fontClass}`}>
-      {/* announcement */}
-      {c.announcement.enabled && c.announcement.text && (
-        <div className="bg-navy py-2 text-center text-[12.5px] font-semibold text-white">{c.announcement.text}</div>
-      )}
-
       {/* header */}
       {c.header.enabled && (
         <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-line bg-white/85 px-5 py-3.5 backdrop-blur-md sm:px-8">
           {/* brand: logo mark + name */}
-          <a href={home} className="flex items-center gap-2.5">
+          <Link href={home} className="flex items-center gap-2.5">
             {c.header.logoUrl
-              ? <img src={c.header.logoUrl} alt={storeName} className="h-9 w-9 rounded-xl object-cover shadow-card" />
-              : <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>{storeName.charAt(0).toUpperCase()}</span>}
+              ? <img src={c.header.logoUrl} alt={storeName} className="h-9 w-9 rounded-xl object-cover shadow-card" onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }} />
+              : null}
+            {!c.header.logoUrl && (
+              <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>{(storeName || 'S').charAt(0).toUpperCase()}</span>
+            )}
             <span className="font-display text-[21px] font-extrabold tracking-tight text-navy">{storeName}</span>
-          </a>
+          </Link>
 
           {/* nav with animated underline */}
           <nav className={`items-center gap-7 text-[14px] font-semibold text-navy/70 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
             {navLinks.map((n, i) => (
-              <a key={i} href={n.href || '#'} className="group relative cursor-pointer transition-colors hover:text-navy">
+              <Link key={i} href={n.href || '#'} className="group relative cursor-pointer transition-colors hover:text-navy">
                 {n.label}
                 <span className="absolute -bottom-1.5 left-0 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ background: accent }} />
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -91,11 +113,7 @@ export default function StorePreview({
             {c.header.showSearch && (
               <button className="grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy"><Search size={18} /></button>
             )}
-            <button className="grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy"><Heart size={18} /></button>
-            <button className="relative grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy">
-              <Bag size={18} />
-              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white" style={{ background: accent }}>0</span>
-            </button>
+            <StoreAccountControls username={username} storeName={storeName} accent={accent} />
           </div>
         </header>
       )}
@@ -164,7 +182,7 @@ export default function StorePreview({
               <p className="col-span-full py-10 text-center text-[13.5px] text-faint">No products in “{tab}” yet.</p>
             ) : (
               filterByTab(products, tab).slice(0, 8).map((p) => (
-                <a key={p.id} href={username ? `/s/${username}/product/${p.id}` : undefined} className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card">
+                <Link key={p.id} href={username ? `/s/${username}/product/${p.id}` : '#'} className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card">
                   <div className="relative aspect-square overflow-hidden bg-green-soft">
                     <AutoImages images={Array.isArray(p.images) ? p.images : (firstImage(p) ? [firstImage(p)] : [])} />
                   </div>
@@ -176,7 +194,7 @@ export default function StorePreview({
                     </div>
                     {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}
                   </div>
-                </a>
+                </Link>
               ))
             )}
           </div>
