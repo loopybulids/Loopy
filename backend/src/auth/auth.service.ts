@@ -6,8 +6,14 @@ import { RegisterDto } from './dto';
 import { verifyGoogleIdToken } from './google-verify';
 
 // In MVP scaffold OTPs live in memory. In production this is Redis with a
-// short TTL (PRD §12 Auth). A master code keeps local demos friction-free.
+// short TTL (PRD §12 Auth).
+//
+// `0000` is a local-demo shortcut that accepts ANY phone number. It must never
+// be live: the seeded admin's phone is 9000000000, so on a public deployment it
+// handed a full admin token to anyone who guessed it. It is now hard-disabled
+// whenever NODE_ENV is production, which every host (Vercel included) sets.
 const MASTER_CODE = '0000';
+const DEMO_OTP_ENABLED = process.env.NODE_ENV !== 'production';
 
 @Injectable()
 export class AuthService {
@@ -18,13 +24,16 @@ export class AuthService {
   async requestOtp(phone: string) {
     const code = String(Math.floor(1000 + Math.random() * 9000));
     this.otps.set(phone, code);
-    // In production this is sent over SMS/WhatsApp; here we return it for dev.
+    // Returning the code is a dev convenience — echoing it in production would
+    // make the OTP pointless, since the caller gets it straight back.
+    if (!DEMO_OTP_ENABLED) return { sent: true };
     return { sent: true, devCode: code, hint: `Use ${code} or master code ${MASTER_CODE}` };
   }
 
   async verifyOtp(phone: string, code: string, name?: string) {
     const expected = this.otps.get(phone);
-    if (code !== MASTER_CODE && code !== expected) {
+    const masterOk = DEMO_OTP_ENABLED && code === MASTER_CODE;
+    if (!masterOk && (!expected || code !== expected)) {
       throw new UnauthorizedException('Invalid or expired code');
     }
     this.otps.delete(phone);
