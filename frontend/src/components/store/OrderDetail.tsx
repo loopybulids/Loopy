@@ -130,6 +130,20 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
         </div>
       </div>
 
+      {/* shipment — appears for both sides the moment the seller ships */}
+      {order?.awbNumber && (
+        <div className="border-t border-line pt-3">
+          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-faint">Shipment</div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+            <span className="text-muted">Tracking number</span>
+            <b className="select-all font-mono text-navy">{order.awbNumber}</b>
+          </div>
+          <p className="mt-1 text-[11.5px] text-faint">
+            {DELIVERED.includes(order?.status) ? 'Delivered.' : 'On its way — use this number to track your parcel.'}
+          </p>
+        </div>
+      )}
+
       {/* who + where */}
       {showContact && (contactName || order?.address) && (
         <div className="border-t border-line pt-3">

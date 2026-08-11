@@ -26,6 +26,9 @@ function safeParseObj(s: string): any {
 export class SellersService {
   constructor(private prisma: PrismaService) {}
 
+  // Fallback when a seller hasn't set their own rate — same default checkout uses.
+  private shippingFlat = Number(process.env.SHIPPING_FLAT || 60);
+
   // All approved stores with a few preview products, for the Shop page.
   async discover() {
     const sellers = await this.prisma.seller.findMany({
@@ -63,6 +66,16 @@ export class SellersService {
       published: seller.published,
       // a store is "live" only once it's published AND has shipping + payout set up
       live: seller.published && seller.shippingFee !== null && !!(seller.payoutUpi || seller.payoutAccount),
+      // Shipping rules, so checkout can show the real cost before the order is
+      // placed instead of a vague "+ shipping". Mirrors the maths in
+      // customers.service.checkout, which stays the source of truth.
+      shipping: {
+        fee: seller.shippingFee ?? this.shippingFlat,
+        minOrderAmount: seller.minOrderAmount ?? null,
+        freeShipEnabled: !!seller.freeShipEnabled,
+        freeShipThreshold: seller.freeShipThreshold ?? null,
+        shipDays: seller.shipDays ?? null,
+      },
       storeConfig: seller.storeConfig ? safeParseObj(seller.storeConfig) : null,
       products: seller.products.map(shapeProduct),
     };
@@ -158,7 +171,27 @@ export class SellersService {
     const seller = await this.prisma.seller.findUnique({ where: { id: sellerId } });
     if (!seller) throw new NotFoundException('Seller not found');
     const productCount = await this.prisma.product.count({ where: { sellerId } });
+    // "Profile complete" = the details a buyer actually needs to trust and
+    // contact the store. Social links and established year are optional extras,
+    // so they're deliberately not required here.
+    const profileFields = [
+      seller.description || seller.tagline, // something describing the store
+      seller.category,
+      seller.city,
+      seller.contactPhone || seller.contactEmail, // at least one way to reach them
+      seller.logoUrl,
+    ];
+    const profileDone = profileFields.filter((v) => !!String(v || '').trim()).length;
+
     const steps = [
+      {
+        key: 'profile',
+        label: 'Complete your store profile',
+        hint: 'Add your logo, description, category, city and a contact — buyers see these on your storefront.',
+        href: '/seller/profile',
+        done: profileDone === profileFields.length,
+        progress: `${profileDone}/${profileFields.length}`,
+      },
       { key: 'product', label: 'Add your first product', hint: 'List an item with images and price to start selling.', href: '/seller/products/new', done: productCount > 0 },
       { key: 'payout', label: 'Add payout details', hint: 'Configure how you’ll receive payments from orders.', href: '/seller/payments', done: !!(seller.payoutUpi || seller.payoutAccount) },
       { key: 'shipping', label: 'Configure shipping', hint: 'Set your shipping rate and pickup address.', href: '/seller/shipping', done: seller.shippingFee !== null && seller.shippingFee !== undefined },

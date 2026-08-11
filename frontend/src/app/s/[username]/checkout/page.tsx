@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { rupees } from '@/lib/api';
+import { api, rupees } from '@/lib/api';
 import { custApi, getCart, getCust, clearCart, type CartItem } from '@/lib/customer';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
 import CustomerAuth from '@/components/store/CustomerAuth';
@@ -22,7 +22,7 @@ export default function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [placed, setPlaced] = useState<any>(null);
-  const [payMethod, setPayMethod] = useState<'cod' | 'online'>('cod');
+  const [shipping, setShipping] = useState<any>(null);
   const [onlineOpt, setOnlineOpt] = useState<'upi' | 'card' | 'netbanking'>('upi');
   const setA = (k: keyof typeof addr, v: string) => setAddr((s) => ({ ...s, [k]: v }));
 
@@ -32,10 +32,27 @@ export default function CheckoutPage() {
     setSignedIn(true);
     custApi.addresses(username).then((a) => { setAddresses(a || []); if (a?.length) setSelected(a[0].id); }).catch(() => {});
   };
+
+  // The store's shipping rules — needed to show a real total, not "+ shipping".
+  useEffect(() => {
+    api.getStore(username).then((s: any) => setShipping(s?.shipping || null)).catch(() => {});
+  }, [username]);
   useEffect(() => { load(); window.addEventListener('cust-change', load); window.addEventListener('cart-change', () => setCart(getCart(username))); return () => window.removeEventListener('cust-change', load); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const itemCount = cart.reduce((s, i) => s + i.qty, 0);
+
+  /**
+   * Mirror the server's shipping maths so the buyer sees the real total before
+   * committing. The backend recomputes this on checkout — this is display only,
+   * never trusted as the price.
+   */
+  const freeShip = !!shipping?.freeShipEnabled
+    && shipping?.freeShipThreshold != null
+    && subtotal >= shipping.freeShipThreshold;
+  const shipCost = shipping ? (freeShip ? 0 : shipping.fee ?? 0) : null;
+  const total = shipCost == null ? subtotal : subtotal + shipCost;
+  const belowMin = shipping?.minOrderAmount != null && subtotal < shipping.minOrderAmount;
 
   const place = async () => {
     setErr('');
@@ -51,8 +68,8 @@ export default function CheckoutPage() {
       const order = await custApi.checkout(username, {
         addressId,
         items: cart.map((i) => ({ productId: i.productId, quantity: i.qty, size: i.size })),
-        paymentMethod: payMethod,
-        onlineMethod: payMethod === 'online' ? onlineOpt : undefined,
+        paymentMethod: 'online',
+        onlineMethod: onlineOpt,
       });
       clearCart(username);
       setPlaced(order);
@@ -152,37 +169,57 @@ export default function CheckoutPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 flex justify-between border-t border-line pt-3 text-[14px]"><span className="text-muted">Subtotal</span><span className="font-bold text-navy">{rupees(subtotal)}</span></div>
-              <p className="mt-1 text-[11px] text-faint">+ shipping (added by the store)</p>
+              <div className="mt-3 space-y-1.5 border-t border-line pt-3 text-[14px]">
+                <div className="flex justify-between"><span className="text-muted">Subtotal</span><span className="font-semibold text-navy">{rupees(subtotal)}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Shipping</span>
+                  {shipCost == null
+                    ? <span className="text-faint">Calculating…</span>
+                    : freeShip
+                      ? <span className="font-semibold text-green-600">Free</span>
+                      : <span className="font-semibold text-navy">{rupees(shipCost)}</span>}
+                </div>
+                {shipping?.freeShipEnabled && shipping?.freeShipThreshold != null && !freeShip && (
+                  <p className="text-[11.5px] text-green-600">
+                    Add {rupees(shipping.freeShipThreshold - subtotal)} more for free shipping
+                  </p>
+                )}
+                <div className="flex justify-between border-t border-line pt-2 text-[15px]">
+                  <span className="font-semibold text-navy">Total</span>
+                  <span className="font-display font-extrabold text-green-600">{rupees(total)}</span>
+                </div>
+                {shipping?.shipDays != null && (
+                  <p className="text-[11.5px] text-faint">Usually dispatched in {shipping.shipDays} day{shipping.shipDays === 1 ? '' : 's'}</p>
+                )}
+              </div>
 
-              {/* payment method */}
+              {/* payment method — online only */}
               <div className="mt-4 border-t border-line pt-3">
                 <div className="text-[12px] font-bold uppercase tracking-wide text-faint">Payment method</div>
-                <div className="mt-2 space-y-2">
-                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-[13px] font-semibold ${payMethod === 'cod' ? 'border-green bg-green-soft/40' : 'border-line'}`}>
-                    <input type="radio" checked={payMethod === 'cod'} onChange={() => setPayMethod('cod')} className="accent-green-600" />
-                    <span className="flex-1">Cash on Delivery</span>
-                    <span className="text-[11px] font-normal text-muted">Pay when it arrives</span>
-                  </label>
-                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-[13px] font-semibold ${payMethod === 'online' ? 'border-green bg-green-soft/40' : 'border-line'}`}>
-                    <input type="radio" checked={payMethod === 'online'} onChange={() => setPayMethod('online')} className="accent-green-600" />
+                <div className="mt-2 rounded-xl border border-green bg-green-soft/40 p-3">
+                  <div className="flex items-center gap-2 text-[13px] font-semibold text-navy">
                     <span className="flex-1">Pay online</span>
                     <span className="text-[11px] font-normal text-muted">UPI · Cards · Netbanking</span>
-                  </label>
-                  {payMethod === 'online' && (
-                    <div className="grid grid-cols-3 gap-2 pl-1">
-                      {(['upi', 'card', 'netbanking'] as const).map((o) => (
-                        <button key={o} type="button" onClick={() => setOnlineOpt(o)} className={`rounded-lg border px-2 py-2 text-[12px] font-semibold capitalize ${onlineOpt === o ? 'border-green bg-green-soft/50 text-green' : 'border-line text-navy hover:border-green/40'}`}>
-                          {o === 'upi' ? 'UPI' : o === 'card' ? 'Card' : 'Netbanking'}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-3 gap-2">
+                    {(['upi', 'card', 'netbanking'] as const).map((o) => (
+                      <button key={o} type="button" onClick={() => setOnlineOpt(o)} className={`rounded-lg border px-2 py-2 text-[12px] font-semibold capitalize ${onlineOpt === o ? 'border-green bg-white text-green' : 'border-line bg-white text-navy hover:border-green/40'}`}>
+                        {o === 'upi' ? 'UPI' : o === 'card' ? 'Card' : 'Netbanking'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {err && <p className="mt-3 text-[13px] font-semibold text-rose">{err}</p>}
-              <button onClick={place} disabled={busy} className="btn-green mt-4 w-full justify-center disabled:opacity-60">{busy ? 'Placing…' : payMethod === 'cod' ? 'Place order · COD' : `Pay ${rupees(subtotal)} online`}</button>
+              {belowMin && (
+                <p className="mt-3 text-[12.5px] font-semibold text-amber">
+                  Minimum order is {rupees(shipping.minOrderAmount)} — add {rupees(shipping.minOrderAmount - subtotal)} more to check out.
+                </p>
+              )}
+              <button onClick={place} disabled={busy || belowMin} className="btn-green mt-4 w-full justify-center disabled:opacity-60">
+                {busy ? 'Placing…' : `Pay ${rupees(total)} online`}
+              </button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-faint"><ShieldLock size={12} /> Loopy-protected payment</p>
             </div>
           </div>

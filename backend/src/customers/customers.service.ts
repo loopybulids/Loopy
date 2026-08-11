@@ -312,4 +312,49 @@ export class CustomersService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  /**
+   * Buyer cancels their own order.
+   *
+   * Stock is only returned when the goods haven't reached the customer — once an
+   * order is Delivered or Completed the items are physically gone, so putting
+   * them back would oversell the catalogue.
+   */
+  async cancelOrder(user: any, orderId: string) {
+    const { customerId } = this.assertCustomer(user);
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, customerId },
+      include: { items: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status === 'Cancelled') throw new BadRequestException('This order is already cancelled.');
+
+    const restock = !['Delivered', 'Completed'].includes(order.status);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (restock) {
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { quantity: { increment: item.quantity } },
+          });
+        }
+      }
+      return tx.order.update({ where: { id: orderId }, data: { status: 'Cancelled' }, include: { items: true } });
+    }, { timeout: 20000, maxWait: 15000 });
+
+    // Surface it in the seller's console immediately.
+    const customer = await this.prisma.customer.findUnique({ where: { id: customerId }, select: { name: true } });
+    await this.prisma.notification.create({
+      data: {
+        sellerId: order.sellerId,
+        type: 'order_cancelled',
+        title: 'Order cancelled ✕',
+        body: `${customer?.name || 'A customer'} cancelled order #${orderId.slice(-6).toUpperCase()} (₹${(order.totalAmount || 0).toLocaleString('en-IN')}).`,
+        link: '/seller/orders',
+      },
+    }).catch(() => { /* never fail the cancellation over a notification */ });
+
+    return updated;
+  }
 }

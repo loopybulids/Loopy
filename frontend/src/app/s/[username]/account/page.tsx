@@ -97,9 +97,6 @@ export default function AccountProfilePage() {
                 <dd className="font-semibold text-navy">{me?.addresses?.length ?? 0}</dd>
               </div>
             </dl>
-            <p className="mt-4 border-t border-line pt-3 text-[12px] leading-relaxed text-muted">
-              This account belongs to <b className="text-navy">{username}</b> only. Each store you shop with keeps its own separate account.
-            </p>
           </div>
         </div>
       )}

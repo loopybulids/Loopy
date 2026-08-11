@@ -167,6 +167,8 @@ export const api = {
   acceptOrder: (id: string) => req<any>(`/orders/${id}/accept`, { method: 'POST' }),
   rejectOrder: (id: string, reason?: string) =>
     req<any>(`/orders/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  /** Step an order back one stage (Shipped → Accepted, etc). */
+  revertOrder: (id: string) => req<any>(`/orders/${id}/revert`, { method: 'POST' }),
   shipOrder: (id: string) => req<any>(`/orders/${id}/ship`, { method: 'POST' }),
 
   // admin (auth required, role=admin)

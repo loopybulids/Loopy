@@ -67,4 +67,8 @@ export class CustomersController {
   @UseGuards(JwtAuthGuard)
   @Get('customer/orders')
   orders(@Req() req: any) { return this.customers.getOrders(req.user); }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('customer/orders/:id/cancel')
+  cancelOrder(@Req() req: any, @Param('id') id: string) { return this.customers.cancelOrder(req.user, id); }
 }

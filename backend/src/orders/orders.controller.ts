@@ -37,6 +37,12 @@ export class OrdersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/revert')
+  revert(@Param('id') id: string, @Req() req: any) {
+    return this.orders.revertStatus(id, req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':id/reject')
   reject(@Param('id') id: string, @Req() req: any, @Body() body: { reason?: string }) {
     return this.orders.rejectOrder(id, req.user.sellerId, body?.reason);

@@ -10,6 +10,23 @@ export default function TrackOrders() {
   const { username } = useParams<{ username: string }>();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+
+  const cancel = async (id: string) => {
+    setErr('');
+    setCancelling(id);
+    try {
+      const updated = await custApi.cancelOrder(username, id);
+      setOrders((list) => list.map((o) => (o.id === id ? { ...o, ...updated } : o)));
+      setConfirming(null);
+    } catch (e: any) {
+      setErr(e?.message || 'Could not cancel this order.');
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   // AccountShell owns the signed-out state, so this only handles the data.
   const load = () => {
@@ -41,6 +58,38 @@ export default function TrackOrders() {
           {orders.map((o) => (
             <div key={o.id} className="rounded-2xl border border-line bg-white p-5 shadow-card">
               <OrderDetail order={o} />
+
+              {o.status !== 'Cancelled' && (
+                <div className="mt-4 border-t border-line pt-3.5">
+                  {confirming === o.id ? (
+                    <div className="rounded-xl border border-rose/30 bg-rose-soft/40 p-3.5">
+                      <p className="text-[12.5px] font-semibold text-navy">
+                        Cancel this order? The seller will be notified straight away.
+                      </p>
+                      <div className="mt-2.5 flex gap-2">
+                        <button
+                          onClick={() => cancel(o.id)}
+                          disabled={cancelling === o.id}
+                          className="rounded-lg bg-rose px-4 py-2 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                        >
+                          {cancelling === o.id ? 'Cancelling…' : 'Yes, cancel order'}
+                        </button>
+                        <button onClick={() => { setConfirming(null); setErr(''); }} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy">
+                          Keep order
+                        </button>
+                      </div>
+                      {err && <p className="mt-2 text-[13px] font-semibold text-rose">{err}</p>}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setConfirming(o.id); setErr(''); }}
+                      className="text-[12.5px] font-semibold text-rose hover:underline"
+                    >
+                      Cancel this order
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

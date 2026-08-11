@@ -19,7 +19,7 @@ export default function Orders() {
 
   // Move an order along the fulfilment chain and swap the updated row in place,
   // so the queue reflects the new status without a full refetch.
-  const act = async (order: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected', reason?: string) => {
+  const act = async (order: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', reason?: string) => {
     setActErr('');
     setActing(order.id);
     try {
@@ -27,6 +27,7 @@ export default function Orders() {
         to === 'Accepted' ? await api.acceptOrder(order.id)
         : to === 'Shipped' ? await api.shipOrder(order.id)
         : to === 'Delivered' ? await api.deliverOrder(order.id)
+        : to === 'Reverted' ? await api.revertOrder(order.id)
         : await api.rejectOrder(order.id, reason);
       setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, ...updated } : o)));
     } catch (e: any) {
@@ -118,6 +119,14 @@ export default function Orders() {
  * Fulfilment controls. Only the single legal next step is offered, so the seller
  * can't skip Accepted → Shipped or move an order backwards.
  */
+/** Where "Undo" sends each status. Mirrors revertStatus() on the server. */
+const BACK_LABEL: Record<string, string> = {
+  Accepted: 'New',
+  Shipped: 'Accepted',
+  Delivered: 'Shipped',
+  Completed: 'Delivered',
+};
+
 const NEXT: Record<string, { to: 'Accepted' | 'Shipped' | 'Delivered'; label: string; hint: string }> = {
   Paid: { to: 'Accepted', label: 'Accept order', hint: 'Confirm you have this item and will fulfil it.' },
   Accepted: { to: 'Shipped', label: 'Mark as shipped', hint: 'Generates a tracking number for the buyer.' },
@@ -126,24 +135,21 @@ const NEXT: Record<string, { to: 'Accepted' | 'Shipped' | 'Delivered'; label: st
 
 function OrderActions({ order, busy, onAct, err }: {
   order: any; busy: boolean; err: string;
-  onAct: (o: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected', reason?: string) => void;
+  onAct: (o: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', reason?: string) => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const step = NEXT[order.status];
+  const canRevert = !!BACK_LABEL[order.status];
   const pay = paymentState(order);
   // On a COD order, "delivered" is also the moment the cash is collected.
   const codOnDelivery = step?.to === 'Delivered' && !pay.paid && pay.short === 'COD';
   // Once it's shipped, declining isn't a rejection any more — it's a refund.
   const canReject = ['Paid', 'PendingPayment', 'Accepted'].includes(order.status);
 
+  // Tracking number is rendered by OrderDetail just above, for both sides.
   return (
     <div className="mt-4 border-t border-line pt-4">
-      {order.awbNumber && (
-        <p className="mb-3 text-[12.5px] text-muted">
-          Tracking number <b className="font-mono text-navy">{order.awbNumber}</b>
-        </p>
-      )}
       {step ? (
         <>
           <div className="flex flex-wrap items-center gap-3">
@@ -194,14 +200,24 @@ function OrderActions({ order, busy, onAct, err }: {
         </>
       ) : (
         <p className="text-[12.5px] font-semibold text-muted">
-          {order.status === 'Delivered'
-            ? (pay.short === 'COD'
-                ? `Delivered — ${money(order.totalAmount ?? 0)} collected in cash.`
-                : 'Delivered — waiting for the buyer to confirm and release payment.')
+          {order.status === 'Delivered' ? 'Delivered.'
             : order.status === 'Completed' ? 'Completed. Payout released.'
+            : order.status === 'Cancelled' ? 'This order was cancelled.'
             : `No further action while this order is ${order.status}.`}
         </p>
       )}
+      {/* Undo — for a stage advanced by mistake. Cancelled orders are excluded:
+          un-cancelling would need to re-reserve stock that may since have sold. */}
+      {canRevert && (
+        <button
+          onClick={() => onAct(order, 'Reverted')}
+          disabled={busy}
+          className="mt-3 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy disabled:opacity-60"
+        >
+          ↩ Undo — move back to {BACK_LABEL[order.status]}
+        </button>
+      )}
+
       {err && <p className="mt-2 text-[13px] font-semibold text-rose">{err}</p>}
     </div>
   );

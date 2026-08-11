@@ -183,6 +183,34 @@ export class OrdersService {
   }
 
   /**
+   * Step an order back one stage, for when the seller advances it by mistake.
+   *
+   * Only walks the normal chain backwards. Cancelled is deliberately excluded:
+   * un-cancelling would have to re-reserve stock that may since have sold, so
+   * that's a new order rather than a status flip.
+   */
+  async revertStatus(id: string, sellerId: string) {
+    const BACK: Record<string, string> = {
+      Accepted: 'Paid',
+      Shipped: 'Accepted',
+      Delivered: 'Shipped',
+      Completed: 'Delivered',
+    };
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.sellerId !== sellerId) throw new ForbiddenException('Not your order');
+
+    const to = BACK[order.status];
+    if (!to) throw new BadRequestException(`An order that is ${order.status} can't be moved back.`);
+
+    const data: any = { status: to };
+    // Going back before "Shipped" invalidates the tracking number.
+    if (order.status === 'Shipped') data.awbNumber = null;
+
+    return this.prisma.order.update({ where: { id }, data, include: { items: true } });
+  }
+
+  /**
    * Seller declines an order: cancel it and put the reserved stock back.
    *
    * Only valid before the goods move — once shipped, cancelling is a refund/

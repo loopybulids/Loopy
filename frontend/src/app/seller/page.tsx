@@ -124,7 +124,12 @@ function Onboarding({ ob }: { ob: any }) {
           <Link key={s.key} href={s.href} className={`flex items-start gap-3 rounded-xl border p-3.5 transition ${s.done ? 'border-green/20 bg-green-soft/40' : 'border-line bg-white hover:border-green-600/40'}`}>
             <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full ${s.done ? 'bg-green-600 text-white' : 'border-2 border-line'}`}>{s.done && <Check size={14} />}</span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2"><span className="text-[13.5px] font-bold text-navy">{s.label}</span>{s.done && <span className="chip-green !py-0 text-[10px]">Done</span>}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-[13.5px] font-bold text-navy">{s.label}</span>
+                {s.done
+                  ? <span className="chip-green !py-0 text-[10px]">Done</span>
+                  : s.progress && <span className="chip-amber !py-0 text-[10px]">{s.progress}</span>}
+              </div>
               <p className="text-[12px] text-muted">{s.hint}</p>
             </div>
           </Link>

@@ -68,23 +68,26 @@ export default function SellerProfile() {
       </div>
 
       <Panel title="Edit profile">
+        <div className="space-y-4">
         <Field label="Store name" value={p.storeName} onChange={(v) => set('storeName', v)} />
-        <div className="mt-4">
+        <div>
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store URL</label>
           <div className="mt-1.5 c-input break-all bg-paper text-muted">{p.username ? storeUrl : '—'}</div>
         </div>
         <Field label="Tagline" value={p.tagline} onChange={(v) => set('tagline', v)} placeholder="Thrifted fashion, curated with love" />
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Category" value={p.category} onChange={(v) => set('category', v)} placeholder="Vintage & Thrift" />
           <Field label="City" value={p.city} onChange={(v) => set('city', v)} placeholder="Mumbai" />
           <Field label="Established (year)" value={p.establishedYear} onChange={(v) => set('establishedYear', v.replace(/[^0-9]/g, ''))} placeholder="2023" />
         </div>
-        <div className="mt-4">
+        <div>
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Bio / description</label>
           <textarea value={p.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" placeholder="Curated vintage & thrift, quality-checked." />
         </div>
 
-        <div className="mt-6 text-[12px] font-bold uppercase tracking-wide text-faint">Contact & socials</div>
+        </div>
+
+        <div className="mt-6 text-[12px] font-bold uppercase tracking-wide text-faint">Contact &amp; socials</div>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <Field label="Contact email" value={p.contactEmail} onChange={(v) => set('contactEmail', v)} placeholder="hello@store.com" />
           <Field label="Contact phone" value={p.contactPhone} onChange={(v) => set('contactPhone', v)} placeholder="+91 98765 43210" />
@@ -108,9 +111,14 @@ export default function SellerProfile() {
   );
 }
 
+/**
+ * No own margin — spacing comes from the parent (`space-y-4` or a grid `gap`).
+ * It previously carried `mt-4 first:mt-0`, which broke row alignment inside a
+ * grid: only the first cell got zero margin, so the other columns sat lower.
+ */
 function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <div className="mt-4 first:mt-0">
+    <div>
       <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="c-input mt-1.5" />
     </div>
