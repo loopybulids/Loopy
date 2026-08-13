@@ -32,7 +32,18 @@ export default function SellerDashboard() {
     return () => clearInterval(t);
   }, []);
 
-  const act = async (id: string, kind: 'accept' | 'ship') => { try { kind === 'accept' ? await api.acceptOrder(id) : await api.shipOrder(id); load(); } catch (e: any) { alert(e.message); } };
+  const act = async (id: string, kind: 'accept' | 'ship') => {
+    try {
+      if (kind === 'accept') await api.acceptOrder(id);
+      else {
+        // Courier is required by the API — ask before shipping.
+        const courier = window.prompt('Shipping agency / courier name');
+        if (!courier?.trim()) return;
+        await api.shipOrder(id, courier.trim());
+      }
+      load();
+    } catch (e: any) { alert(e.message); }
+  };
   const paid = orders.filter((o) => o.status !== 'PendingPayment');
   const toAccept = orders.filter((o) => o.status === 'Paid').length;
   const completed = orders.filter((o) => ['Delivered', 'Completed'].includes(o.status)).length;

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo } from '@/lib/store-config';
+import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo, safeHref } from '@/lib/store-config';
 import { SizeStrip } from '@/components/sizes';
 import AutoImages from '@/components/AutoImages';
 import StoreAccountControls from '@/components/store/StoreAccountControls';
@@ -101,7 +101,7 @@ export default function StorePreview({
           {/* nav with animated underline */}
           <nav className={`items-center gap-7 text-[14px] font-semibold text-navy/70 ${mobile ? 'hidden' : 'hidden md:flex'}`}>
             {navLinks.map((n, i) => (
-              <Link key={i} href={n.href || '#'} className="group relative cursor-pointer transition-colors hover:text-navy">
+              <Link key={i} href={safeHref(n.href)} className="group relative cursor-pointer transition-colors hover:text-navy">
                 {n.label}
                 <span className="absolute -bottom-1.5 left-0 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ background: accent }} />
               </Link>
@@ -259,7 +259,7 @@ function PageBody({ page, accent }: { page: StorePage; accent: string }) {
         ) : null;
         if (b.type === 'button') return (
           <div key={b.id} className="mt-6">
-            <a href={b.href || '#'} className="inline-block rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card" style={{ background: accent }}>{b.text || 'Button'}</a>
+            <a href={safeHref(b.href)} className="inline-block rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card" style={{ background: accent }}>{b.text || 'Button'}</a>
           </div>
         );
         return null;

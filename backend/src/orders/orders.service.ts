@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto } from './dto';
-import { orderAcceptedEmail, orderRejectedEmail, sendMail } from '../mail/mailer';
+import { orderAcceptedEmail, orderRejectedEmail, orderShippedEmail, sendMail } from '../mail/mailer';
 
 @Injectable()
 export class OrdersService {
@@ -113,9 +113,10 @@ export class OrdersService {
 
   // POST /orders/:id/confirm — verify payment + finalize (stubbed).
   // Real impl verifies Razorpay HMAC signature on the webhook (PRD §15.1).
-  async confirmPayment(id: string) {
+  async confirmPayment(id: string, user?: any) {
     const order = await this.prisma.order.findUnique({ where: { id }, include: { items: true } });
     if (!order) throw new NotFoundException('Order not found');
+    this.assertOrderAccess(order, user);
     if (order.status !== 'PendingPayment') return order;
 
     // Decrement inventory transactionally to prevent oversell (PRD §12/§20).
@@ -138,12 +139,37 @@ export class OrdersService {
     }, { timeout: 20000, maxWait: 15000 });
   }
 
-  async findOne(id: string) {
+  /**
+   * Only the buyer who placed an order, the seller fulfilling it, or an admin
+   * may see or act on it.
+   *
+   * Order ids are cuids, but "unguessable" is not an access control: these
+   * records carry the buyer's name, phone and full delivery address.
+   */
+  private assertOrderAccess(order: { sellerId: string; customerId: string | null; buyerId: string | null }, user: any) {
+    if (!user) throw new ForbiddenException('Sign in to continue');
+    if (user.role === 'admin') return;
+    if (user.role === 'seller' && user.sellerId && order.sellerId === user.sellerId) return;
+    if (user.role === 'customer' && order.customerId && order.customerId === user.userId) return;
+    if (user.role === 'buyer' && order.buyerId && order.buyerId === user.userId) return;
+    throw new ForbiddenException('Not your order');
+  }
+
+  /** Buyer-only actions (confirm delivery, review, dispute). */
+  private assertBuyer(order: { customerId: string | null; buyerId: string | null }, user: any) {
+    if (!user) throw new ForbiddenException('Sign in to continue');
+    const isCustomer = user.role === 'customer' && order.customerId && order.customerId === user.userId;
+    const isBuyer = user.role === 'buyer' && order.buyerId && order.buyerId === user.userId;
+    if (!isCustomer && !isBuyer) throw new ForbiddenException('Only the buyer can do this');
+  }
+
+  async findOne(id: string, user?: any) {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: { items: true, seller: true },
     });
     if (!order) throw new NotFoundException('Order not found');
+    this.assertOrderAccess(order, user);
     return order;
   }
 
@@ -158,23 +184,34 @@ export class OrdersService {
     return { storeName: seller?.storeName, email: customer?.email || null };
   }
 
-  async transition(id: string, sellerId: string, to: 'Accepted' | 'Shipped') {
+  /**
+   * Advance an order. Shipping additionally records the courier — a tracking
+   * number is useless to the buyer without knowing who to track it with — and
+   * emails them the details.
+   */
+  async transition(id: string, sellerId: string, to: 'Accepted' | 'Shipped', courier?: string) {
     const order = await this.prisma.order.findUnique({ where: { id } });
     if (!order) throw new NotFoundException('Order not found');
     if (order.sellerId !== sellerId) throw new ForbiddenException('Not your order');
 
     const data: any = { status: to };
     if (to === 'Shipped') {
+      const name = String(courier || '').trim();
+      if (!name) throw new BadRequestException('Enter the courier / shipping agency name.');
+      if (name.length > 60) throw new BadRequestException('Courier name is too long.');
+      data.courier = name;
       // Stub AWB. Real impl: Shiprocket order_create → order_ship (PRD §15.2).
       data.awbNumber = 'DL' + Math.floor(1000000000 + Math.random() * 8999999999);
     }
     const updated = await this.prisma.order.update({ where: { id }, data, include: { items: true } });
 
-    if (to === 'Accepted') {
-      // Fire-and-forget: a mail failure must never fail the acceptance itself.
+    // Fire-and-forget: a mail failure must never fail the status change itself.
+    if (to === 'Accepted' || to === 'Shipped') {
       this.notifyTargets(updated).then(({ storeName, email }) => {
         if (!email) return;
-        const m = orderAcceptedEmail(updated, storeName);
+        const m = to === 'Accepted'
+          ? orderAcceptedEmail(updated, storeName)
+          : orderShippedEmail(updated, storeName);
         return sendMail(email, m.subject, m.html, m.text);
       }).catch(() => {});
     }
@@ -205,7 +242,7 @@ export class OrdersService {
 
     const data: any = { status: to };
     // Going back before "Shipped" invalidates the tracking number.
-    if (order.status === 'Shipped') data.awbNumber = null;
+    if (order.status === 'Shipped') { data.awbNumber = null; data.courier = null; }
 
     return this.prisma.order.update({ where: { id }, data, include: { items: true } });
   }
@@ -231,7 +268,15 @@ export class OrdersService {
           data: { quantity: { increment: item.quantity } },
         });
       }
-      return tx.order.update({ where: { id }, data: { status: 'Cancelled' }, include: { items: true } });
+      return tx.order.update({
+        where: { id },
+        data: {
+          status: 'Cancelled',
+          cancelledBy: 'seller',
+          cancelReason: String(reason || '').trim().slice(0, 300) || null,
+        },
+        include: { items: true },
+      });
     }, { timeout: 20000, maxWait: 15000 });
 
     this.notifyTargets(updated).then(({ storeName, email }) => {
@@ -256,9 +301,10 @@ export class OrdersService {
   }
 
   // Buyer confirms delivery → release escrow + complete the order.
-  async confirmDelivery(id: string) {
+  async confirmDelivery(id: string, user?: any) {
     const order = await this.prisma.order.findUnique({ where: { id } });
     if (!order) throw new NotFoundException('Order not found');
+    this.assertBuyer(order, user);
     return this.prisma.order.update({
       where: { id },
       data: { status: 'Completed' },
@@ -266,12 +312,19 @@ export class OrdersService {
     });
   }
 
-  async addReview(orderId: string, rating: number, comment?: string) {
+  async addReview(orderId: string, rating: number, comment?: string, user?: any) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { items: true },
     });
     if (!order) throw new NotFoundException('Order not found');
+    this.assertBuyer(order, user);
+    if (!['Delivered', 'Completed'].includes(order.status)) {
+      throw new BadRequestException('You can review an order once it has been delivered.');
+    }
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new BadRequestException('Rating must be a whole number from 1 to 5.');
+    }
     // releasing escrow on review keeps the demo's happy path moving
     await this.prisma.order.update({ where: { id: orderId }, data: { status: 'Completed' } });
     return this.prisma.review.create({
@@ -285,9 +338,10 @@ export class OrdersService {
     });
   }
 
-  async openDispute(orderId: string, issueType: string, description?: string) {
+  async openDispute(orderId: string, issueType: string, description?: string, user?: any) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
+    this.assertBuyer(order, user);
     await this.prisma.order.update({ where: { id: orderId }, data: { status: 'Disputed' } });
     return this.prisma.dispute.create({
       data: {

@@ -67,7 +67,12 @@ const STATUS_LABEL: Record<string, string> = {
   Refunded: 'Refunded',
 };
 
-export function statusLabel(status?: string) {
+/**
+ * `cancelledBy` distinguishes the two paths that both store status='Cancelled':
+ * the buyer pulling out vs the seller declining.
+ */
+export function statusLabel(status?: string, cancelledBy?: string | null) {
+  if (status === 'Cancelled') return cancelledBy === 'buyer' ? 'Cancelled' : 'Rejected';
   return STATUS_LABEL[String(status || '')] || status || '—';
 }
 
@@ -110,7 +115,7 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
             </div>
           )}
         </div>
-        {order?.status && <span className={statusChip(order.status)}>{statusLabel(order.status)}</span>}
+        {order?.status && <span className={statusChip(order.status)}>{statusLabel(order.status, order.cancelledBy)}</span>}
       </div>
 
       {/* items */}
@@ -134,13 +139,30 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
       {order?.awbNumber && (
         <div className="border-t border-line pt-3">
           <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-faint">Shipment</div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
-            <span className="text-muted">Tracking number</span>
-            <b className="select-all font-mono text-navy">{order.awbNumber}</b>
+          <div className="space-y-1 text-[13px]">
+            {order?.courier && (
+              <div className="flex flex-wrap items-center gap-x-2">
+                <span className="text-muted">Courier</span>
+                <b className="text-navy">{order.courier}</b>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-x-2">
+              <span className="text-muted">Tracking number</span>
+              <b className="select-all font-mono text-navy">{order.awbNumber}</b>
+            </div>
           </div>
           <p className="mt-1 text-[11.5px] text-faint">
             {DELIVERED.includes(order?.status) ? 'Delivered.' : 'On its way — use this number to track your parcel.'}
           </p>
+        </div>
+      )}
+
+      {order?.status === 'Cancelled' && order?.cancelReason && (
+        <div className="border-t border-line pt-3">
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-faint">
+            {order.cancelledBy === 'buyer' ? 'Cancellation reason' : 'Reason the seller gave'}
+          </div>
+          <p className="text-[13px] text-navy">{order.cancelReason}</p>
         </div>
       )}
 

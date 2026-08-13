@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller()
 export class CustomersController {
@@ -13,16 +14,19 @@ export class CustomersController {
   }
 
   // Signup is two steps: register emails a 6-digit code, verify creates the account.
+  @Throttle({ sustained: { ttl: 60_000, limit: 8 } })
   @Post('stores/:username/customer-auth/register')
   authRegister(@Param('username') username: string, @Body() body: any) {
     return this.customers.registerCustomer(username, body);
   }
 
+  @Throttle({ sustained: { ttl: 60_000, limit: 8 } })
   @Post('stores/:username/customer-auth/verify')
   authVerify(@Param('username') username: string, @Body() body: any) {
     return this.customers.verifySignup(username, body?.email, body?.code);
   }
 
+  @Throttle({ sustained: { ttl: 60_000, limit: 8 } })
   @Post('stores/:username/customer-auth/login')
   authLogin(@Param('username') username: string, @Body() body: any) {
     return this.customers.loginCustomer(username, body?.email, body?.password);
@@ -70,5 +74,7 @@ export class CustomersController {
 
   @UseGuards(JwtAuthGuard)
   @Post('customer/orders/:id/cancel')
-  cancelOrder(@Req() req: any, @Param('id') id: string) { return this.customers.cancelOrder(req.user, id); }
+  cancelOrder(@Req() req: any, @Param('id') id: string, @Body() body: { reason?: string }) {
+    return this.customers.cancelOrder(req.user, id, body?.reason);
+  }
 }

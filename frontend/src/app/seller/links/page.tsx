@@ -24,6 +24,7 @@ export default function CheckoutLinks() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [copied, setCopied] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -43,13 +44,14 @@ export default function CheckoutLinks() {
   const setRow = (i: number, patch: Partial<Row>) =>
     setRows((r) => r.map((row, n) => (n === i ? { ...row, ...patch } : row)));
   const removeRow = (i: number) => setRows((r) => r.filter((_, n) => n !== i));
-  const addRow = () => {
-    // default to the first product not already in the basket
-    const used = new Set(rows.map((r) => r.pid));
-    const next = products.find((p) => !used.has(p.id)) || products[0];
-    if (next) setRows((r) => [...r, { pid: next.id, qty: 1 }]);
+  /** Add a specific product the seller picked (never guess one for them). */
+  const addProduct = (id: string) => {
+    setRows((r) => (r.some((x) => x.pid === id) ? r : [...r, { pid: id, qty: 1 }]));
+    setPicking(false);
   };
 
+  // Products not already in the basket — what the picker offers.
+  const available = products.filter((p) => !rows.some((r) => r.pid === p.id));
   const total = rows.reduce((s, r) => s + (byId.get(r.pid)?.price || 0) * r.qty, 0);
   const itemCount = rows.reduce((s, r) => s + r.qty, 0);
   const allUsed = rows.length >= products.length;
@@ -135,14 +137,48 @@ export default function CheckoutLinks() {
               })}
             </div>
 
-            <button
-              onClick={addRow}
-              disabled={allUsed}
-              title={allUsed ? 'Every product is already in this link' : undefined}
-              className="btn-ghost mt-3 w-full justify-center disabled:opacity-50"
-            >
-              <Plus size={15} /> Add another product
-            </button>
+            {/* Picker — the seller chooses which product to add, rather than one
+                being guessed for them. */}
+            {picking ? (
+              <div className="mt-3 rounded-xl border border-line bg-white p-2 shadow-card">
+                <div className="flex items-center justify-between px-1.5 pb-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Choose a product</span>
+                  <button onClick={() => setPicking(false)} className="text-[12px] font-semibold text-muted hover:text-navy">Cancel</button>
+                </div>
+                <div className="max-h-64 space-y-1 overflow-y-auto">
+                  {available.length === 0 ? (
+                    <p className="px-1.5 py-3 text-center text-[12.5px] text-muted">Every product is already in this link.</p>
+                  ) : available.map((p) => {
+                    const img = (Array.isArray(p.images) ? p.images : (() => { try { return JSON.parse(p.images || '[]'); } catch { return []; } })())[0];
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => addProduct(p.id)}
+                        className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-paper"
+                      >
+                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-md border border-line bg-paper">
+                          {img && <img src={img} alt="" className="h-full w-full object-cover" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-semibold text-navy">{p.title || p.name}</span>
+                          <span className="block text-[11.5px] text-faint">{money(p.price)} · {p.quantity ?? 0} in stock</span>
+                        </span>
+                        <Plus size={15} className="shrink-0 text-green-600" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setPicking(true)}
+                disabled={allUsed}
+                title={allUsed ? 'Every product is already in this link' : undefined}
+                className="btn-ghost mt-3 w-full justify-center disabled:opacity-50"
+              >
+                <Plus size={15} /> Add another product
+              </button>
+            )}
 
             <div className="mt-5 flex items-center justify-between rounded-xl bg-green-soft px-4 py-3 ring-1 ring-green/15">
               <span className="text-[13px] font-semibold text-navy/80">

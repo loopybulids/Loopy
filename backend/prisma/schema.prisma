@@ -223,6 +223,11 @@ model Order {
   razorpayOrderId  String?
   paymentId        String?
   awbNumber        String?
+  courier          String?  // shipping agency, captured when the seller ships
+  cancelReason     String?  // why it was cancelled — shown to the other party
+  // 'buyer' | 'seller'. Both paths set status='Cancelled', so without this the
+  // seller can't tell a customer cancellation from their own rejection.
+  cancelledBy      String?
   createdAt        DateTime @default(now())
 
   buyer  User?       @relation("BuyerOrders", fields: [buyerId], references: [id])

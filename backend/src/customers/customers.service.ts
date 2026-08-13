@@ -305,12 +305,20 @@ export class CustomersService {
   }
 
   async getOrders(user: any) {
-    const { customerId } = this.assertCustomer(user);
-    return this.prisma.order.findMany({
-      where: { customerId },
-      include: { items: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { customerId, sellerId } = this.assertCustomer(user);
+    const [orders, seller] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { customerId },
+        include: { items: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      // Attached to each order so a cancelled buyer knows who to chase.
+      this.prisma.seller.findUnique({
+        where: { id: sellerId },
+        select: { storeName: true, contactEmail: true, contactPhone: true },
+      }),
+    ]);
+    return orders.map((o) => ({ ...o, seller }));
   }
 
   /**
@@ -320,7 +328,7 @@ export class CustomersService {
    * order is Delivered or Completed the items are physically gone, so putting
    * them back would oversell the catalogue.
    */
-  async cancelOrder(user: any, orderId: string) {
+  async cancelOrder(user: any, orderId: string, reason?: string) {
     const { customerId } = this.assertCustomer(user);
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, customerId },
@@ -340,7 +348,15 @@ export class CustomersService {
           });
         }
       }
-      return tx.order.update({ where: { id: orderId }, data: { status: 'Cancelled' }, include: { items: true } });
+      return tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'Cancelled',
+          cancelledBy: 'buyer',
+          cancelReason: String(reason || '').trim().slice(0, 300) || null,
+        },
+        include: { items: true },
+      });
     }, { timeout: 20000, maxWait: 15000 });
 
     // Surface it in the seller's console immediately.
@@ -350,7 +366,8 @@ export class CustomersService {
         sellerId: order.sellerId,
         type: 'order_cancelled',
         title: 'Order cancelled ✕',
-        body: `${customer?.name || 'A customer'} cancelled order #${orderId.slice(-6).toUpperCase()} (₹${(order.totalAmount || 0).toLocaleString('en-IN')}).`,
+        body: `${customer?.name || 'A customer'} cancelled order #${orderId.slice(-6).toUpperCase()} (₹${(order.totalAmount || 0).toLocaleString('en-IN')}).`
+          + (String(reason || '').trim() ? ` Reason: ${String(reason).trim().slice(0, 200)}` : ''),
         link: '/seller/orders',
       },
     }).catch(() => { /* never fail the cancellation over a notification */ });

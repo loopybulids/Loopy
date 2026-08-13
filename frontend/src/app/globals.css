@@ -116,6 +116,10 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
   .c-input::placeholder { color: #9AA2B1; }
   .c-input:focus { outline: none; border-color: rgba(30,158,99,.7); box-shadow: 0 0 0 3px rgba(30,158,99,.16); }
   /* sidebar nav link */
+  /* Number inputs: strip the spinner arrows, which steal width in narrow fields. */
+  .no-spin { -moz-appearance: textfield; appearance: textfield; }
+  .no-spin::-webkit-outer-spin-button,
+  .no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .c-nav { @apply flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13.5px] font-semibold transition-colors; }
   .c-nav-off { @apply text-navy/65 hover:bg-green-soft/60 hover:text-navy; }
   .c-nav-on { @apply bg-green-soft text-green ring-1 ring-green/15; }

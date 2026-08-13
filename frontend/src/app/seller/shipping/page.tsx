@@ -56,8 +56,11 @@ export default function Shipping() {
   };
 
   const ship = async (id: string) => {
+    // Courier is required by the API — ask before shipping.
+    const courier = window.prompt('Shipping agency / courier name');
+    if (!courier?.trim()) return;
     setBusyId(id);
-    try { await api.shipOrder(id); await load(); } catch { /* ignore */ } finally { setBusyId(''); }
+    try { await api.shipOrder(id, courier.trim()); await load(); } catch { /* ignore */ } finally { setBusyId(''); }
   };
 
   const toShip = orders.filter((o) => o.status === 'Paid' || o.status === 'Accepted');

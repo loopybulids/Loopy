@@ -10,6 +10,27 @@ export type PageBlockType = 'heading' | 'text' | 'image' | 'button';
 export type PageBlock = { id: string; type: PageBlockType; text?: string; url?: string; href?: string };
 export type StorePage = { id: string; title: string; slug: string; showInNav: boolean; blocks: PageBlock[] };
 
+/**
+ * Make a seller-supplied URL safe to put in an href.
+ *
+ * Store config is authored by the seller and rendered on their public
+ * storefront, so `javascript:` (or `data:`/`vbscript:`) in a nav link or button
+ * would be stored XSS against their own shoppers. Anything that isn't an
+ * http(s), mailto, tel or same-site link is dropped.
+ */
+export function safeHref(href?: string | null): string {
+  const v = String(href || '').trim();
+  if (!v) return '#';
+  // relative / same-site links are fine
+  if (v.startsWith('/') || v.startsWith('#') || v.startsWith('?')) return v;
+  if (/^(https?:|mailto:|tel:)/i.test(v)) return v;
+  // protocol-relative "//evil.com" is an off-site absolute URL — allow, it's http(s)
+  if (v.startsWith('//')) return v;
+  // no scheme at all (e.g. "example.com") → treat as external https
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) return `https://${v}`;
+  return '#'; // javascript:, data:, vbscript:, file:, …
+}
+
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const slugify = (s: string) =>
   (s || 'page').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'page';

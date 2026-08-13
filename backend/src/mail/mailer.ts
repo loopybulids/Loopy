@@ -86,6 +86,27 @@ export function orderAcceptedEmail(order: any, storeName?: string) {
   };
 }
 
+/** Seller shipped — carries the courier and tracking number. */
+export function orderShippedEmail(order: any, storeName?: string) {
+  const who = storeName ? ` from ${storeName}` : '';
+  const courier = order?.courier || 'Courier';
+  const awb = order?.awbNumber || '';
+  return {
+    subject: `Order #${ref(order)} has shipped${storeName ? ` — ${storeName}` : ''}`,
+    text: `Your order #${ref(order)}${who} is on its way. Courier: ${courier}. Tracking number: ${awb}.`,
+    html: shell(
+      'Your order is on its way 📦',
+      `Order <b>#${ref(order)}</b>${who} has been dispatched.`,
+      `<div style="background:#F6F5F0;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+         <div style="font-size:13px;color:#5B6B80">Courier</div>
+         <div style="font-size:15px;font-weight:700;color:#0E2A47;margin-bottom:10px">${courier}</div>
+         <div style="font-size:13px;color:#5B6B80">Tracking number</div>
+         <div style="font-size:17px;font-weight:800;letter-spacing:1px;color:#15784A;font-family:monospace">${awb}</div>
+       </div>` + summary(order),
+    ),
+  };
+}
+
 /** Seller declined — nothing is owed, and any stock has been released. */
 export function orderRejectedEmail(order: any, storeName?: string, reason?: string) {
   const who = storeName ? ` by ${storeName}` : '';

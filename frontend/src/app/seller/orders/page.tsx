@@ -6,8 +6,20 @@ import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import OrderDetail, { paymentState, statusLabel, statusChip } from '@/components/store/OrderDetail';
 import { Bag, Share, Plus } from '@/components/icons';
 
-// Values are the stored Order.status; labels come from statusLabel().
-const FILTERS = ['All', 'Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed', 'Cancelled'];
+/**
+ * Buyer cancellations and seller rejections both store status='Cancelled', so
+ * they're split here by `cancelledBy` rather than by status alone.
+ */
+const FILTERS: { key: string; label: string; match: (o: any) => boolean }[] = [
+  { key: 'All', label: 'All', match: () => true },
+  { key: 'Paid', label: 'New', match: (o) => o.status === 'Paid' },
+  { key: 'Accepted', label: 'Accepted', match: (o) => o.status === 'Accepted' },
+  { key: 'Shipped', label: 'Shipped', match: (o) => o.status === 'Shipped' },
+  { key: 'Delivered', label: 'Delivered', match: (o) => o.status === 'Delivered' },
+  { key: 'Completed', label: 'Completed', match: (o) => o.status === 'Completed' },
+  { key: 'Cancelled', label: 'Cancelled', match: (o) => o.status === 'Cancelled' && o.cancelledBy === 'buyer' },
+  { key: 'Rejected', label: 'Rejected', match: (o) => o.status === 'Cancelled' && o.cancelledBy !== 'buyer' },
+];
 
 export default function Orders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -19,16 +31,16 @@ export default function Orders() {
 
   // Move an order along the fulfilment chain and swap the updated row in place,
   // so the queue reflects the new status without a full refetch.
-  const act = async (order: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', reason?: string) => {
+  const act = async (order: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', extra?: string) => {
     setActErr('');
     setActing(order.id);
     try {
       const updated =
         to === 'Accepted' ? await api.acceptOrder(order.id)
-        : to === 'Shipped' ? await api.shipOrder(order.id)
+        : to === 'Shipped' ? await api.shipOrder(order.id, extra || '')
         : to === 'Delivered' ? await api.deliverOrder(order.id)
         : to === 'Reverted' ? await api.revertOrder(order.id)
-        : await api.rejectOrder(order.id, reason);
+        : await api.rejectOrder(order.id, extra);
       setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, ...updated } : o)));
     } catch (e: any) {
       setActErr(e?.message || 'Could not update this order.');
@@ -41,24 +53,29 @@ export default function Orders() {
     api.myOrders().then((o) => { setOrders(o || []); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
-  const shown = filter === 'All' ? orders : orders.filter((o) => o.status === filter);
+  const active = FILTERS.find((f) => f.key === filter) || FILTERS[0];
+  const shown = orders.filter(active.match);
 
   return (
     <div>
       <PageHead title="Orders" sub="Every order in one queue." action={<Link href="/seller/orders/new" className="btn-green"><Plus size={15} /> New order</Link>} />
 
       <div className="mb-5 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors ${
-              filter === f ? 'bg-green text-white' : 'bg-white text-muted ring-1 ring-line hover:text-navy'
-            }`}
-          >
-            {f === 'All' ? 'All' : statusLabel(f)}
-          </button>
-        ))}
+        {FILTERS.map((f) => {
+          const n = f.key === 'All' ? orders.length : orders.filter(f.match).length;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors ${
+                filter === f.key ? 'bg-green text-white' : 'bg-white text-muted ring-1 ring-line hover:text-navy'
+              }`}
+            >
+              {f.label}
+              {n > 0 && <span className={`ml-1.5 text-[11px] ${filter === f.key ? 'text-white/70' : 'text-faint'}`}>{n}</span>}
+            </button>
+          );
+        })}
       </div>
 
       <Panel>
@@ -67,7 +84,7 @@ export default function Orders() {
         ) : shown.length === 0 ? (
           <Empty
             icon={<Share size={24} />}
-            title={orders.length === 0 ? 'No orders yet' : `No ${filter.toLowerCase()} orders`}
+            title={orders.length === 0 ? 'No orders yet' : `No ${active.label.toLowerCase()} orders`}
             hint="Share a checkout link in a chat and paid orders will appear here automatically."
             action={<Link href="/seller/links" className="btn-green"><Plus size={15} /> Create a checkout link</Link>}
           />
@@ -96,7 +113,7 @@ export default function Orders() {
                       {pay.short}{pay.paid ? '' : ' · due'}
                     </span>
                     <span className="text-[14px] font-bold text-navy">{money(o.totalAmount ?? o.total ?? o.amount ?? 0)}</span>
-                    <span className={`${statusChip(o.status)} ml-1`}>{statusLabel(o.status)}</span>
+                    <span className={`${statusChip(o.status)} ml-1`}>{statusLabel(o.status, o.cancelledBy)}</span>
                     <span className={`ml-1 shrink-0 text-faint transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
                   </button>
                   {open && (
@@ -139,6 +156,8 @@ function OrderActions({ order, busy, onAct, err }: {
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  const [shipping, setShipping] = useState(false);
+  const [courier, setCourier] = useState('');
   const step = NEXT[order.status];
   const canRevert = !!BACK_LABEL[order.status];
   const pay = paymentState(order);
@@ -153,7 +172,11 @@ function OrderActions({ order, busy, onAct, err }: {
       {step ? (
         <>
           <div className="flex flex-wrap items-center gap-3">
-            <button onClick={() => onAct(order, step.to)} disabled={busy} className="btn-green px-4 py-2.5 text-[13px] disabled:opacity-60">
+            <button
+              onClick={() => (step.to === 'Shipped' ? setShipping((v) => !v) : onAct(order, step.to))}
+              disabled={busy}
+              className="btn-green px-4 py-2.5 text-[13px] disabled:opacity-60"
+            >
               {busy ? 'Updating…' : step.label}
             </button>
             {canReject && (
@@ -171,6 +194,38 @@ function OrderActions({ order, busy, onAct, err }: {
                 : step.hint}
             </span>
           </div>
+
+          {shipping && step.to === 'Shipped' && (
+            <div className="mt-3 rounded-xl border border-green/30 bg-green-soft/30 p-3.5">
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">
+                Shipping agency <span className="text-rose">*</span>
+              </label>
+              <input
+                value={courier}
+                onChange={(e) => setCourier(e.target.value)}
+                placeholder="e.g. Delhivery, Blue Dart, India Post"
+                maxLength={60}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && courier.trim() && onAct(order, 'Shipped', courier.trim())}
+                className="c-input mt-1.5 text-[13px]"
+              />
+              <p className="mt-1.5 text-[11.5px] text-muted">
+                A tracking number is generated automatically. Sending this emails the buyer the courier and tracking details.
+              </p>
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  onClick={() => onAct(order, 'Shipped', courier.trim())}
+                  disabled={busy || !courier.trim()}
+                  className="btn-green px-4 py-2 text-[13px] disabled:opacity-50"
+                >
+                  {busy ? 'Sending…' : 'Send'}
+                </button>
+                <button onClick={() => { setShipping(false); setCourier(''); }} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {rejecting && (
             <div className="mt-3 rounded-xl border border-rose/30 bg-rose-soft/40 p-3.5">

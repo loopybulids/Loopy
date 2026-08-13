@@ -73,7 +73,8 @@ export const custApi = {
   addAddress: (u: string, body: any) => custReq(u, '/customer/addresses', { method: 'POST', body: JSON.stringify(body) }),
   checkout: (u: string, body: any) => custReq(u, '/customer/checkout', { method: 'POST', body: JSON.stringify(body) }),
   orders: (u: string) => custReq(u, '/customer/orders'),
-  cancelOrder: (u: string, id: string) => custReq(u, `/customer/orders/${id}/cancel`, { method: 'POST' }),
+  cancelOrder: (u: string, id: string, reason?: string) =>
+    custReq(u, `/customer/orders/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };
 
 /* ── cart (client-side, per store) ── */
