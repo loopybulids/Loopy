@@ -5,19 +5,67 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Card, Chip, Icon, money, SectionTitle, statusChip } from '@/components/admin/AdminKit';
 
+/** Where a refund can go next — mirrors REFUND_NEXT in backend common/money-actions. */
+const REFUND_NEXT: Record<string, string[]> = {
+  Required: ['Initiated'],
+  Initiated: ['Refunded', 'Failed'],
+  Failed: ['Initiated'],
+  Refunded: [],
+};
+
 export default function OrderInvestigation() {
   const { id } = useParams<{ id: string }>();
   const [d, setD] = useState<any>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState('');
+  const [audit, setAudit] = useState<any[]>([]);
+
 
   const load = () => api.adminOrderDetail(id).then(setD).catch((e) => setErr(e?.message || 'Not found'));
-  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadAudit = () => api.adminOrderAudit(id).then(setAudit).catch(() => setAudit([]));
 
-  const act = async (action: string) => {
-    if (!confirm(`Confirm: ${action} this order?`)) return;
+  /**
+   * Run an admin action against the exact version of the order on screen.
+   *
+   * The key is minted once per click, so the browser retrying that request is
+   * a no-op server-side, while a genuine second click is a new decision with a
+   * new key. Money actions spell out the amount in the confirmation, because
+   * "Mark Delivered" doesn't tell the operator they are releasing ₹7,200.
+   */
+  const act = async (action: string, label: string, isMoney: boolean) => {
+    const question = isMoney
+      ? `${label}
+
+${money(d.amounts.total)} collected from the customer.
+`
+        + `${money(d.amounts.sellerReceivable)} goes to ${d.seller?.storeName || 'the seller'}.
+`
+        + `${money(d.amounts.platformFee)} is Loopy's fee.
+
+This cannot be undone. Continue?`
+      : `${label} — order #${d.id.slice(-6).toUpperCase()}?`;
+    if (!confirm(question)) return;
+
     setBusy(action);
-    try { await api.adminOrderAction(id, action); await load(); } catch (e: any) { alert(e?.message || 'Failed'); }
+    try {
+      await api.adminOrderAction(id, action, d.version, crypto.randomUUID());
+      await Promise.all([load(), loadAudit()]);
+    } catch (e: any) {
+      alert(e?.message || 'Failed');
+      await load(); // a stale-version rejection means the screen is out of date
+    }
+    setBusy('');
+  };
+
+  useEffect(() => { load(); loadAudit(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const moveRefund = async (to: string) => {
+    if (!confirm(`Mark this refund as ${to}?`)) return;
+    setBusy(`refund:${to}`);
+    try {
+      await api.adminSetRefundState(id, to, d.version, crypto.randomUUID());
+      await Promise.all([load(), loadAudit()]);
+    } catch (e: any) { alert(e?.message || 'Failed'); await load(); }
     setBusy('');
   };
 
@@ -85,12 +133,40 @@ export default function OrderInvestigation() {
               <Field label="Method" value={d.payment.method} />
               <Field label="Payment ID" value={d.payment.id || '—'} />
               <Field label="Gateway Ref" value={d.payment.razorpay || '—'} />
-              <Field label="Items Total" value={money(d.amounts.items)} />
-              <Field label="Shipping" value={money(d.amounts.shipping)} />
-              <Field label="Commission" value={money(d.amounts.commission)} accent />
-              <Field label="GST (est. 18%)" value={money(d.amounts.gst)} />
-              <Field label="Order Total" value={money(d.amounts.total)} bold />
             </div>
+
+            {/* Customer-facing lines. These three always sum to the total —
+                platform economics are shown separately below so the breakdown
+                can never appear to disagree with what was charged. */}
+            <div className="mt-4 border-t border-line pt-3">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-faint">What the customer paid</div>
+              <div className="space-y-1.5 text-[13px]">
+                <Line label="Items" value={money(d.amounts.items)} />
+                <Line label="Shipping" value={money(d.amounts.shipping)} />
+                <Line label={`Platform fee (${d.amounts.items ? Math.round((d.amounts.platformFee / d.amounts.items) * 100) : 0}%)`} value={money(d.amounts.platformFee)} />
+                <div className="flex justify-between border-t border-line pt-1.5 text-[14px] font-bold text-navy">
+                  <span>Order total</span><span>{money(d.amounts.total)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-line pt-3">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-faint">Settlement</div>
+              <div className="space-y-1.5 text-[13px]">
+                <Line label="Seller receivable (items + shipping)" value={money(d.amounts.sellerReceivable)} />
+                <Line label="Loopy keeps (platform fee)" value={money(d.amounts.platformFee)} />
+                <Line label="GST on fee (est. 18%)" value={money(d.amounts.gstOnFee)} muted />
+              </div>
+            </div>
+
+            {/* A stored total that disagrees with its parts is a ledger fault. */}
+            {d.amounts.reconciles ? (
+              <p className="mt-3 text-[12px] font-semibold text-green-600">✓ Reconciled — total equals items + shipping + fee.</p>
+            ) : (
+              <p className="mt-3 rounded-lg bg-rose-soft px-3 py-2 text-[12px] font-bold text-rose">
+                ⚠ Ledger mismatch of {money(d.amounts.difference)} — stored total does not equal its components. Do not settle this order until it is corrected.
+              </p>
+            )}
           </Card>
 
           {d.dispute && (
@@ -105,15 +181,85 @@ export default function OrderInvestigation() {
         <div className="space-y-5">
           {/* actions */}
           <Card className="p-5">
-            <SectionTitle>One-Click Actions</SectionTitle>
+            <SectionTitle>Actions</SectionTitle>
+            {/* Only what the server will actually accept from this status. */}
             <div className="grid grid-cols-2 gap-2">
-              <Action label="Mark Shipped" onClick={() => act('ship')} busy={busy === 'ship'} />
-              <Action label="Mark Delivered" onClick={() => act('deliver')} busy={busy === 'deliver'} />
-              <Action label="Refund" tone="rose" onClick={() => act('refund')} busy={busy === 'refund'} />
-              <Action label="Cancel Order" tone="rose" onClick={() => act('cancel')} busy={busy === 'cancel'} />
+              {(d.allowedActions || []).map((a: any) => (
+                <Action
+                  key={a.key}
+                  label={a.money && a.key === 'deliver' ? `Verify delivery · release ${money(d.amounts.sellerReceivable)}` : a.label}
+                  tone={a.key === 'refund' || a.key === 'cancel' ? 'rose' : undefined}
+                  busy={busy === a.key}
+                  onClick={() => act(a.key, a.label, a.money)}
+                />
+              ))}
               <Action label="Contact Seller" onClick={() => d.seller.email && (window.location.href = `mailto:${d.seller.email}`)} />
               <Action label="Contact Customer" onClick={() => d.customer.phone && (window.location.href = `tel:${d.customer.phone}`)} />
             </div>
+            {!(d.allowedActions || []).length && (
+              <p className="mt-2 text-[12px] text-muted">
+                No further action is possible — this order is {d.status.toLowerCase()}.
+              </p>
+            )}
+            <p className="mt-3 border-t border-line pt-2 text-[11px] text-faint">
+              Version {d.version} · actions are checked against this version, so a stale screen cannot overwrite someone else&apos;s decision.
+            </p>
+          </Card>
+
+          {/* refund lifecycle — separate from status, because owing a refund and
+              having paid it are different facts */}
+          {d.refundState && (
+            <Card className="p-5">
+              <SectionTitle>Refund</SectionTitle>
+              <div className="mb-3 flex items-center gap-2">
+                <span className={d.refundState === 'Refunded' ? 'chip-green' : d.refundState === 'Failed' ? 'chip-rose' : 'chip-amber'}>
+                  {d.refundState}
+                </span>
+                <span className="text-[12.5px] text-muted">{money(d.amounts.total)} owed to the customer</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {REFUND_NEXT[d.refundState]?.map((to: string) => (
+                  <Action
+                    key={to}
+                    label={to === 'Refunded' ? 'Confirm money returned' : to === 'Failed' ? 'Mark failed' : `Mark ${to}`}
+                    tone={to === 'Failed' ? 'rose' : undefined}
+                    busy={busy === `refund:${to}`}
+                    onClick={() => moveRefund(to)}
+                  />
+                ))}
+              </div>
+              {!REFUND_NEXT[d.refundState]?.length && (
+                <p className="text-[12px] text-muted">This refund is settled. Nothing further to do.</p>
+              )}
+            </Card>
+          )}
+
+          {/* audit trail — the evidence for every money decision on this order */}
+          <Card className="p-5">
+            <SectionTitle>Audit Trail</SectionTitle>
+            {audit.length ? (
+              <ol className="space-y-2.5">
+                {audit.map((a) => (
+                  <li key={a.id} className="border-l-2 border-line pl-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                      <span className="text-[13px] font-bold text-navy">{a.action}</span>
+                      <span className="text-[11px] text-muted">{new Date(a.at).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="text-[12px] text-muted">
+                      {a.before?.status && a.after?.status && a.before.status !== a.after.status
+                        ? `${a.before.status} → ${a.after.status}`
+                        : a.before?.refundState || a.after?.refundState
+                          ? `${a.before?.refundState || 'not owed'} → ${a.after?.refundState}`
+                          : ''}
+                      {a.amount ? ` · ${money(a.amount)}` : ''}
+                    </div>
+                    <div className="text-[11px] text-faint">by {a.actor}</div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-[12.5px] text-muted">No admin action has been taken on this order.</p>
+            )}
           </Card>
 
           {/* customer */}
@@ -159,5 +305,15 @@ function Action({ label, onClick, tone, busy }: { label: string; onClick: () => 
     <button onClick={onClick} disabled={busy} className={`rounded-xl px-3 py-2.5 text-[12.5px] font-bold disabled:opacity-50 ${tone === 'rose' ? 'bg-rose-soft text-rose hover:bg-rose/10' : 'bg-paper text-navy hover:bg-line/60'}`}>
       {busy ? '…' : label}
     </button>
+  );
+}
+
+/** One label/value row in the money breakdown. */
+function Line({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <div className="flex justify-between">
+      <span className={muted ? 'text-faint' : 'text-muted'}>{label}</span>
+      <span className={muted ? 'font-semibold text-faint' : 'font-semibold text-navy'}>{value}</span>
+    </div>
   );
 }

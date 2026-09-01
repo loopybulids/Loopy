@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const [err, setErr] = useState('');
   const [placed, setPlaced] = useState<any>(null);
   const [shipping, setShipping] = useState<any>(null);
+  const [feePct, setFeePct] = useState<number | null>(null);
   const [onlineOpt, setOnlineOpt] = useState<'upi' | 'card' | 'netbanking'>('upi');
   const setA = (k: keyof typeof addr, v: string) => setAddr((s) => ({ ...s, [k]: v }));
 
@@ -35,7 +36,10 @@ export default function CheckoutPage() {
 
   // The store's shipping rules — needed to show a real total, not "+ shipping".
   useEffect(() => {
-    api.getStore(username).then((s: any) => setShipping(s?.shipping || null)).catch(() => {});
+    api.getStore(username).then((s: any) => {
+      setShipping(s?.shipping || null);
+      setFeePct(s?.platformFeePct ?? null);
+    }).catch(() => {});
   }, [username]);
   useEffect(() => { load(); window.addEventListener('cust-change', load); window.addEventListener('cart-change', () => setCart(getCart(username))); return () => window.removeEventListener('cust-change', load); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -51,7 +55,11 @@ export default function CheckoutPage() {
     && shipping?.freeShipThreshold != null
     && subtotal >= shipping.freeShipThreshold;
   const shipCost = shipping ? (freeShip ? 0 : shipping.fee ?? 0) : null;
-  const total = shipCost == null ? subtotal : subtotal + shipCost;
+  // Platform fee, charged on the goods value on top of shipping. Must match
+  // computeAmounts() in backend/src/common/money.ts or the total shown here
+  // won't be the total charged.
+  const fee = feePct == null ? null : Math.round((subtotal * feePct) / 100);
+  const total = shipCost == null || fee == null ? null : subtotal + shipCost + fee;
   const belowMin = shipping?.minOrderAmount != null && subtotal < shipping.minOrderAmount;
 
   const place = async () => {
@@ -184,9 +192,17 @@ export default function CheckoutPage() {
                     Add {rupees(shipping.freeShipThreshold - subtotal)} more for free shipping
                   </p>
                 )}
+                {fee != null && fee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted">Platform fee</span>
+                    <span className="font-semibold text-navy">{rupees(fee)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-line pt-2 text-[15px]">
                   <span className="font-semibold text-navy">Total</span>
-                  <span className="font-display font-extrabold text-green-600">{rupees(total)}</span>
+                  <span className="font-display font-extrabold text-green-600">
+                    {total == null ? '…' : rupees(total)}
+                  </span>
                 </div>
                 {shipping?.shipDays != null && (
                   <p className="text-[11.5px] text-faint">Usually dispatched in {shipping.shipDays} day{shipping.shipDays === 1 ? '' : 's'}</p>
@@ -217,8 +233,8 @@ export default function CheckoutPage() {
                   Minimum order is {rupees(shipping.minOrderAmount)} — add {rupees(shipping.minOrderAmount - subtotal)} more to check out.
                 </p>
               )}
-              <button onClick={place} disabled={busy || belowMin} className="btn-green mt-4 w-full justify-center disabled:opacity-60">
-                {busy ? 'Placing…' : `Pay ${rupees(total)} online`}
+              <button onClick={place} disabled={busy || belowMin || total == null} className="btn-green mt-4 w-full justify-center disabled:opacity-60">
+                {busy ? 'Placing…' : total == null ? 'Loading…' : `Pay ${rupees(total)} online`}
               </button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-faint"><ShieldLock size={12} /> Loopy-protected payment</p>
             </div>

@@ -19,6 +19,12 @@ export class SellersController {
   }
 
   // Public — record a storefront page view (traffic analytics)
+  // Lightweight brand lookup for storefront sub-pages (no catalogue payload).
+  @Get(':username/brand')
+  brand(@Param('username') username: string) {
+    return this.sellers.getBrand(username);
+  }
+
   @Post(':username/visit')
   recordVisit(@Param('username') username: string, @Body() body: { session?: string; source?: string; referrer?: string }) {
     return this.sellers.recordVisit(username, body?.session, body?.source, body?.referrer);

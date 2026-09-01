@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -22,9 +22,41 @@ export class AdminController {
     return this.admin.orderDetail(req.user, id);
   }
 
-  @Post('orders/:id/:action')
-  orderAction(@Req() req: any, @Param('id') id: string, @Param('action') action: string) {
-    return this.admin.orderAction(req.user, id, action);
+  /**
+   * `expectedVersion` is the order version the operator was looking at, and
+   * `Idempotency-Key` makes a retry safe. Both are enforced in the service —
+   * see common/money-actions for why neither is optional.
+   */
+  @Post('orders/:id/action/:action')
+  orderAction(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('action') action: string,
+    @Body() body: any,
+    @Headers('idempotency-key') idem?: string,
+  ) {
+    return this.admin.orderAction(req.user, id, action, {
+      expectedVersion: body?.expectedVersion,
+      idempotencyKey: idem || body?.idempotencyKey,
+    });
+  }
+
+  @Post('orders/:id/refund-state')
+  setRefundState(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: any,
+    @Headers('idempotency-key') idem?: string,
+  ) {
+    return this.admin.setRefundState(req.user, id, body?.to, {
+      expectedVersion: body?.expectedVersion,
+      idempotencyKey: idem || body?.idempotencyKey,
+    });
+  }
+
+  @Get('orders/:id/audit')
+  orderAudit(@Req() req: any, @Param('id') id: string) {
+    return this.admin.orderAudit(req.user, id);
   }
 
   @Get('customers')

@@ -5,8 +5,10 @@ import { rupees } from '@/lib/api';
  * Full breakdown of a single order — items, who it's going to, where, how it
  * was paid and the money split.
  *
- * `commissionAmount` is deliberately never rendered: that's Loopy's cut, not
- * something the shopper or the seller's customer-facing views should show.
+ * `commissionAmount` is shown as "Platform fee": the customer is charged it on
+ * top of items + shipping, so hiding it would leave the lines not adding up to
+ * the total they paid. What stays hidden is the settlement side — what the
+ * seller receives is not the shopper's business.
  */
 
 /** Statuses at which the goods are with the customer, so COD cash is in hand. */
@@ -96,6 +98,8 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
   const items = order?.items || [];
   const itemsAmount = order?.itemsAmount ?? items.reduce((s: number, i: any) => s + i.unitPrice * i.quantity, 0);
   const shipping = order?.shippingCharge ?? 0;
+  // Charged to the customer on top of items + shipping (see backend common/money).
+  const fee = order?.commissionAmount ?? 0;
   const when = order?.createdAt ? new Date(order.createdAt) : null;
   const contactName = order?.customer?.name || order?.buyerName;
   const contactPhone = order?.customer?.phone || order?.buyerPhone;
@@ -182,6 +186,7 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
       <div className="space-y-1.5 border-t border-line pt-3">
         <Row label="Items total" value={rupees(itemsAmount)} />
         <Row label="Shipping" value={shipping ? rupees(shipping) : 'Free'} />
+        {fee > 0 && <Row label="Platform fee" value={rupees(fee)} />}
         <div className="mt-1 flex justify-between border-t border-line pt-2 text-[15px]">
           <span className="font-semibold text-navy">Total</span>
           <span className="font-display font-extrabold text-green-600">{rupees(order?.totalAmount ?? 0)}</span>

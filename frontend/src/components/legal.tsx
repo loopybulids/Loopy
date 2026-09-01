@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Loop } from '@/components/icons';
+import Logo from '@/components/Logo';
 
 export function Clause({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
@@ -15,8 +15,8 @@ export function LegalShell({ title, children }: { title: string; active?: string
     <main className="min-h-screen bg-paper text-navy">
       <header className="sticky top-0 z-20 border-b border-line bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/" className="flex items-center gap-2 font-display text-[22px] font-extrabold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={17} /></span> Loopy
+          <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
+            <Logo height={30} />
           </Link>
           <Link href="/" className="text-[14px] font-semibold text-muted hover:text-navy">← Back home</Link>
         </div>

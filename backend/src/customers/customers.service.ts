@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { verifyGoogleIdToken } from '../auth/google-verify';
 import { sendMail, verificationEmail } from '../mail/mailer';
+import { computeAmounts } from '../common/money';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -250,14 +251,18 @@ export class CustomersService {
       itemsAmount += p.price * qty;
       return { productId: p.id, title: i.size ? `${p.title} (${i.size})` : p.title, unitPrice: p.price, quantity: qty };
     });
-    const commissionAmount = Math.round((itemsAmount * this.commissionPct) / 100);
+
     const seller = await this.prisma.seller.findUnique({ where: { id: sellerId }, select: { shippingFee: true, minOrderAmount: true, freeShipEnabled: true, freeShipThreshold: true } });
     if (seller?.minOrderAmount && itemsAmount < seller.minOrderAmount) {
       throw new BadRequestException(`Minimum order is ₹${seller.minOrderAmount.toLocaleString('en-IN')} — add more items to check out.`);
     }
     let shippingCharge = seller?.shippingFee != null ? seller.shippingFee : this.shippingFlat;
     if (seller?.freeShipEnabled && seller.freeShipThreshold != null && itemsAmount >= seller.freeShipThreshold) shippingCharge = 0;
-    const totalAmount = itemsAmount + shippingCharge;
+
+    // One formula, from common/money — customer pays items + shipping + fee.
+    const amounts = computeAmounts(itemsAmount, shippingCharge, this.commissionPct);
+    const commissionAmount = amounts.fee;
+    const totalAmount = amounts.customerTotal;
     const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
 
     // Payment method: 'cod' (Cash on Delivery) or 'online:<upi|card|netbanking>'.

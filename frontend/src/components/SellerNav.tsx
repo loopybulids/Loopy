@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/store/auth';
-import { Bell, Loop } from './icons';
+import Logo from '@/components/Logo';
+import { Bell } from './icons';
 
 const LINKS = [
   { href: '/seller/dashboard', label: 'Dashboard' },
@@ -21,8 +22,8 @@ export default function SellerNav() {
 
   return (
     <nav className="sticky top-0 z-50 flex h-[64px] items-center gap-5 border-b border-white/10 bg-[#0A1828]/90 px-5 backdrop-blur-md sm:px-8">
-      <Link href="/seller/dashboard" className="flex items-center gap-2 font-display text-[22px] font-extrabold tracking-tight text-white">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-green-500/15 text-green-500 ring-1 ring-green-500/30"><Loop size={18} /></span> Loopy
+      <Link href="/seller/dashboard" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+        <Logo height={26} tone="light" />
         <span className="ml-0.5 rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#8A98AD]">Seller</span>
       </Link>
       <div className="ml-2 hidden items-center gap-1 md:flex">

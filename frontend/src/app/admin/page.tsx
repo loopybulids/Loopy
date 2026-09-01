@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { AreaTrend, Bars, Card, Chip, Donut, Icon, money, num, SectionTitle, StatCard, statusChip } from '@/components/admin/AdminKit';
+import LedgerBanner from '@/components/admin/LedgerBanner';
 
 const CACHE_KEY = 'loopy_admin_command';
 
@@ -49,6 +50,9 @@ export default function CommandCenter() {
           <button onClick={load} className="rounded-xl bg-navy px-3.5 py-2 text-[12.5px] font-bold text-white">Refresh</button>
         </div>
       </div>
+
+      {/* Whether the money metrics below can be trusted. */}
+      <LedgerBanner ledger={d.ledger} />
 
       {/* primary money metrics */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

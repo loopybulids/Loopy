@@ -1,6 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { amountsOf, gmvOf, platformFeeOf, reconcile, sellerReceivableOf } from '../common/money';
+import {
+  assertNotStale, canRefundMoveTo, MONEY_ACTIONS, ORDER_TRANSITIONS, requireVersion,
+} from '../common/money-actions';
 
 // Order statuses that represent real, paid money in the system.
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
@@ -62,7 +66,7 @@ export class AdminService {
     const [sellers, orders, productCount, disputes, payouts, items] = await Promise.all([
       this.prisma.seller.findMany({ select: { id: true, kycStatus: true } }),
       this.prisma.order.findMany({
-        select: { id: true, sellerId: true, status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true },
+        select: { id: true, sellerId: true, status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true },
       }),
       this.prisma.product.count(),
       this.prisma.dispute.findMany({ select: { status: true, orderId: true } }),
@@ -71,9 +75,12 @@ export class AdminService {
     ]);
 
     const paid = orders.filter((o) => PAID.includes(o.status));
-    const gmv = paid.reduce((s, o) => s + o.totalAmount, 0);
-    const commission = paid.reduce((s, o) => s + o.commissionAmount, 0);
-    const sellerPayouts = paid.reduce((s, o) => s + o.itemsAmount, 0);
+    // All three come from common/money so the dashboard can never disagree with
+    // finance, the seller wallet or the order ledger.
+    const gmv = gmvOf(paid);
+    const commission = platformFeeOf(paid);
+    const sellerPayouts = sellerReceivableOf(paid);
+    const ledger = reconcile(paid);
     const refunded = orders.filter((o) => o.status === 'Refunded');
     const refundCost = refunded.reduce((s, o) => s + o.totalAmount, 0);
     const openDisputeOrderIds = new Set(disputes.filter((d) => d.status === 'open').map((d) => d.orderId));
@@ -120,6 +127,7 @@ export class AdminService {
     return {
       metrics: {
         gmv, revenue: commission, grossProfit, netProfit, commission, sellerPayouts,
+        ledger,
         pendingRefunds, refundCost,
         activeOrders: cnt((o) => ACTIVE.includes(o.status)),
         processingOrders: cnt((o) => PROCESSING.includes(o.status)),
@@ -258,8 +266,36 @@ export class AdminService {
     return {
       id: o.id,
       status: o.status,
+      // The version the operator is looking at. Every action they take from
+      // this screen sends it back, so a decision made against a stale view is
+      // rejected rather than applied.
+      version: o.version,
+      refundState: o.refundState,
+      // Which actions are legal from here — so the UI can't offer a button
+      // the server will refuse.
+      allowedActions: Object.entries(ORDER_TRANSITIONS)
+        .filter(([, r]) => r.from.includes(o.status))
+        .map(([key, r]) => ({ key, label: r.label, money: MONEY_ACTIONS.has(key) })),
       createdAt: o.createdAt,
-      amounts: { total: o.totalAmount, items: o.itemsAmount, commission: o.commissionAmount, shipping: o.shippingCharge, gst: Math.round(o.commissionAmount * 0.18) },
+      // Split into what the CUSTOMER paid and what the PLATFORM earns. Previously
+      // commission and GST were listed beside items/shipping as if they composed
+      // the total, so the visible lines summed to more than the total shown.
+      amounts: (() => {
+        const a = amountsOf(o);
+        return {
+          // customer-facing — these three always sum to `total`
+          items: a.items,
+          shipping: a.shipping,
+          platformFee: a.fee,
+          total: a.customerTotal,
+          // platform economics — not charged on top of the total
+          sellerReceivable: a.sellerReceivable,
+          gstOnFee: Math.round(a.fee * 0.18),
+          // surfaced so a ledger fault is visible instead of hidden
+          reconciles: a.reconciles,
+          difference: a.difference,
+        };
+      })(),
       customer: { name: o.buyerName || 'Customer', phone: o.buyerPhone, address: o.address, orders: buyerOrders.length, ltv },
       seller: { id: o.seller?.id, storeName: o.seller?.storeName, username: o.seller?.username, city: o.seller?.city, rating: o.seller?.rating, kyc: o.seller?.kycStatus, email: (o.seller as any)?.user?.email, phone: (o.seller as any)?.user?.phone },
       items: o.items.map((it) => ({ title: it.title, qty: it.quantity, price: it.unitPrice, image: this.firstImage((it as any).product?.images), brand: (it as any).product?.brand, category: (it as any).product?.category, condition: (it as any).product?.condition })),
@@ -275,14 +311,108 @@ export class AdminService {
     try { const a = JSON.parse(images || '[]'); return Array.isArray(a) ? a[0] : undefined; } catch { return undefined; }
   }
 
-  async orderAction(user: any, id: string, action: string) {
+  /**
+   * Apply an admin action to an order.
+   *
+   * Every call must carry the version of the order the operator was looking at
+   * when they decided, and every money action must carry an idempotency key.
+   * The action is refused — not silently repeated or silently applied to a
+   * changed order — if either is missing or stale. See common/money-actions.
+   */
+  async orderAction(
+    user: any,
+    id: string,
+    action: string,
+    opts: { expectedVersion?: unknown; idempotencyKey?: string } = {},
+  ) {
     this.assertAdmin(user);
-    const o = await this.prisma.order.findUnique({ where: { id } });
-    if (!o) throw new NotFoundException('Order not found');
-    const map: Record<string, string> = { cancel: 'Cancelled', refund: 'Refunded', deliver: 'Delivered', ship: 'Shipped', accept: 'Accepted' };
-    const status = map[action];
-    if (!status) throw new NotFoundException('Unknown action');
-    return this.prisma.order.update({ where: { id }, data: { status } });
+
+    const rule = ORDER_TRANSITIONS[action];
+    if (!rule) throw new NotFoundException('Unknown action');
+
+    const isMoney = MONEY_ACTIONS.has(action);
+    const key = opts.idempotencyKey?.trim();
+    if (isMoney && !key) {
+      throw new BadRequestException(
+        'An Idempotency-Key header is required for actions that move money.',
+      );
+    }
+
+    // A retry of a request we already completed returns the original result.
+    // Without this, a double click refunds twice.
+    if (key) {
+      const seen = await this.prisma.idempotencyKey.findUnique({ where: { key } });
+      if (seen) {
+        if (seen.target !== id || seen.scope !== `order:${action}`) {
+          throw new ConflictException('That idempotency key was already used for a different action.');
+        }
+        return { ...JSON.parse(seen.response), replayed: true };
+      }
+    }
+
+    const before = await this.prisma.order.findUnique({ where: { id } });
+    if (!before) throw new NotFoundException('Order not found');
+
+    if (!rule.from.includes(before.status)) {
+      throw new BadRequestException(
+        `Cannot ${action} an order that is ${before.status}. Allowed from: ${rule.from.join(', ')}.`,
+      );
+    }
+
+    const expected = requireVersion(opts.expectedVersion);
+
+    // A refund only moves the money state along its own lifecycle — marking an
+    // order Refunded does not by itself mean cash has gone back to the customer.
+    let refundState = before.refundState;
+    if (action === 'refund') {
+      // "Refund" instructs the money out; it is not proof it arrived. The
+      // operator confirms that separately via setRefundState.
+      refundState = 'Initiated';
+    } else if (action === 'cancel' && PAID.includes(before.status) && !refundState) {
+      // Cancelling an order the customer has already paid for creates a debt.
+      refundState = 'Required';
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // The version in the WHERE clause is the lock: if anyone else has
+      // touched this order since it was read, nothing matches and count is 0.
+      const { count } = await tx.order.updateMany({
+        where: { id, version: expected },
+        data: { status: rule.to, refundState, version: { increment: 1 } },
+      });
+      assertNotStale(count, 'This order');
+
+      const after = await tx.order.findUnique({ where: { id } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: String(user.sub || user.id || 'unknown'),
+          actorEmail: user.email || null,
+          action: `order.${action}`,
+          entity: 'order',
+          entityId: id,
+          before: JSON.stringify({ status: before.status, refundState: before.refundState, version: before.version }),
+          after: JSON.stringify({ status: after!.status, refundState: after!.refundState, version: after!.version }),
+          amount: isMoney ? after!.totalAmount : null,
+        },
+      });
+
+      if (key) {
+        await tx.idempotencyKey.create({
+          data: {
+            key,
+            scope: `order:${action}`,
+            actorId: String(user.sub || user.id || 'unknown'),
+            target: id,
+            response: JSON.stringify({ id, status: after!.status, refundState: after!.refundState, version: after!.version }),
+          },
+        });
+      }
+
+      return after!;
+    });
+
+    return { id: result.id, status: result.status, refundState: result.refundState, version: result.version };
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -358,9 +488,10 @@ export class AdminService {
       this.prisma.payout.findMany({ orderBy: { createdAt: 'desc' } }),
     ]);
     const paid = orders.filter((o) => PAID.includes(o.status));
-    const gmv = paid.reduce((s, o) => s + o.totalAmount, 0);
-    const commission = paid.reduce((s, o) => s + o.commissionAmount, 0);
-    const sellerEarnings = paid.reduce((s, o) => s + o.itemsAmount, 0);
+    const gmv = gmvOf(paid);
+    const commission = platformFeeOf(paid);
+    const sellerEarnings = sellerReceivableOf(paid);
+    const ledger = reconcile(paid);
     const shipping = paid.reduce((s, o) => s + o.shippingCharge, 0);
     const refundCost = orders.filter((o) => o.status === 'Refunded').reduce((s, o) => s + o.totalAmount, 0);
     const gst = Math.round(commission * 0.18);
@@ -374,9 +505,98 @@ export class AdminService {
         payoutPaid, payoutPending,
         marketingSpend: 0, operationalCost: 0,
       },
+      // Reconciliation banner: GMV must equal seller liability + platform fee.
+      ledger: {
+        ...ledger,
+      },
       cashflow: this.series(paid, 30, (o) => o.commissionAmount),
       settlements: payouts.slice(0, 25).map((p) => ({ id: p.id, sellerId: p.sellerId, amount: p.amount, status: p.status, createdAt: p.createdAt })),
     };
+  }
+
+  /**
+   * Advance an order's refund through its own lifecycle.
+   *
+   * Kept apart from `orderAction` because confirming that money reached the
+   * customer is a different claim from changing the order's status, and the
+   * two must not be settled by one click. Only the moves in REFUND_NEXT are
+   * allowed, so a refund cannot be marked Refunded without first being
+   * Initiated, and a completed refund cannot be reopened.
+   */
+  async setRefundState(
+    user: any,
+    id: string,
+    to: string,
+    opts: { expectedVersion?: unknown; idempotencyKey?: string } = {},
+  ) {
+    this.assertAdmin(user);
+
+    const key = opts.idempotencyKey?.trim();
+    if (!key) throw new BadRequestException('An Idempotency-Key header is required for refund updates.');
+
+    const seen = await this.prisma.idempotencyKey.findUnique({ where: { key } });
+    if (seen) {
+      if (seen.target !== id || seen.scope !== `refund:${to}`) {
+        throw new ConflictException('That idempotency key was already used for a different action.');
+      }
+      return { ...JSON.parse(seen.response), replayed: true };
+    }
+
+    const before = await this.prisma.order.findUnique({ where: { id } });
+    if (!before) throw new NotFoundException('Order not found');
+    if (!canRefundMoveTo(before.refundState, to)) {
+      throw new BadRequestException(
+        `A refund that is ${before.refundState || 'not owed'} cannot move to ${to}.`,
+      );
+    }
+
+    const expected = requireVersion(opts.expectedVersion);
+
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.order.updateMany({
+        where: { id, version: expected },
+        data: { refundState: to, version: { increment: 1 } },
+      });
+      assertNotStale(count, 'This order');
+      const after = await tx.order.findUnique({ where: { id } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: String(user.sub || user.id || 'unknown'),
+          actorEmail: user.email || null,
+          action: `refund.${to}`,
+          entity: 'order',
+          entityId: id,
+          before: JSON.stringify({ refundState: before.refundState, version: before.version }),
+          after: JSON.stringify({ refundState: to, version: after!.version }),
+          amount: after!.totalAmount,
+        },
+      });
+      await tx.idempotencyKey.create({
+        data: {
+          key, scope: `refund:${to}`,
+          actorId: String(user.sub || user.id || 'unknown'), target: id,
+          response: JSON.stringify({ id, refundState: to, version: after!.version }),
+        },
+      });
+
+      return { id, refundState: to, version: after!.version };
+    });
+  }
+
+  /** The money trail for one order — who did what, oldest first. */
+  async orderAudit(user: any, id: string) {
+    this.assertAdmin(user);
+    const rows = await this.prisma.auditLog.findMany({
+      where: { entity: 'order', entityId: id },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((r) => ({
+      id: r.id, action: r.action, actor: r.actorEmail || r.actorId,
+      before: r.before ? JSON.parse(r.before) : null,
+      after: r.after ? JSON.parse(r.after) : null,
+      amount: r.amount, at: r.createdAt,
+    }));
   }
 
   // ─────────────────────────────────────────────────────────────

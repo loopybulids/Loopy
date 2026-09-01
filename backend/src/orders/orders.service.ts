@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto } from './dto';
 import { orderAcceptedEmail, orderRejectedEmail, orderShippedEmail, sendMail } from '../mail/mailer';
+import { computeAmounts } from '../common/money';
 
 @Injectable()
 export class OrdersService {
@@ -41,9 +42,10 @@ export class OrdersService {
       return { productId: p.id, title: p.title, unitPrice: p.price, quantity: qty };
     });
 
-    const commissionAmount = Math.round((itemsAmount * this.commissionPct) / 100);
-    const shippingCharge = this.shippingFlat;
-    const totalAmount = itemsAmount + commissionAmount + shippingCharge;
+    const a = computeAmounts(itemsAmount, this.shippingFlat, this.commissionPct);
+    const commissionAmount = a.fee;
+    const shippingCharge = a.shipping;
+    const totalAmount = a.customerTotal;
 
     const order = await this.prisma.order.create({
       data: {
@@ -82,9 +84,10 @@ export class OrdersService {
       return { productId: p.id, title: p.title, unitPrice: p.price, quantity: qty };
     });
 
-    const commissionAmount = Math.round((itemsAmount * this.commissionPct) / 100);
-    const shippingCharge = Number(dto.shippingCharge ?? this.shippingFlat);
-    const totalAmount = itemsAmount + shippingCharge;
+    const a = computeAmounts(itemsAmount, Number(dto.shippingCharge ?? this.shippingFlat), this.commissionPct);
+    const commissionAmount = a.fee;
+    const shippingCharge = a.shipping;
+    const totalAmount = a.customerTotal;
 
     // See the note in customers.service checkout: Prisma's 5s default is too
     // tight for per-statement round trips to Neon, especially on a cold compute.

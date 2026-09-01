@@ -102,6 +102,8 @@ export const api = {
 
   // storefront / products
   getStore: (username: string) => req<any>(`/sellers/${username}`),
+  /** Name, logo and accent only — for storefront sub-pages that don't need the catalogue. */
+  getStoreBrand: (username: string) => req<any>(`/sellers/${username}/brand`),
   getProduct: (id: string) => req<any>(`/products/${id}`),
 
   // orders
@@ -187,7 +189,29 @@ export const api = {
     return req<any[]>(`/admin/orders${s ? `?${s}` : ''}`);
   },
   adminOrderDetail: (id: string) => req<any>(`/admin/orders/${id}`),
-  adminOrderAction: (id: string, action: string) => req<any>(`/admin/orders/${id}/${action}`, { method: 'POST' }),
+  /**
+   * Apply an admin action to an order.
+   *
+   * `expectedVersion` is the version the operator was shown; the server
+   * rejects the call if the order has moved since. The idempotency key is
+   * generated per attempt so a retry of the *same* click is a no-op, while a
+   * deliberate second action is a new key. See backend common/money-actions.
+   */
+  adminOrderAction: (id: string, action: string, expectedVersion: number, idempotencyKey: string) =>
+    req<any>(`/admin/orders/${id}/action/${action}`, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ expectedVersion }),
+    }),
+
+  adminSetRefundState: (id: string, to: string, expectedVersion: number, idempotencyKey: string) =>
+    req<any>(`/admin/orders/${id}/refund-state`, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ to, expectedVersion }),
+    }),
+
+  adminOrderAudit: (id: string) => req<any[]>(`/admin/orders/${id}/audit`),
   adminCustomers: (q?: string) => req<any[]>(`/admin/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminCustomerDetail: (key: string) => req<any>(`/admin/customers/${encodeURIComponent(key)}`),
   adminFinance: () => req<any>(`/admin/finance`),

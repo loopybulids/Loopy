@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { AreaTrend, Card, money, SectionTitle, StatCard, statusChip } from '@/components/admin/AdminKit';
+import LedgerBanner from '@/components/admin/LedgerBanner';
 
 export default function FinanceCenter() {
   const [d, setD] = useState<any>(null);
@@ -25,6 +26,9 @@ export default function FinanceCenter() {
         <div><h1 className="font-display text-[26px] font-extrabold text-navy">Finance Center</h1><p className="text-[14px] text-muted">Revenue, commission, payouts, taxes and settlements.</p></div>
         <button onClick={exportCsv} className="rounded-xl bg-navy px-4 py-2 text-[12.5px] font-bold text-white">Export settlements (CSV)</button>
       </div>
+
+      {/* Whether these figures can be trusted, before the figures themselves. */}
+      <LedgerBanner ledger={d.ledger} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <StatCard label="GMV" value={money(f.gmv)} icon="rupee" accent="navy" />

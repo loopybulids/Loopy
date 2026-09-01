@@ -228,6 +228,15 @@ model Order {
   // 'buyer' | 'seller'. Both paths set status='Cancelled', so without this the
   // seller can't tell a customer cancellation from their own rejection.
   cancelledBy      String?
+  // Optimistic-lock counter. Every money-affecting write must supply the
+  // version it read; the update matches on it and bumps it, so a second
+  // click — or a second operator working from a stale screen — is rejected
+  // instead of silently applying the same action twice.
+  version          Int      @default(0)
+  // Refund lifecycle, tracked separately from `status` because "this order
+  // owes a refund" and "the money has actually gone back" are different facts.
+  // null (nothing owed) | Required | Initiated | Refunded | Failed
+  refundState      String?
   createdAt        DateTime @default(now())
 
   buyer  User?       @relation("BuyerOrders", fields: [buyerId], references: [id])
@@ -309,4 +318,38 @@ model Payout {
   createdAt DateTime @default(now())
 
   @@index([sellerId])
+}
+
+/// One row per completed money action, keyed by the caller's Idempotency-Key.
+/// A retry — a double click, a flaky network, a browser replaying the request —
+/// arrives with the same key, finds this row, and gets the original response
+/// back instead of performing the action a second time.
+model IdempotencyKey {
+  key       String   @id
+  scope     String
+  actorId   String
+  target    String
+  response  String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Append-only record of who moved money and what it looked like before.
+/// Nothing in the codebase updates or deletes these rows — that is the point.
+/// When a figure is disputed this is the only evidence of how it got that way.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorEmail String?
+  action     String
+  entity     String
+  entityId   String
+  before     String?
+  after      String?
+  amount     Int?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
 }

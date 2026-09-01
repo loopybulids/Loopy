@@ -44,6 +44,29 @@ export class SellersService {
     }));
   }
 
+  /**
+   * Just the storefront's identity — name, logo and accent colour.
+   *
+   * The account pages need the same brand mark the storefront header shows, but
+   * `getStore` returns the whole catalogue (images included, ~900KB). This keeps
+   * those pages cheap.
+   */
+  async getBrand(username: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { username },
+      select: { storeName: true, username: true, logoUrl: true, storeConfig: true },
+    });
+    if (!seller) throw new NotFoundException('Store not found');
+    const cfg: any = seller.storeConfig ? safeParseObj(seller.storeConfig) : null;
+    return {
+      storeName: seller.storeName,
+      username: seller.username,
+      // The header logo is edited in the store editor; fall back to the profile logo.
+      logoUrl: cfg?.header?.logoUrl || seller.logoUrl || null,
+      accent: cfg?.theme?.accent || null,
+    };
+  }
+
   async getStore(username: string) {
     const seller = await this.prisma.seller.findUnique({
       where: { username },
@@ -76,6 +99,9 @@ export class SellersService {
         freeShipThreshold: seller.freeShipThreshold ?? null,
         shipDays: seller.shipDays ?? null,
       },
+      // Platform fee rate, so checkout can show the real total before payment.
+      // The server recomputes it on checkout — this is display only.
+      platformFeePct: Number(process.env.COMMISSION_PERCENT || 5),
       storeConfig: seller.storeConfig ? safeParseObj(seller.storeConfig) : null,
       products: seller.products.map(shapeProduct),
     };
@@ -350,7 +376,9 @@ export class SellersService {
   // Escrow wallet computed from the order ledger (PRD §12 Payment/Escrow).
   async getWallet(sellerId: string) {
     const orders = await this.prisma.order.findMany({ where: { sellerId } });
-    const net = (o: any) => o.itemsAmount; // seller earns item value (fee is on top)
+    // Seller receives goods + shipping; Loopy's fee is charged to the customer
+    // on top, so it is never deducted here. See common/money.
+    const net = (o: any) => (o.itemsAmount || 0) + (o.shippingCharge || 0);
     const held = orders
       .filter((o) => ['Paid', 'Accepted', 'Shipped'].includes(o.status))
       .reduce((s, o) => s + net(o), 0);
@@ -365,7 +393,25 @@ export class SellersService {
     return { available: Math.max(0, available - paid), held, paidOut: paid, payouts };
   }
 
+  /**
+   * Raise a payout request for everything currently available.
+   *
+   * A seller with one request already open cannot raise another: `available`
+   * is computed from delivered orders minus payouts already *paid*, so an
+   * open request is not yet deducted, and a second click would ask for the
+   * same money twice. Returning the existing request makes a double submit
+   * harmless rather than expensive.
+   */
   async requestPayout(sellerId: string) {
+    const open = await this.prisma.payout.findFirst({
+      where: { sellerId, status: 'requested' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (open) {
+      return { ok: true, payout: open, alreadyRequested: true,
+        message: 'You already have a payout request being processed.' };
+    }
+
     const { available } = await this.getWallet(sellerId);
     if (available <= 0) return { ok: false, message: 'No funds available yet' };
     const payout = await this.prisma.payout.create({
