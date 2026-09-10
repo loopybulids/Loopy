@@ -25,6 +25,29 @@ export default function Reviews() {
     catch { /* ignore */ } finally { setBusy(''); }
   };
 
+  /**
+   * Take a review off the storefront, or put it back.
+   *
+   * A reason is asked for and shown back to the seller, so the decision is
+   * recorded rather than silent — Loopy's admins see both the review and why
+   * it was hidden.
+   */
+  const toggleHidden = async (r: any) => {
+    let reason: string | null = null;
+    if (!r.hidden) {
+      reason = window.prompt(
+        'Hide this review from your storefront?\n\nIt stops showing to shoppers and stops counting towards your rating. '
+        + 'It is not deleted — Loopy can still see it.\n\nReason (optional):',
+        '',
+      );
+      if (reason === null) return;
+    }
+    setBusy(r.id);
+    try { await api.hideReview(r.id, !r.hidden, reason || undefined); await load(); }
+    catch (e: any) { alert(e?.message || 'Could not update this review.'); }
+    finally { setBusy(''); }
+  };
+
   const avg = reviews.length ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : 0;
   const replied = reviews.filter((r) => r.response).length;
 
@@ -45,7 +68,7 @@ export default function Reviews() {
           ) : (
             <div className="space-y-4">
               {reviews.map((r) => (
-                <div key={r.id} className="rounded-xl border border-line p-4">
+                <div key={r.id} className={`rounded-xl border p-4 ${r.hidden ? 'border-dashed border-line bg-paper/50' : 'border-line'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="grid h-8 w-8 place-items-center rounded-full bg-green-soft text-[12px] font-extrabold text-green-600">{(r.buyerName || 'C').charAt(0).toUpperCase()}</span>
@@ -56,7 +79,17 @@ export default function Reviews() {
                     </div>
                     <Stars n={r.rating} />
                   </div>
-                  {r.comment && <p className="mt-2.5 text-[13.5px] text-navy">{r.comment}</p>}
+                  {r.comment && <p className={`mt-2.5 text-[13.5px] ${r.hidden ? 'text-muted line-through decoration-line' : 'text-navy'}`}>{r.comment}</p>}
+
+                  {r.hidden && (
+                    <div className="mt-2.5 rounded-lg border border-line bg-white px-3 py-2">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-faint">Hidden from your storefront</div>
+                      <p className="mt-0.5 text-[12px] text-muted">
+                        {r.hiddenReason || 'No reason given.'} Shoppers can&apos;t see it and it no longer counts
+                        towards your rating. Loopy can still see it.
+                      </p>
+                    </div>
+                  )}
 
                   {r.response ? (
                     <div className="mt-3 rounded-lg bg-green-soft/50 p-3">
@@ -77,6 +110,16 @@ export default function Reviews() {
                       </button>
                     </div>
                   )}
+
+                  <div className="mt-3 flex justify-end border-t border-line pt-2.5">
+                    <button
+                      onClick={() => toggleHidden(r)}
+                      disabled={busy === r.id}
+                      className="text-[12px] font-bold text-muted underline decoration-line underline-offset-2 hover:text-navy disabled:opacity-50"
+                    >
+                      {r.hidden ? 'Show on storefront' : 'Hide from storefront'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

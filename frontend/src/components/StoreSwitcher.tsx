@@ -19,11 +19,13 @@ const ChevronUpDown = ({ size = 13 }: { size?: number }) => (
  * switcher — it identifies the store you're working on and gets you to its link
  * fast, which is the whole product loop.
  */
-export default function StoreSwitcher({ storeName, username, logoUrl, published }: {
+export default function StoreSwitcher({ storeName, username, logoUrl, published, email }: {
   storeName: string;
   username: string;
   logoUrl?: string | null;
   published?: boolean;
+  /** Which account this console belongs to. */
+  email?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -77,7 +79,10 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published 
               />
             )}
           </span>
-          <span className="mt-0.5 block truncate text-[11.5px] text-faint">{prettyUrl}</span>
+          <span className="mt-0.5 block text-[11.5px] font-semibold text-muted">{prettyUrl}</span>
+          {email && (
+            <span className="block truncate text-[10.5px] text-faint" title={email}>{email}</span>
+          )}
         </span>
 
         <span className="shrink-0 text-faint"><ChevronUpDown /></span>

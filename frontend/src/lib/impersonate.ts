@@ -1,4 +1,5 @@
 import { api } from './api';
+import { clearApiDataCache } from './use-api-data';
 
 /** Admin enters a seller's console. Backs up the admin session so it can be restored. */
 export async function impersonateSeller(id: string) {
@@ -14,6 +15,7 @@ export async function impersonateSeller(id: string) {
   localStorage.setItem('loopy_role', 'seller');
   localStorage.setItem('loopy_name', r.storeName || 'Store');
   localStorage.setItem('loopy_impersonating', r.storeName || '1');
+  clearApiDataCache();
   window.location.href = '/seller';
 }
 
@@ -28,5 +30,6 @@ export function exitImpersonation() {
   } catch { /* ignore */ }
   localStorage.removeItem('loopy_admin_backup');
   localStorage.removeItem('loopy_impersonating');
+  clearApiDataCache();
   window.location.href = '/admin';
 }

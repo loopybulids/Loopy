@@ -143,6 +143,12 @@ export const api = {
   myOrders: () => req<any[]>(`/sellers/me/orders`),
   myProducts: () => req<any[]>(`/sellers/me/products`),
   myWallet: () => req<any>(`/sellers/me/wallet`),
+
+  /** Orders + wallet + analytics + onboarding in a single request. */
+  myDashboard: () => req<any>(`/sellers/me/dashboard`),
+
+  /** Just handle/logo/published — for the console shell, not a full profile. */
+  mySummary: () => req<any>(`/sellers/me/summary`),
   myAnalytics: () => req<any>(`/sellers/me/analytics`),
   myOnboarding: () => req<any>(`/sellers/me/onboarding`),
   myReviews: () => req<any[]>(`/sellers/me/reviews`),
@@ -212,6 +218,39 @@ export const api = {
     }),
 
   adminOrderAudit: (id: string) => req<any[]>(`/admin/orders/${id}/audit`),
+
+  /**
+   * Hide or unhide one of the seller's own reviews.
+   *
+   * Hiding takes it off the storefront and out of the public rating. It is not
+   * a delete — Loopy admins still see it, along with the reason.
+   */
+  hideReview: (id: string, hidden: boolean, reason?: string) =>
+    req<any>(`/sellers/me/reviews/${id}/hide`, {
+      method: 'POST',
+      body: JSON.stringify({ hidden, reason }),
+    }),
+
+  /** Every review on the platform, hidden ones included. Admin only. */
+  adminReviews: (filter?: string) =>
+    req<any>(`/admin/reviews${filter ? `?filter=${encodeURIComponent(filter)}` : ''}`),
+
+  /** The withdrawal queue: requests waiting on a decision, plus history. */
+  adminPayouts: () => req<any>(`/admin/payouts`),
+
+  /** Approve or reject a seller withdrawal. Pays real money — see payoutAction. */
+  adminPayoutAction: (
+    id: string,
+    action: 'approve' | 'reject',
+    expectedVersion: number,
+    idempotencyKey: string,
+    note?: string,
+  ) =>
+    req<any>(`/admin/payouts/${id}/${action}`, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ expectedVersion, note }),
+    }),
   adminCustomers: (q?: string) => req<any[]>(`/admin/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminCustomerDetail: (key: string) => req<any>(`/admin/customers/${encodeURIComponent(key)}`),
   adminFinance: () => req<any>(`/admin/finance`),

@@ -66,7 +66,7 @@ export class AdminService {
     const [sellers, orders, productCount, disputes, payouts, items] = await Promise.all([
       this.prisma.seller.findMany({ select: { id: true, kycStatus: true } }),
       this.prisma.order.findMany({
-        select: { id: true, sellerId: true, status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true },
+        select: { id: true, sellerId: true, status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true },
       }),
       this.prisma.product.count(),
       this.prisma.dispute.findMany({ select: { status: true, orderId: true } }),
@@ -484,9 +484,20 @@ export class AdminService {
   async finance(user: any) {
     this.assertAdmin(user);
     const [orders, payouts] = await Promise.all([
-      this.prisma.order.findMany({ select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, createdAt: true } }),
+      this.prisma.order.findMany({ select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, createdAt: true } }),
       this.prisma.payout.findMany({ orderBy: { createdAt: 'desc' } }),
     ]);
+
+    // Who each payout belongs to — an operator approving money needs the store
+    // name and payout destination, not an 8-character id fragment.
+    const sellers = await this.prisma.seller.findMany({
+      where: { id: { in: [...new Set(payouts.map((p) => p.sellerId))] } },
+      select: {
+        id: true, storeName: true, username: true,
+        payoutMethod: true, payoutUpi: true, payoutAccount: true, payoutName: true,
+      },
+    });
+    const sellerNames = new Map(sellers.map((x) => [x.id, x]));
     const paid = orders.filter((o) => PAID.includes(o.status));
     const gmv = gmvOf(paid);
     const commission = platformFeeOf(paid);
@@ -510,7 +521,13 @@ export class AdminService {
         ...ledger,
       },
       cashflow: this.series(paid, 30, (o) => o.commissionAmount),
-      settlements: payouts.slice(0, 25).map((p) => ({ id: p.id, sellerId: p.sellerId, amount: p.amount, status: p.status, createdAt: p.createdAt })),
+      // `version` travels to the UI and back on every decision — see payoutAction.
+      settlements: payouts.slice(0, 25).map((p) => ({
+        id: p.id, sellerId: p.sellerId, amount: p.amount, status: p.status,
+        version: p.version, note: p.note, decidedBy: p.decidedBy, decidedAt: p.decidedAt,
+        createdAt: p.createdAt,
+        seller: sellerNames.get(p.sellerId) || null,
+      })),
     };
   }
 
@@ -581,6 +598,270 @@ export class AdminService {
       });
 
       return { id, refundState: to, version: after!.version };
+    });
+  }
+
+  /**
+   * Every review on the platform, including the ones sellers have hidden.
+   *
+   * This is the top of the visibility hierarchy: a buyer writes a review, the
+   * seller may hide it from their storefront, and this screen still shows it —
+   * along with who hid it and why. Without that, hiding would be
+   * indistinguishable from deleting and a store could bury every complaint.
+   */
+  async reviews(user: any, filter?: string) {
+    this.assertAdmin(user);
+
+    const where =
+      filter === 'hidden' ? { hidden: true }
+      : filter === 'low' ? { rating: { lte: 2 } }
+      : {};
+
+    const reviews = await this.prisma.review.findMany({
+      where, orderBy: { createdAt: 'desc' }, take: 200,
+    });
+
+    const [sellers, products, customers, all] = await Promise.all([
+      this.prisma.seller.findMany({
+        where: { id: { in: [...new Set(reviews.map((r) => r.sellerId))] } },
+        select: { id: true, storeName: true, username: true },
+      }),
+      this.prisma.product.findMany({
+        where: { id: { in: [...new Set(reviews.map((r) => r.productId))] } },
+        select: { id: true, title: true },
+      }),
+      this.prisma.customer.findMany({
+        where: { id: { in: reviews.map((r) => r.customerId).filter(Boolean) as string[] } },
+        select: { id: true, name: true, email: true },
+      }),
+      // Totals are over every review, not just the filtered page.
+      this.prisma.review.findMany({ select: { rating: true, hidden: true } }),
+    ]);
+
+    const sellerMap = new Map(sellers.map((x) => [x.id, x]));
+    const productMap = new Map(products.map((x) => [x.id, x.title]));
+    const customerMap = new Map(customers.map((x) => [x.id, x]));
+
+    const hiddenCount = all.filter((r) => r.hidden).length;
+
+    return {
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        response: r.response,
+        hidden: r.hidden,
+        hiddenReason: r.hiddenReason,
+        hiddenAt: r.hiddenAt,
+        createdAt: r.createdAt,
+        orderId: r.orderId,
+        product: productMap.get(r.productId) || 'Product',
+        seller: sellerMap.get(r.sellerId) || null,
+        customer: r.customerId
+          ? customerMap.get(r.customerId) || null
+          : { name: r.buyerName || 'Guest', email: null },
+      })),
+      summary: {
+        total: all.length,
+        hidden: hiddenCount,
+        visible: all.length - hiddenCount,
+        avgAll: all.length ? Math.round((all.reduce((a, b) => a + b.rating, 0) / all.length) * 10) / 10 : 0,
+        avgVisible: (() => {
+          const v = all.filter((r) => !r.hidden);
+          return v.length ? Math.round((v.reduce((a, b) => a + b.rating, 0) / v.length) * 10) / 10 : 0;
+        })(),
+        lowRatings: all.filter((r) => r.rating <= 2).length,
+      },
+    };
+  }
+
+  /**
+   * The withdrawal queue: every payout request, waiting ones first.
+   *
+   * Kept as its own screen rather than a table buried in Finance, because
+   * these are the requests somebody has to act on — a seller is waiting for
+   * their money, and a row inside a page of charts is easy to miss.
+   *
+   * Each waiting request carries the seller's payout destination and how much
+   * of their balance it represents, so the decision can be made here without
+   * opening another screen.
+   */
+  async payouts(user: any) {
+    this.assertAdmin(user);
+
+    const payouts = await this.prisma.payout.findMany({ orderBy: { createdAt: 'desc' } });
+    const sellerIds = [...new Set(payouts.map((p) => p.sellerId))];
+
+    const [sellers, orders] = await Promise.all([
+      this.prisma.seller.findMany({
+        where: { id: { in: sellerIds } },
+        select: {
+          id: true, storeName: true, username: true, kycStatus: true,
+          payoutMethod: true, payoutUpi: true, payoutAccount: true,
+          payoutName: true, payoutEmail: true,
+          user: { select: { email: true, phone: true } },
+        },
+      }),
+      // Delivered earnings per seller, to show what the request is drawn from.
+      this.prisma.order.findMany({
+        where: { sellerId: { in: sellerIds }, status: { in: DELIVERED } },
+        select: { sellerId: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
+      }),
+    ]);
+
+    const sellerMap = new Map(sellers.map((x) => [x.id, x]));
+    const earned = new Map<string, number>();
+    for (const o of orders) {
+      earned.set(o.sellerId, (earned.get(o.sellerId) || 0) + sellerReceivableOf([o]));
+    }
+
+    const paidSoFar = new Map<string, number>();
+    for (const p of payouts.filter((x) => x.status === 'paid')) {
+      paidSoFar.set(p.sellerId, (paidSoFar.get(p.sellerId) || 0) + p.amount);
+    }
+
+    const shape = (p: any) => {
+      const seller = sellerMap.get(p.sellerId);
+      const destination = seller?.payoutMethod === 'bank' ? seller?.payoutAccount : seller?.payoutUpi;
+      return {
+        id: p.id,
+        amount: p.amount,
+        status: p.status,
+        version: p.version,
+        note: p.note,
+        decidedBy: p.decidedBy,
+        decidedAt: p.decidedAt,
+        createdAt: p.createdAt,
+        seller: seller
+          ? {
+              id: seller.id, storeName: seller.storeName, username: seller.username,
+              kyc: seller.kycStatus, email: seller.user?.email, phone: seller.user?.phone,
+              method: seller.payoutMethod || 'upi',
+              destination: destination || null,
+              accountName: seller.payoutName || null,
+              payoutEmail: seller.payoutEmail || null,
+              lifetimeEarned: earned.get(p.sellerId) || 0,
+              alreadyPaid: paidSoFar.get(p.sellerId) || 0,
+            }
+          : null,
+        // Refuse-to-pay signals the operator should see before approving.
+        warnings: [
+          !destination ? 'No payout destination on file' : null,
+          // The stored values are 'approved' / 'rejected'. Comparing against
+          // 'verified' flagged every properly-approved seller, which would
+          // teach an operator to ignore these warnings entirely.
+          seller && !['approved', 'verified'].includes(seller.kycStatus || '')
+            ? `KYC is ${seller.kycStatus || 'not submitted'}`
+            : null,
+          p.amount > (earned.get(p.sellerId) || 0) - (paidSoFar.get(p.sellerId) || 0)
+            ? 'Request exceeds delivered earnings'
+            : null,
+        ].filter(Boolean),
+      };
+    };
+
+    const pending = payouts.filter((p) => p.status === 'requested').map(shape);
+    const decided = payouts.filter((p) => p.status !== 'requested').map(shape);
+
+    return {
+      pending,
+      decided: decided.slice(0, 50),
+      summary: {
+        pendingCount: pending.length,
+        pendingAmount: pending.reduce((a, b) => a + b.amount, 0),
+        paidAmount: payouts.filter((p) => p.status === 'paid').reduce((a, b) => a + b.amount, 0),
+        rejectedCount: payouts.filter((p) => p.status === 'rejected').length,
+        needsAttention: pending.filter((p) => p.warnings.length > 0).length,
+      },
+    };
+  }
+
+  /**
+   * Approve or reject a seller's withdrawal request.
+   *
+   * This is a money action, so it carries the same protections as the order
+   * ones: an idempotency key (a double-click must not pay twice), the version
+   * the operator was shown (a stale screen must not overwrite a decision
+   * someone else already made), and an audit row recording who decided what.
+   *
+   *   approve -> 'paid'      the amount moves into the seller's Settled total
+   *   reject  -> 'rejected'  the amount returns to their Available balance
+   *
+   * Only a request still awaiting a decision can be decided; `paid` and
+   * `rejected` are terminal.
+   */
+  async payoutAction(
+    user: any,
+    id: string,
+    action: 'approve' | 'reject',
+    opts: { expectedVersion?: unknown; idempotencyKey?: string; note?: string } = {},
+  ) {
+    this.assertAdmin(user);
+    if (action !== 'approve' && action !== 'reject') {
+      throw new BadRequestException('Action must be approve or reject.');
+    }
+
+    const key = opts.idempotencyKey?.trim();
+    if (!key) throw new BadRequestException('An Idempotency-Key header is required to decide a payout.');
+
+    const seen = await this.prisma.idempotencyKey.findUnique({ where: { key } });
+    if (seen) {
+      if (seen.target !== id || seen.scope !== `payout:${action}`) {
+        throw new ConflictException('That idempotency key was already used for a different action.');
+      }
+      return { ...JSON.parse(seen.response), replayed: true };
+    }
+
+    const before = await this.prisma.payout.findUnique({ where: { id } });
+    if (!before) throw new NotFoundException('Payout not found');
+    if (before.status !== 'requested') {
+      throw new BadRequestException(
+        `This payout is already ${before.status} — it cannot be ${action === 'approve' ? 'approved' : 'rejected'} again.`,
+      );
+    }
+
+    const expected = requireVersion(opts.expectedVersion);
+    const status = action === 'approve' ? 'paid' : 'rejected';
+
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.payout.updateMany({
+        where: { id, version: expected, status: 'requested' },
+        data: {
+          status,
+          note: opts.note?.trim() || null,
+          decidedBy: String(user.email || user.sub || user.userId || 'admin'),
+          decidedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+      assertNotStale(count, 'This payout');
+
+      const after = await tx.payout.findUnique({ where: { id } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: String(user.sub || user.userId || 'unknown'),
+          actorEmail: user.email || null,
+          action: `payout.${action}`,
+          entity: 'payout',
+          entityId: id,
+          before: JSON.stringify({ status: before.status, version: before.version }),
+          after: JSON.stringify({ status, version: after!.version }),
+          amount: before.amount,
+        },
+      });
+
+      await tx.idempotencyKey.create({
+        data: {
+          key,
+          scope: `payout:${action}`,
+          actorId: String(user.sub || user.userId || 'unknown'),
+          target: id,
+          response: JSON.stringify({ id, status, version: after!.version, amount: before.amount }),
+        },
+      });
+
+      return { id, status, version: after!.version, amount: before.amount };
     });
   }
 

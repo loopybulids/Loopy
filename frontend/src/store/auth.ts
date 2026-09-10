@@ -1,6 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { api, clearApiCache } from '@/lib/api';
+import { clearApiDataCache } from '@/lib/use-api-data';
 
 /**
  * Frictionless, role-based auth.
@@ -157,6 +158,7 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   signOut: () => {
     clearApiCache();
+    clearApiDataCache();
     if (typeof window !== 'undefined') {
       ['loopy_token', 'loopy_user', 'loopy_role', 'loopy_name'].forEach((k) =>
         localStorage.removeItem(k),

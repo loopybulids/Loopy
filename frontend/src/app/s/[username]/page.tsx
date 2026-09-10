@@ -35,7 +35,13 @@ export default async function StorePage({ params, searchParams }: { params: Prom
       <VisitPing username={username} />
       {/* No separate account strip — the store header carries wishlist/cart/account
           itself, and the announcement renders from StorePreview as designed. */}
-      <StorePreview config={config} products={store.products} storeName={store.storeName} username={username} />
+      <StorePreview
+        config={config}
+        products={store.products}
+        storeName={store.storeName}
+        username={username}
+        reviews={store.reviews || []}
+      />
     </main>
   );
 }

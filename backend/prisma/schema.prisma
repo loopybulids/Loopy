@@ -217,6 +217,12 @@ model Order {
   itemsAmount      Int
   commissionAmount Int
   shippingCharge   Int
+  /// Coupon discount off the goods value, borne by the seller. The platform
+  /// fee is charged on itemsAmount - discountAmount, so a discounted order
+  /// still reconciles. See common/money.
+  discountAmount   Int      @default(0)
+  /// The code the buyer actually used, kept for support and reporting.
+  couponCode       String?
   // PendingPayment | Paid | Accepted | Shipped | Delivered | Completed
   // | Cancelled | Disputed | Refunded
   status           String   @default("PendingPayment")
@@ -261,19 +267,38 @@ model OrderItem {
   @@index([orderId])
 }
 
+/// A buyer's rating of one order.
+///
+/// Visibility is a three-level hierarchy:
+///   buyer   writes it
+///   seller  may hide it from their storefront (and reply to it)
+///   admin   sees every review, hidden or not, and who hid it
+///
+/// `hidden` only removes it from public view — nothing deletes a review, so a
+/// seller cannot quietly erase criticism, only stop displaying it.
 model Review {
-  id          String    @id @default(cuid())
-  orderId     String
-  productId   String
-  sellerId    String
-  buyerName   String?
-  rating      Int
-  comment     String?
-  response    String?   // seller's public reply
-  respondedAt DateTime?
-  createdAt   DateTime  @default(now())
+  id           String    @id @default(cuid())
+  orderId      String
+  productId    String
+  sellerId     String
+  /// Who wrote it, when the buyer was a signed-in store customer.
+  customerId   String?
+  buyerName    String?
+  rating       Int
+  comment      String?
+  response     String?   // seller's public reply
+  respondedAt  DateTime?
+  /// Hidden from the storefront by the seller. Still visible to them and admin.
+  hidden       Boolean   @default(false)
+  hiddenReason String?
+  hiddenAt     DateTime?
+  createdAt    DateTime  @default(now())
 
+  /// One review per order — the buyer rates the order once.
+  @@unique([orderId])
   @@index([sellerId])
+  @@index([productId])
+  @@index([customerId])
 }
 
 model Dispute {
@@ -288,6 +313,22 @@ model Dispute {
   resolvedAt  DateTime?
 
   @@index([status])
+}
+
+/// One row per successful coupon use, so per-customer limits can be enforced
+/// and a redemption can be traced back to its order.
+model CouponRedemption {
+  id         String   @id @default(cuid())
+  couponId   String
+  sellerId   String
+  customerId String?
+  orderId    String
+  amount     Int
+  createdAt  DateTime @default(now())
+
+  @@index([couponId])
+  @@index([couponId, customerId])
+  @@index([orderId])
 }
 
 model Coupon {
@@ -310,14 +351,31 @@ model Coupon {
   @@index([sellerId])
 }
 
+/// A seller's withdrawal request and its decision.
+///
+/// requested -> paid      admin approved and money was sent
+/// requested -> rejected  admin declined; the amount returns to available
+///
+/// Nothing ever set `paid` before: sellers could request a payout but no
+/// approval path existed, so every request sat as `requested` forever and the
+/// seller's "Settled" total was permanently zero.
 model Payout {
   id        String   @id @default(cuid())
   sellerId  String
   amount    Int
-  status    String   @default("requested") // requested | paid
+  status    String   @default("requested") // requested | paid | rejected
+  /// Optimistic-lock counter — an approval must name the version it saw, so a
+  /// double click cannot pay the same request twice. See common/money-actions.
+  version   Int      @default(0)
+  /// Why it was rejected, or the transfer reference when paid.
+  note      String?
+  /// Who decided, and when.
+  decidedBy String?
+  decidedAt DateTime?
   createdAt DateTime @default(now())
 
   @@index([sellerId])
+  @@index([status])
 }
 
 /// One row per completed money action, keyed by the caller's Idempotency-Key.

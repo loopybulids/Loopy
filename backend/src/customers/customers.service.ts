@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { verifyGoogleIdToken } from '../auth/google-verify';
 import { sendMail, verificationEmail } from '../mail/mailer';
 import { computeAmounts } from '../common/money';
+import { describeCoupon, discountFor, normalizeCode } from '../common/coupons';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -228,6 +229,77 @@ export class CustomersService {
     });
   }
 
+  // ── coupons ──
+
+  /** Look up a coupon for this store by code, case-insensitively. */
+  private async findCoupon(sellerId: string, code: string) {
+    const wanted = normalizeCode(code);
+    if (!wanted) return null;
+    // Codes are stored as the seller typed them, so match in memory rather
+    // than relying on the database's collation.
+    const all = await this.prisma.coupon.findMany({ where: { sellerId } });
+    const found = all.find((c) => normalizeCode(c.code) === wanted);
+    if (!found) throw new BadRequestException('That code isn’t valid for this store.');
+    return found;
+  }
+
+  /**
+   * Identify the shopper from a bearer token on an unguarded route.
+   *
+   * Returns null for anything that isn't a valid customer token for this
+   * store — a guest, an expired token, a seller's token — because the caller
+   * only uses this to tighten limits, never to grant access.
+   */
+  private async customerFromHeader(authHeader: string | undefined, sellerId: string) {
+    const token = /^Bearer\s+(.+)$/i.exec(String(authHeader || ''))?.[1];
+    if (!token) return null;
+    try {
+      const payload: any = await this.jwt.verifyAsync(token);
+      if (payload?.role !== 'customer' || payload?.sellerId !== sellerId) return null;
+      return String(payload.sub);
+    } catch {
+      return null;
+    }
+  }
+
+  /** How many times this customer has already redeemed a given coupon. */
+  private async couponUses(couponId: string, customerId?: string | null) {
+    if (!customerId) return 0;
+    return this.prisma.couponRedemption.count({ where: { couponId, customerId } });
+  }
+
+  /**
+   * Price a coupon against a cart without redeeming it.
+   *
+   * Shares `discountFor` with checkout, so the figure quoted here is exactly
+   * the figure charged — the buyer can never be shown one price and billed
+   * another.
+   */
+  async previewCoupon(authHeader: string | undefined, username: string, code: string, itemsSubtotal: number) {
+    const seller = await this.prisma.seller.findUnique({ where: { username }, select: { id: true } });
+    if (!seller) throw new NotFoundException('Store not found');
+
+    const subtotal = Math.max(0, Math.round(Number(itemsSubtotal) || 0));
+    const coupon = await this.findCoupon(seller.id, code);
+    if (!coupon) throw new BadRequestException('Enter a code.');
+
+    // The route is public so a guest can price a code, but if the shopper is
+    // signed in their token is read here — otherwise a per-customer limit
+    // would quote a discount at preview that checkout then refuses.
+    const customerId = await this.customerFromHeader(authHeader, seller.id);
+    const discount = discountFor(coupon, subtotal, {
+      customerUses: await this.couponUses(coupon.id, customerId),
+    });
+
+    return {
+      code: coupon.code,
+      description: describeCoupon(coupon as any),
+      discount,
+      // Recomputed by the server on checkout regardless of what's shown here.
+      newItemsTotal: subtotal - discount,
+    };
+  }
+
   // ── checkout ──
   async checkout(user: any, dto: any) {
     const { customerId, sellerId } = this.assertCustomer(user);
@@ -259,8 +331,16 @@ export class CustomersService {
     let shippingCharge = seller?.shippingFee != null ? seller.shippingFee : this.shippingFlat;
     if (seller?.freeShipEnabled && seller.freeShipThreshold != null && itemsAmount >= seller.freeShipThreshold) shippingCharge = 0;
 
-    // One formula, from common/money — customer pays items + shipping + fee.
-    const amounts = computeAmounts(itemsAmount, shippingCharge, this.commissionPct);
+    // Coupon, if the buyer supplied one. The discount is recomputed here from
+    // the coupon row — never taken from the request — so a tampered client
+    // cannot award itself money.
+    const coupon = dto.couponCode ? await this.findCoupon(sellerId, dto.couponCode) : null;
+    const discountAmount = coupon
+      ? discountFor(coupon, itemsAmount, { customerUses: await this.couponUses(coupon.id, customerId) })
+      : 0;
+
+    // One formula, from common/money — customer pays net goods + shipping + fee.
+    const amounts = computeAmounts(itemsAmount, shippingCharge, discountAmount, this.commissionPct);
     const commissionAmount = amounts.fee;
     const totalAmount = amounts.customerTotal;
     const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
@@ -285,6 +365,8 @@ export class CustomersService {
           data: {
             sellerId, customerId, buyerName: customer?.name || dto.name || 'Customer', buyerPhone: customer?.phone || dto.phone || null,
             address, itemsAmount, commissionAmount, shippingCharge, totalAmount, status: 'Paid',
+            discountAmount: amounts.discount,
+            couponCode: coupon ? coupon.code : null,
             paymentId,
             items: { create: rows },
           },
@@ -292,6 +374,27 @@ export class CustomersService {
         });
         for (const r of rows) {
           await tx.product.update({ where: { id: r.productId }, data: { quantity: { decrement: r.quantity } } });
+        }
+
+        // Redemption is recorded inside the same transaction as the order, so
+        // a coupon can never be counted as used against an order that failed —
+        // nor used twice past its limit by two simultaneous checkouts.
+        if (coupon && amounts.discount > 0) {
+          const { count } = await tx.coupon.updateMany({
+            where: {
+              id: coupon.id,
+              // Re-check the cap at write time; the read above may be stale.
+              ...(coupon.usageLimit != null ? { usedCount: { lt: coupon.usageLimit } } : {}),
+            },
+            data: { usedCount: { increment: 1 } },
+          });
+          if (count === 0) throw new BadRequestException('That code has just been fully redeemed.');
+          await tx.couponRedemption.create({
+            data: {
+              couponId: coupon.id, sellerId, customerId,
+              orderId: created.id, amount: amounts.discount,
+            },
+          });
         }
         return created;
       },
@@ -323,7 +426,22 @@ export class CustomersService {
         select: { storeName: true, contactEmail: true, contactPhone: true },
       }),
     ]);
-    return orders.map((o) => ({ ...o, seller }));
+
+    // Which of these has already been rated, so the list can ask for a review
+    // exactly once rather than offering a form that would be refused.
+    const reviews = await this.prisma.review.findMany({
+      where: { orderId: { in: orders.map((o) => o.id) } },
+      select: { orderId: true, rating: true, comment: true, createdAt: true },
+    });
+    const byOrder = new Map(reviews.map((r) => [r.orderId, r]));
+
+    return orders.map((o) => ({
+      ...o,
+      seller,
+      review: byOrder.get(o.id) || null,
+      // Delivered goods, not yet rated — the only state where we ask.
+      canReview: ['Delivered', 'Completed'].includes(o.status) && !byOrder.has(o.id),
+    }));
   }
 
   /**

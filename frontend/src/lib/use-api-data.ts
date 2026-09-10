@@ -1,0 +1,117 @@
+'use client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+/**
+ * Read an API endpoint and paint the last known answer immediately.
+ *
+ * Every console page is a client component that fetches on mount, so the
+ * in-memory cache in `api.ts` only helps if you come back within its TTL and
+ * never reload. Leave a page for longer, or refresh, and the cards go back to
+ * skeletons and wait on Neon — which is what "the content takes time to load
+ * when I come back" actually is.
+ *
+ * This keeps the previous payload in localStorage and hands it back
+ * synchronously on mount, so the page paints filled in on the first frame,
+ * then quietly refreshes and re-renders when the real answer lands.
+ *
+ * Cached values are scoped to the current session token, so switching store
+ * or account can never show one seller another's figures.
+ */
+
+const NS = 'loopy_swr';
+/** Beyond this, a remembered payload is too old to show even briefly. */
+const MAX_AGE = 24 * 60 * 60 * 1000;
+
+function scope(): string {
+  try {
+    // Namespaced by session, not by user id: the token is what changes when
+    // you switch store or sign in as someone else.
+    const t = localStorage.getItem('loopy_token');
+    return t ? t.slice(-16) : 'anon';
+  } catch {
+    return 'anon';
+  }
+}
+
+const keyFor = (key: string) => `${NS}:${scope()}:${key}`;
+
+function read<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(keyFor(key));
+    if (!raw) return null;
+    const { at, data } = JSON.parse(raw);
+    if (!at || Date.now() - at > MAX_AGE) return null;
+    return data as T;
+  } catch {
+    return null;
+  }
+}
+
+function write(key: string, data: unknown) {
+  try {
+    localStorage.setItem(keyFor(key), JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    // Quota or a browser blocking storage — the page still works, it just
+    // won't paint instantly next time.
+  }
+}
+
+/** Drop every remembered payload. Call on sign-out and store switch. */
+export function clearApiDataCache() {
+  if (typeof window === 'undefined') return;
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(`${NS}:`)) localStorage.removeItem(k);
+    }
+  } catch { /* nothing we can do */ }
+}
+
+export interface ApiData<T> {
+  data: T | null;
+  /** True only when there is nothing at all to show yet. */
+  loading: boolean;
+  /** True while a background refresh is in flight over existing data. */
+  refreshing: boolean;
+  error: string;
+  reload: () => Promise<void>;
+}
+
+export function useApiData<T>(key: string, fetcher: () => Promise<T>): ApiData<T> {
+  const cached = useRef<T | null>(null);
+  if (cached.current === null) cached.current = read<T>(key);
+
+  const [data, setData] = useState<T | null>(cached.current);
+  const [loading, setLoading] = useState(cached.current === null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  // Held in a ref so a caller passing an inline arrow doesn't restart the
+  // effect on every render.
+  const fetchRef = useRef(fetcher);
+  fetchRef.current = fetcher;
+
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; }, []);
+
+  const run = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const fresh = await fetchRef.current();
+      if (!alive.current) return;
+      setData(fresh);
+      setError('');
+      write(key, fresh);
+    } catch (e: any) {
+      if (!alive.current) return;
+      // Keep showing what we have; only surface the error if there's nothing.
+      setError(e?.message || 'Could not load.');
+    } finally {
+      if (alive.current) { setLoading(false); setRefreshing(false); }
+    }
+  }, [key]);
+
+  useEffect(() => { run(); }, [run]);
+
+  return { data, loading, refreshing, error, reload: run };
+}

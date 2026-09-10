@@ -13,11 +13,24 @@ function toLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+
+/** Rupees with Indian digit grouping — ₹1,500 rather than ₹1500. */
+const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
 function statusOf(c: any): { label: string; cls: string } {
   if (c.expiresAt && new Date(c.expiresAt).getTime() <= Date.now()) return { label: 'Expired', cls: 'chip-rose' };
   if (c.startsAt && new Date(c.startsAt).getTime() > Date.now()) return { label: 'Scheduled', cls: 'chip-amber' };
   if (!c.active) return { label: 'Inactive', cls: 'chip-navy' };
   return { label: 'Active', cls: 'chip-green' };
+}
+
+/** Column header — one place for the header row's type treatment. */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`py-3 text-[10.5px] font-bold uppercase tracking-[0.09em] text-faint ${className}`}>
+      {children}
+    </th>
+  );
 }
 
 export default function Discounts() {
@@ -47,44 +60,104 @@ export default function Discounts() {
       ) : (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-[13.5px]">
+            <table className="w-full min-w-[800px] table-fixed text-left">
+              {/* Fixed widths so the columns don't reflow as values change
+                  length — the money and date columns were colliding. */}
+              <colgroup>
+                <col className="w-[150px]" />
+                <col className="w-[130px]" />
+                <col className="w-[110px]" />
+                <col className="w-[90px]" />
+                <col className="w-[175px]" />
+                <col className="w-[105px]" />
+                <col className="w-[80px]" />
+                <col className="w-[90px]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-line text-[11px] uppercase tracking-wide text-faint">
-                  <th className="px-4 py-3 font-bold">Code</th>
-                  <th className="py-3 font-bold">Discount</th>
-                  <th className="py-3 font-bold">Min Order</th>
-                  <th className="py-3 font-bold">Uses</th>
-                  <th className="py-3 font-bold">Validity</th>
-                  <th className="py-3 font-bold">Status</th>
-                  <th className="py-3 font-bold">Active</th>
-                  <th className="py-3 pr-4 text-right font-bold">Actions</th>
+                <tr className="border-b border-line bg-paper/40">
+                  <Th className="pl-5 pr-3">Code</Th>
+                  <Th className="px-3">Discount</Th>
+                  <Th className="px-3 text-right">Min order</Th>
+                  <Th className="px-3 text-right">Uses</Th>
+                  <Th className="px-3">Validity</Th>
+                  <Th className="px-3">Status</Th>
+                  <Th className="px-3 text-center">Active</Th>
+                  <Th className="pl-3 pr-5 text-right">Actions</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {coupons.map((c) => {
-                  const s = statusOf(c);
+                  const st = statusOf(c);
+                  const off = !c.active || st.label === 'Expired';
+
                   return (
-                    <tr key={c.id} className="hover:bg-paper/50">
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="rounded-md bg-paper px-2 py-0.5 font-mono text-[12.5px] font-bold text-navy">{c.code}</span>
-                          <button onClick={() => copy(c.code)} title="Copy" className="text-faint hover:text-navy">{copied === c.code ? <Check size={14} className="text-green-600" /> : <ICopy />}</button>
-                        </span>
+                    <tr key={c.id} className={`transition-colors hover:bg-paper/50 ${off ? 'opacity-65' : ''}`}>
+                      {/* code */}
+                      <td className="py-4 pl-5 pr-3">
+                        <button
+                          onClick={() => copy(c.code)}
+                          title="Copy code"
+                          className="group inline-flex items-center gap-2 rounded-lg bg-paper px-2.5 py-1.5"
+                        >
+                          <span className="font-mono text-[12.5px] font-bold tracking-[0.06em] text-navy">{c.code}</span>
+                          {copied === c.code
+                            ? <Check size={13} className="text-green-600" />
+                            : <span className="text-faint transition-colors group-hover:text-navy"><ICopy /></span>}
+                        </button>
                       </td>
-                      <td className="py-3 font-semibold text-navy">{c.type === 'percent' ? `${c.value}%` : `₹${c.value}`}{c.type === 'percent' && c.maxDiscount ? <span className="text-[11px] text-faint"> (max ₹{c.maxDiscount})</span> : ''}</td>
-                      <td className="py-3 text-muted">{c.minOrder ? `₹${c.minOrder}` : '—'}</td>
-                      <td className="py-3 text-muted">{c.usedCount ?? 0} / {c.usageLimit ?? '∞'}</td>
-                      <td className="py-3 text-[11.5px] leading-tight text-muted"><div><b className="text-faint">FROM:</b> {fmt(c.startsAt)}</div><div><b className="text-faint">TO:</b> {fmt(c.expiresAt)}</div></td>
-                      <td className="py-3"><span className={s.cls}>{s.label}</span></td>
-                      <td className="py-3">
-                        <button onClick={() => toggleActive(c)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${c.active ? 'bg-green' : 'bg-line'}`}>
+
+                      {/* discount */}
+                      <td className="px-3 py-4">
+                        <span className="font-display text-[15px] font-extrabold tabular-nums text-navy">
+                          {c.type === 'percent' ? `${c.value}%` : inr(c.value)}
+                        </span>
+                        {c.type === 'percent' && c.maxDiscount != null && (
+                          <span className="ml-1.5 text-[11.5px] text-faint">max {inr(c.maxDiscount)}</span>
+                        )}
+                      </td>
+
+                      {/* min order */}
+                      <td className="px-3 py-4 text-right text-[13px] tabular-nums text-muted">
+                        {c.minOrder ? inr(c.minOrder) : <span className="text-faint">—</span>}
+                      </td>
+
+                      {/* uses */}
+                      <td className="px-3 py-4 text-right text-[13px] tabular-nums text-muted">
+                        <span className="font-semibold text-navy">{c.usedCount ?? 0}</span>
+                        <span className="text-faint"> / {c.usageLimit ?? '\u221E'}</span>
+                      </td>
+
+                      {/* validity */}
+                      <td className="px-3 py-4">
+                        <div className="text-[12px] leading-[1.5] text-muted">
+                          <div>{c.startsAt ? fmt(c.startsAt) : 'Live now'}</div>
+                          <div className="text-faint">
+                            <span className="mr-1">{'\u2192'}</span>
+                            {c.expiresAt ? fmt(c.expiresAt) : 'No expiry'}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* status */}
+                      <td className="px-3 py-4"><span className={st.cls}>{st.label}</span></td>
+
+                      {/* active */}
+                      <td className="px-3 py-4 text-center">
+                        <button
+                          onClick={() => toggleActive(c)}
+                          aria-pressed={c.active}
+                          title={c.active ? 'Turn off' : 'Turn on'}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${c.active ? 'bg-green' : 'bg-line'}`}
+                        >
                           <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-card transition-transform ${c.active ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                         </button>
                       </td>
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center justify-end gap-3">
-                          <button onClick={() => edit(c)} title="Edit" className="text-muted hover:text-navy"><IPencil /></button>
-                          <button onClick={() => remove(c.id)} title="Delete" className="text-muted hover:text-rose"><ITrash /></button>
+
+                      {/* actions */}
+                      <td className="py-4 pl-3 pr-5">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => edit(c)} title="Edit" className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-paper hover:text-navy"><IPencil /></button>
+                          <button onClick={() => remove(c.id)} title="Delete" className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-rose-soft hover:text-rose"><ITrash /></button>
                         </div>
                       </td>
                     </tr>

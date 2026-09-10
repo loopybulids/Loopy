@@ -1,12 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { useApiData } from '@/lib/use-api-data';
 import { PageHead, StatCard, Panel, Empty, money } from '@/components/seller-ui';
 import { Wallet, Check } from '@/components/icons';
 
 export default function Payments() {
-  const [wallet, setWallet] = useState<any>(null);
-  const [orders, setOrders] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [pd, setPd] = useState({ payoutEmail: '', payoutMethod: 'upi', payoutName: '', payoutUpi: '', payoutAccount: '', payoutPhone: '' });
@@ -14,16 +13,27 @@ export default function Payments() {
   const [savedPd, setSavedPd] = useState(false);
   const setP = (k: keyof typeof pd, v: string) => setPd((s) => ({ ...s, [k]: v }));
 
-  const load = () => Promise.all([
-    api.myWallet().catch(() => null),
-    api.myOrders().catch(() => []),
-    api.myProfile().catch(() => null),
-  ]).then(([w, o, p]) => {
-    setWallet(w); setOrders(o || []);
-    if (p) setPd({ payoutEmail: p.payoutEmail || '', payoutMethod: p.payoutMethod || 'upi', payoutName: p.payoutName || '', payoutUpi: p.payoutUpi || '', payoutAccount: p.payoutAccount || '', payoutPhone: p.payoutPhone || '' });
-  });
+  // Painted from the last visit on the first frame, then refreshed.
+  const { data, reload: load } = useApiData('seller:payments', () =>
+    Promise.all([
+      api.myWallet().catch(() => null),
+      api.myOrders().catch(() => []),
+      api.myProfile().catch(() => null),
+    ]).then(([w, o, p]) => ({ wallet: w, orders: o || [], profile: p })),
+  );
 
-  useEffect(() => { load(); }, []);
+  const wallet = data?.wallet ?? null;
+  const orders: any[] = data?.orders ?? [];
+
+  // The payout form is editable, so it is seeded from the fetch rather than
+  // driven by it — otherwise a background refresh would wipe what's typed.
+  const seeded = useRef(false);
+  useEffect(() => {
+    const p = (data as any)?.profile;
+    if (!p || seeded.current) return;
+    seeded.current = true;
+    setPd({ payoutEmail: p.payoutEmail || '', payoutMethod: p.payoutMethod || 'upi', payoutName: p.payoutName || '', payoutUpi: p.payoutUpi || '', payoutAccount: p.payoutAccount || '', payoutPhone: p.payoutPhone || '' });
+  }, [data]);
 
   const savePd = async () => {
     setSavingPd(true); setSavedPd(false);
@@ -44,11 +54,29 @@ export default function Payments() {
     <div>
       <PageHead title="Payments & payouts" sub="Track balances and move money to your bank." />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Available" value={money(wallet?.available ?? 0)} icon={<Wallet size={18} />} accent />
-        <StatCard label="Pending (escrow)" value={money(wallet?.pending ?? 0)} />
-        <StatCard label="Settled" value={money(wallet?.settled ?? 0)} />
+      {/* The four states money passes through, in the order it passes through
+          them, so the page explains itself. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Pending (escrow)" value={money(wallet?.pending ?? 0)} delta="Ordered, not yet delivered" />
+        <StatCard label="Available" value={money(wallet?.available ?? 0)} icon={<Wallet size={18} />} accent delta="Delivered — ready to withdraw" />
+        <StatCard label="Awaiting approval" value={money(wallet?.requested ?? 0)} delta="Requested from Loopy" />
+        <StatCard label="Settled" value={money(wallet?.settled ?? 0)} delta="Paid to your bank" />
       </div>
+
+      <p className="mt-3 text-[12px] text-faint">
+        Lifetime earnings {money(wallet?.lifetime ?? 0)} · money moves left to right as orders are delivered and payouts approved.
+      </p>
+
+      {wallet?.requested > 0 && (
+        <div className="mt-3 rounded-xl border border-amber/40 bg-amber-soft/40 px-4 py-3">
+          <div className="text-[13px] font-bold text-navy">
+            {money(wallet.requested)} withdrawal awaiting approval
+          </div>
+          <p className="mt-0.5 text-[12.5px] text-muted">
+            Loopy is reviewing it. Once approved it moves to Settled — usually within 1–2 working days.
+          </p>
+        </div>
+      )}
 
       {/* payout section — kept as a focused column */}
       <div className="mt-6 max-w-xl">

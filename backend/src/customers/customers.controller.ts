@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Throttle } from '@nestjs/throttler';
@@ -67,6 +67,26 @@ export class CustomersController {
   @UseGuards(JwtAuthGuard)
   @Post('customer/checkout')
   checkout(@Req() req: any, @Body() body: any) { return this.customers.checkout(req.user, body); }
+
+  /**
+   * Price a coupon against a cart before checkout.
+   *
+   * Public on purpose: a shopper types a code before signing in. Per-customer
+   * limits only bind once they do, and checkout re-validates either way — the
+   * discount is never taken from the client.
+   *
+   * Throttled because trying codes is guessing: without a limit this is a free
+   * coupon enumerator for a store's whole namespace.
+   */
+  @Throttle({ default: { limit: 12, ttl: 60000 } })
+  @Post('stores/:username/coupon/preview')
+  previewCoupon(
+    @Headers('authorization') auth: string | undefined,
+    @Param('username') username: string,
+    @Body() body: any,
+  ) {
+    return this.customers.previewCoupon(auth, username, body?.code, body?.itemsSubtotal);
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('customer/orders')

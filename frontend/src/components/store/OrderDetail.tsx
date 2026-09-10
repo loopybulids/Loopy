@@ -98,8 +98,9 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
   const items = order?.items || [];
   const itemsAmount = order?.itemsAmount ?? items.reduce((s: number, i: any) => s + i.unitPrice * i.quantity, 0);
   const shipping = order?.shippingCharge ?? 0;
-  // Charged to the customer on top of items + shipping (see backend common/money).
+  // Charged to the customer on top of net items + shipping (see backend common/money).
   const fee = order?.commissionAmount ?? 0;
+  const discount = order?.discountAmount ?? 0;
   const when = order?.createdAt ? new Date(order.createdAt) : null;
   const contactName = order?.customer?.name || order?.buyerName;
   const contactPhone = order?.customer?.phone || order?.buyerPhone;
@@ -185,6 +186,9 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
       {/* money */}
       <div className="space-y-1.5 border-t border-line pt-3">
         <Row label="Items total" value={rupees(itemsAmount)} />
+        {discount > 0 && (
+          <Row label={order?.couponCode ? `Discount · ${order.couponCode}` : 'Discount'} value={`−${rupees(discount)}`} />
+        )}
         <Row label="Shipping" value={shipping ? rupees(shipping) : 'Free'} />
         {fee > 0 && <Row label="Platform fee" value={rupees(fee)} />}
         <div className="mt-1 flex justify-between border-t border-line pt-2 text-[15px]">

@@ -5,7 +5,7 @@
 // route 401s. Preloading env here makes both use the same secret.
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
@@ -16,6 +16,36 @@ async function bootstrap() {
   // (Default Express limit is 100kb.) Note: on Vercel the platform caps at ~4.5MB.
   app.use(json({ limit: '25mb' }));
   app.use(urlencoded({ extended: true, limit: '25mb' }));
+
+  /**
+   * Log every request: method, path, status, duration.
+   *
+   * Nest logs its bootstrap (RouterExplorer, "application successfully
+   * started") and then nothing — so a silent terminal looked like "the
+   * frontend isn't calling the API" when in fact nothing was ever going to be
+   * printed. This makes the truth visible.
+   *
+   * Timings matter here specifically: every query is a round trip to Neon in
+   * us-east-2, so anything over ~1.2s is worth noticing rather than guessing
+   * at. Set REQUEST_LOG=off to silence it.
+   */
+  if (process.env.REQUEST_LOG !== 'off') {
+    const logger = new Logger('Request');
+    app.use((req: any, res: any, next: any) => {
+      const started = Date.now();
+      res.on('finish', () => {
+        const ms = Date.now() - started;
+        const line = `${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`;
+        // A slow or failing request should stand out in a busy terminal.
+        if (res.statusCode >= 500) logger.error(line);
+        else if (res.statusCode >= 400) logger.warn(line);
+        else if (ms > 1200) logger.warn(`${line}  ← slow`);
+        else logger.log(line);
+      });
+      next();
+    });
+  }
+
   
 
   // API versioning per PRD §9.5

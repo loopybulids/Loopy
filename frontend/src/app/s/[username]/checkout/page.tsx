@@ -25,6 +25,10 @@ export default function CheckoutPage() {
   const [shipping, setShipping] = useState<any>(null);
   const [feePct, setFeePct] = useState<number | null>(null);
   const [onlineOpt, setOnlineOpt] = useState<'upi' | 'card' | 'netbanking'>('upi');
+  const [code, setCode] = useState('');
+  const [coupon, setCoupon] = useState<any>(null);
+  const [couponErr, setCouponErr] = useState('');
+  const [checking, setChecking] = useState(false);
   const setA = (k: keyof typeof addr, v: string) => setAddr((s) => ({ ...s, [k]: v }));
 
   const load = () => {
@@ -58,9 +62,40 @@ export default function CheckoutPage() {
   // Platform fee, charged on the goods value on top of shipping. Must match
   // computeAmounts() in backend/src/common/money.ts or the total shown here
   // won't be the total charged.
-  const fee = feePct == null ? null : Math.round((subtotal * feePct) / 100);
-  const total = shipCost == null || fee == null ? null : subtotal + shipCost + fee;
+  // A seller's coupon comes off the goods value, and the fee is charged on what
+  // the goods actually sell for — same order of operations as computeAmounts().
+  const discount = Math.min(coupon?.discount ?? 0, subtotal);
+  const netItems = subtotal - discount;
+  const fee = feePct == null ? null : Math.round((netItems * feePct) / 100);
+  const total = shipCost == null || fee == null ? null : netItems + shipCost + fee;
   const belowMin = shipping?.minOrderAmount != null && subtotal < shipping.minOrderAmount;
+
+  const applyCoupon = async () => {
+    const wanted = code.trim();
+    if (!wanted) return;
+    setChecking(true); setCouponErr('');
+    try {
+      setCoupon(await custApi.previewCoupon(username, wanted, subtotal));
+    } catch (e: any) {
+      setCoupon(null);
+      setCouponErr(e?.message || 'That code could not be applied.');
+    } finally { setChecking(false); }
+  };
+
+  const removeCoupon = () => { setCoupon(null); setCode(''); setCouponErr(''); };
+
+  /**
+   * A coupon priced against an old cart is a wrong quote — re-check it
+   * whenever the subtotal moves, and drop it if it no longer qualifies.
+   */
+  useEffect(() => {
+    if (!coupon) return;
+    let alive = true;
+    custApi.previewCoupon(username, coupon.code, subtotal)
+      .then((c: any) => { if (alive) { setCoupon(c); setCouponErr(''); } })
+      .catch((e: any) => { if (alive) { setCoupon(null); setCouponErr(e?.message || 'That code no longer applies.'); } });
+    return () => { alive = false; };
+  }, [subtotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const place = async () => {
     setErr('');
@@ -78,6 +113,8 @@ export default function CheckoutPage() {
         items: cart.map((i) => ({ productId: i.productId, quantity: i.qty, size: i.size })),
         paymentMethod: 'online',
         onlineMethod: onlineOpt,
+        // Only the code travels — the server prices it itself.
+        couponCode: coupon?.code || undefined,
       });
       clearCart(username);
       setPlaced(order);
@@ -192,12 +229,54 @@ export default function CheckoutPage() {
                     Add {rupees(shipping.freeShipThreshold - subtotal)} more for free shipping
                   </p>
                 )}
+                {discount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted">Discount · {coupon.code}</span>
+                    <span className="font-semibold text-green-600">−{rupees(discount)}</span>
+                  </div>
+                )}
                 {fee != null && fee > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted">Platform fee</span>
                     <span className="font-semibold text-navy">{rupees(fee)}</span>
                   </div>
                 )}
+
+                {/* coupon */}
+                <div className="!mt-3 border-t border-line pt-3">
+                  {coupon ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="chip-green">{coupon.code}</span>
+                        <span className="ml-2 text-[11.5px] text-muted">{coupon.description}</span>
+                      </span>
+                      <button onClick={removeCoupon} className="shrink-0 text-[12px] font-semibold text-muted underline hover:text-navy">
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          value={code}
+                          onChange={(e) => { setCode(e.target.value.toUpperCase()); setCouponErr(''); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                          placeholder="Discount code"
+                          aria-label="Discount code"
+                          className="c-input min-w-0 flex-1 uppercase"
+                        />
+                        <button
+                          onClick={applyCoupon}
+                          disabled={checking || !code.trim()}
+                          className="shrink-0 rounded-xl bg-navy px-4 text-[12.5px] font-bold text-white disabled:opacity-50"
+                        >
+                          {checking ? '…' : 'Apply'}
+                        </button>
+                      </div>
+                      {couponErr && <p className="mt-1.5 text-[11.5px] text-rose">{couponErr}</p>}
+                    </>
+                  )}
+                </div>
                 <div className="flex justify-between border-t border-line pt-2 text-[15px]">
                   <span className="font-semibold text-navy">Total</span>
                   <span className="font-display font-extrabold text-green-600">
@@ -213,13 +292,26 @@ export default function CheckoutPage() {
               <div className="mt-4 border-t border-line pt-3">
                 <div className="text-[12px] font-bold uppercase tracking-wide text-faint">Payment method</div>
                 <div className="mt-2 rounded-xl border border-green bg-green-soft/40 p-3">
-                  <div className="flex items-center gap-2 text-[13px] font-semibold text-navy">
-                    <span className="flex-1">Pay online</span>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-[13px] font-semibold text-navy">
+                    <span>Pay online</span>
                     <span className="text-[11px] font-normal text-muted">UPI · Cards · Netbanking</span>
                   </div>
-                  <div className="mt-2.5 grid grid-cols-3 gap-2">
+                  {/* Equal thirds while all three fit; "Netbanking" is the long
+                      one, so basis-0 + a floor lets it drop to its own row in a
+                      narrow column instead of spilling out of the card. */}
+                  <div className="mt-2.5 flex flex-wrap gap-2">
                     {(['upi', 'card', 'netbanking'] as const).map((o) => (
-                      <button key={o} type="button" onClick={() => setOnlineOpt(o)} className={`rounded-lg border px-2 py-2 text-[12px] font-semibold capitalize ${onlineOpt === o ? 'border-green bg-white text-green' : 'border-line bg-white text-navy hover:border-green/40'}`}>
+                      <button
+                        key={o}
+                        type="button"
+                        onClick={() => setOnlineOpt(o)}
+                        aria-pressed={onlineOpt === o}
+                        className={`min-w-[76px] flex-1 basis-0 whitespace-nowrap rounded-lg border px-2 py-2 text-center text-[12px] font-semibold transition-colors ${
+                          onlineOpt === o
+                            ? 'border-green bg-white text-green'
+                            : 'border-line bg-white text-navy hover:border-green/40'
+                        }`}
+                      >
                         {o === 'upi' ? 'UPI' : o === 'card' ? 'Card' : 'Netbanking'}
                       </button>
                     ))}

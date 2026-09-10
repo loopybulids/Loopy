@@ -38,7 +38,26 @@ async function custReq(u: string, path: string, init?: RequestInit) {
     headers: { 'Content-Type': 'application/json', ...(c ? { Authorization: `Bearer ${c.token}` } : {}), ...(init?.headers || {}) },
     cache: 'no-store',
   });
-  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b?.message || `Request failed (${res.status})`); }
+
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+
+    /**
+     * A rejected token is a dead session, and the shopper cannot fix it.
+     *
+     * Sessions last 7 days. Once one lapses the page still showed the buyer
+     * as signed in and answered "Unauthorized" on the pay button — a dead end
+     * at the worst possible moment. Clearing it here makes the sign-in panel
+     * reappear (the pages listen for `cust-change`), so the shopper signs back
+     * in and keeps their cart instead of being stuck.
+     */
+    if (res.status === 401 && c) {
+      clearCust(u);
+      throw new Error('Your session expired — please sign in again to place your order.');
+    }
+
+    throw new Error(b?.message || `Request failed (${res.status})`);
+  }
   return res.json();
 }
 
@@ -72,6 +91,31 @@ export const custApi = {
   addresses: (u: string) => custReq(u, '/customer/addresses'),
   addAddress: (u: string, body: any) => custReq(u, '/customer/addresses', { method: 'POST', body: JSON.stringify(body) }),
   checkout: (u: string, body: any) => custReq(u, '/customer/checkout', { method: 'POST', body: JSON.stringify(body) }),
+
+  /**
+   * Rate a delivered order — 1-5 stars plus an optional comment.
+   *
+   * The server allows this only on a delivered order the caller bought, and
+   * only once, so the form is offered on exactly those orders.
+   */
+  addReview: (u: string, orderId: string, rating: number, comment?: string) =>
+    custReq(u, `/orders/${orderId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment }),
+    }),
+
+  /**
+   * Price a coupon against the current cart.
+   *
+   * The figure returned is what the server will charge — checkout recomputes
+   * the discount from the coupon row and ignores anything the client sends,
+   * so this is a quote the buyer can trust rather than a hint.
+   */
+  previewCoupon: (u: string, code: string, itemsSubtotal: number) =>
+    custReq(u, `/stores/${u}/coupon/preview`, {
+      method: 'POST',
+      body: JSON.stringify({ code, itemsSubtotal }),
+    }),
   orders: (u: string) => custReq(u, '/customer/orders'),
   cancelOrder: (u: string, id: string, reason?: string) =>
     custReq(u, `/customer/orders/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }),

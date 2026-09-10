@@ -2,42 +2,100 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useApiData } from '@/lib/use-api-data';
 import { StatCard, Panel, Empty, money } from '@/components/seller-ui';
 import { AreaTrend } from '@/components/admin/AdminKit';
 import { Bag, Check, Eye, Plus, Share, Star, Users, Wallet } from '@/components/icons';
 
 export default function Dashboard() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [wallet, setWallet] = useState<any>(null);
-  const [an, setAn] = useState<any>(null);
-  const [ob, setOb] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  /**
+   * One request, and one cached bundle.
+   *
+   * The server assembles orders, wallet, analytics and onboarding in parallel
+   * (see getDashboard), so this is a single round trip rather than four
+   * competing ones. The result is remembered under one key, so returning to
+   * the dashboard paints every card from the last visit on the first frame and
+   * refreshes behind it.
+   */
+  const { data, loading, error, refreshing, reload } = useApiData('seller:dashboard', () =>
+    api.myDashboard().then((d: any) => ({
+      orders: d?.orders || [],
+      wallet: d?.wallet ?? null,
+      an: d?.analytics ?? null,
+      ob: d?.onboarding ?? null,
+    })),
+  );
 
-  const load = () => Promise.all([
-    api.myOrders().catch(() => []),
-    api.myWallet().catch(() => null),
-    api.myAnalytics().catch(() => null),
-    api.myOnboarding().catch(() => null),
-  ]).then(([o, w, a, on]) => { setOrders(o || []); setWallet(w); setAn(a); setOb(on); setLoading(false); });
-  useEffect(() => { load(); }, []);
+  const orders: any[] = data?.orders ?? [];
+  const wallet = data?.wallet ?? null;
+  const an = data?.an ?? null;
+  const ob = data?.ob ?? null;
 
   const revenue = an?.revenue ?? 0;
+  // Earned across the store's whole history, straight from the wallet so the
+  // dashboard and the payments page can never disagree.
+  const lifetime = wallet?.lifetime ?? 0;
   const showChecklist = ob && ob.done < ob.total;
 
   return (
     <div className="space-y-6">
+      {/*
+        A failed load must say so. Every card falls back to 0, so without this
+        a dead API looks exactly like a store that has made no sales — which is
+        indistinguishable from real data and far worse than an error.
+      */}
+      {error && !data && (
+        <div className="rounded-xl border border-rose/40 bg-rose-soft/60 px-4 py-3">
+          <div className="text-[13.5px] font-bold text-navy">Couldn&apos;t load your dashboard</div>
+          <p className="mt-0.5 text-[12.5px] text-muted">
+            {error} — the figures below are not real.
+          </p>
+          <button onClick={() => reload()} className="mt-2 rounded-lg bg-navy px-3 py-1.5 text-[12px] font-bold text-white">
+            Try again
+          </button>
+        </div>
+      )}
+
       {/* onboarding checklist */}
       {showChecklist && <Onboarding ob={ob} />}
 
-      {/* metric cards */}
+      {/*
+        Skeletons while the first load is in flight.
+        Rendering `0` during loading is indistinguishable from a store that
+        genuinely has no sales — which made "is it broken or is it empty?"
+        impossible to answer by looking at the screen.
+      */}
+      {loading && !data ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="card p-5">
+              <div className="h-3 w-24 animate-pulse rounded bg-line" />
+              <div className="mt-3 h-7 w-20 animate-pulse rounded bg-line" />
+              <div className="mt-3 h-3 w-16 animate-pulse rounded bg-line/70" />
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <StatCard label="Revenue" value={money(revenue)} delta={revenue ? 'Paid orders' : 'No sales yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
+        {/* All-time earnings first: it's the number sellers actually look for.
+            Same formula as the wallet — delivered orders, net of discounts. */}
+        <StatCard label="All-time earnings" value={money(lifetime)} delta={lifetime ? 'Delivered orders' : 'Nothing delivered yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
+        <StatCard label="Revenue" value={money(revenue)} delta={revenue ? `${an?.paidOrders ?? 0} paid orders` : 'No sales yet'} icon={<Wallet size={18} />} href="/seller/payments" />
         <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} href="/seller/orders" />
         <StatCard label="Customers" value={an?.customers ?? 0} delta="Unique buyers" icon={<Users size={18} />} href="/seller/customers" />
         <StatCard label="Store visits" value={an?.totalVisits ?? 0} delta={`${an?.visitsToday ?? 0} today`} icon={<Eye size={18} />} />
         <LiveCard live={an?.liveUsers ?? 0} conversion={an?.conversion ?? 0} />
         <StatCard label="Rating" value={an?.avgRating ? `${an.avgRating}★` : '—'} delta={`${an?.reviewCount ?? 0} reviews`} icon={<Star size={18} />} href="/seller/reviews" />
       </div>
+      )}
+
+      {/* Which store these figures belong to — two stores can share a name. */}
+      {data && (
+        <p className="-mt-2 text-[11.5px] text-faint">
+          Showing {ob?.published ? 'live' : 'draft'} store data
+          {refreshing ? ' · refreshing…' : ''}
+        </p>
+      )}
 
       {/* charts */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -73,8 +131,9 @@ export default function Dashboard() {
       <Panel title="Payouts">
         <div className="grid gap-4 sm:grid-cols-3">
           <Row label="Available balance" value={money(wallet?.available ?? 0)} strong />
-          <Row label="Held (in escrow)" value={money(wallet?.held ?? 0)} />
-          <Row label="Paid out" value={money(wallet?.paidOut ?? 0)} />
+          <Row label="Pending (in escrow)" value={money(wallet?.pending ?? 0)} />
+          <Row label="Paid out" value={money(wallet?.settled ?? 0)} />
+          <Row label="Lifetime earnings" value={money(wallet?.lifetime ?? 0)} />
         </div>
         <Link href="/seller/payments" className="btn-green mt-5 w-fit">Go to payouts</Link>
       </Panel>

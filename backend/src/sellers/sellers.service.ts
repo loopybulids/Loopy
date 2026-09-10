@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { sellerReceivableOf } from '../common/money';
 
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 
@@ -75,6 +76,15 @@ export class SellersService {
       },
     });
     if (!seller) throw new NotFoundException('Store not found');
+
+    // Visible reviews only — a hidden one must not reach the storefront by
+    // any route. Capped because this payload is already large.
+    const reviews = await this.prisma.review.findMany({
+      where: { sellerId: seller.id, hidden: false },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, rating: true, comment: true, response: true, buyerName: true, createdAt: true },
+    });
     return {
       id: seller.id,
       storeName: seller.storeName,
@@ -102,6 +112,16 @@ export class SellersService {
       // Platform fee rate, so checkout can show the real total before payment.
       // The server recomputes it on checkout — this is display only.
       platformFeePct: Number(process.env.COMMISSION_PERCENT || 5),
+      // What buyers said, newest first. Hidden ones are excluded here — this
+      // is the public list, and that is the whole point of hiding.
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        response: r.response,
+        buyerName: r.buyerName || 'Customer',
+        createdAt: r.createdAt,
+      })),
       storeConfig: seller.storeConfig ? safeParseObj(seller.storeConfig) : null,
       products: seller.products.map(shapeProduct),
     };
@@ -159,10 +179,22 @@ export class SellersService {
 
   // Everything the dashboard needs: sales, traffic, live users, reviews.
   async getAnalytics(sellerId: string) {
-    const [orders, visits, reviews] = await Promise.all([
-      this.prisma.order.findMany({ where: { sellerId }, select: { status: true, totalAmount: true, itemsAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true } }),
-      this.prisma.visit.findMany({ where: { sellerId }, select: { session: true, source: true, createdAt: true } }),
-      this.prisma.review.findMany({ where: { sellerId }, select: { rating: true } }),
+    // Only the last 14 days of visit rows are ever read — that's the width of
+    // every chart on the page. Pulling the store's entire visit history to
+    // compute a 14-day series is the dashboard's slowest query and it grows
+    // without limit, so the running totals come from counts instead.
+    const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const [orders, visits, visitTotal, reviewAgg] = await Promise.all([
+      this.prisma.order.findMany({ where: { sellerId }, select: { status: true, totalAmount: true, itemsAmount: true, shippingCharge: true, discountAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true } }),
+      this.prisma.visit.findMany({
+        where: { sellerId, createdAt: { gte: since } },
+        select: { session: true, source: true, createdAt: true },
+      }),
+      this.prisma.visit.count({ where: { sellerId } }),
+      // Count and mean computed in the database rather than by pulling every
+      // review row back to add them up here. Hidden reviews are excluded
+      // because this is the rating shoppers see.
+      this.prisma.review.aggregate({ where: { sellerId, hidden: false }, _avg: { rating: true }, _count: true }),
     ]);
     // traffic sources (top)
     const srcMap = new Map<string, number>();
@@ -175,17 +207,21 @@ export class SellersService {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
     return {
-      revenue: paid.reduce((s, o) => s + o.itemsAmount, 0),
+      // What the seller actually earns — goods net of their coupon discounts,
+      // plus shipping. Previously this summed itemsAmount alone, so the
+      // dashboard's "Revenue" was smaller than the wallet's lifetime earnings
+      // for the same orders. Same formula as getWallet now. See common/money.
+      revenue: sellerReceivableOf(paid),
       orders: orders.length,
       paidOrders: paid.length,
       customers: new Set(orders.map((o) => o.buyerId || o.buyerPhone || o.buyerName).filter(Boolean)).size,
-      totalVisits: visits.length,
+      totalVisits: visitTotal,
       visitsToday: visits.filter((v) => v.createdAt >= todayStart).length,
       liveUsers: liveSessions.size,
-      conversion: visits.length ? Math.round((paid.length / visits.length) * 1000) / 10 : 0,
-      reviewCount: reviews.length,
-      avgRating: reviews.length ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : 0,
-      revenueSeries: this.series(paid, 14, (o) => o.itemsAmount),
+      conversion: visitTotal ? Math.round((paid.length / visitTotal) * 1000) / 10 : 0,
+      reviewCount: reviewAgg._count,
+      avgRating: reviewAgg._avg.rating ? Math.round(reviewAgg._avg.rating * 10) / 10 : 0,
+      revenueSeries: this.series(paid, 14, (o) => (o.itemsAmount || 0) - (o.discountAmount || 0) + (o.shippingCharge || 0)),
       ordersSeries: this.series(orders, 14, () => 1),
       trafficSeries: this.series(visits, 14, () => 1),
       sources,
@@ -193,10 +229,38 @@ export class SellersService {
   }
 
   // Onboarding checklist — computed from real store state.
+  /**
+   * Progress through store setup.
+   *
+   * Every step here is a yes/no, but this used to load the whole Seller row and
+   * then a product count, one after the other. Logos, banners and storeConfig
+   * are stored inline as base64/JSON — nearly a megabyte for some stores — so
+   * the checklist was pulling all of it across the wire to ask six boolean
+   * questions, which made it the slowest call on the dashboard.
+   *
+   * The columns are now reduced to booleans in the database and the count runs
+   * alongside it rather than after it.
+   */
   async getOnboarding(sellerId: string) {
-    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId } });
+    const [rows, productCount] = await Promise.all([
+      this.prisma.$queryRaw<Array<{
+        description: string | null; tagline: string | null; category: string | null;
+        city: string | null; contactPhone: string | null; contactEmail: string | null;
+        hasLogo: boolean; payoutUpi: string | null; payoutAccount: string | null;
+        shippingFee: number | null; hasConfig: boolean; published: boolean;
+      }>>`
+        SELECT description, tagline, category, city, "contactPhone", "contactEmail",
+               (COALESCE("logoUrl", '') <> '')     AS "hasLogo",
+               "payoutUpi", "payoutAccount", "shippingFee",
+               ("storeConfig" IS NOT NULL)         AS "hasConfig",
+               published
+        FROM "Seller" WHERE id = ${sellerId} LIMIT 1
+      `,
+      this.prisma.product.count({ where: { sellerId } }),
+    ]);
+
+    const seller = rows[0];
     if (!seller) throw new NotFoundException('Seller not found');
-    const productCount = await this.prisma.product.count({ where: { sellerId } });
     // "Profile complete" = the details a buyer actually needs to trust and
     // contact the store. Social links and established year are optional extras,
     // so they're deliberately not required here.
@@ -205,7 +269,7 @@ export class SellersService {
       seller.category,
       seller.city,
       seller.contactPhone || seller.contactEmail, // at least one way to reach them
-      seller.logoUrl,
+      seller.hasLogo ? 'logo' : '', // a boolean from SQL, not the base64 itself
     ];
     const profileDone = profileFields.filter((v) => !!String(v || '').trim()).length;
 
@@ -221,7 +285,7 @@ export class SellersService {
       { key: 'product', label: 'Add your first product', hint: 'List an item with images and price to start selling.', href: '/seller/products/new', done: productCount > 0 },
       { key: 'payout', label: 'Add payout details', hint: 'Configure how you’ll receive payments from orders.', href: '/seller/payments', done: !!(seller.payoutUpi || seller.payoutAccount) },
       { key: 'shipping', label: 'Configure shipping', hint: 'Set your shipping rate and pickup address.', href: '/seller/shipping', done: seller.shippingFee !== null && seller.shippingFee !== undefined },
-      { key: 'customize', label: 'Customize your store', hint: 'Update colors, logo and pages to match your brand.', href: '/seller/store-editor', done: !!seller.storeConfig },
+      { key: 'customize', label: 'Customize your store', hint: 'Update colors, logo and pages to match your brand.', href: '/seller/store-editor', done: seller.hasConfig },
       { key: 'publish', label: 'Publish your store', hint: 'Make your store live for customers to visit.', href: '/seller/store-editor', done: !!seller.published },
     ];
     return { steps, done: steps.filter((s) => s.done).length, total: steps.length, published: !!seller.published };
@@ -236,7 +300,60 @@ export class SellersService {
     return reviews.map((r) => ({
       id: r.id, rating: r.rating, comment: r.comment, response: r.response, respondedAt: r.respondedAt,
       buyerName: r.buyerName || 'Customer', product: title(r.productId), createdAt: r.createdAt,
+      hidden: r.hidden, hiddenReason: r.hiddenReason, hiddenAt: r.hiddenAt,
     }));
+  }
+
+  /**
+   * Recompute a store's public star rating from its visible reviews.
+   *
+   * `Seller.rating` and `ratingCount` are displayed on the storefront and the
+   * Shop listing but were seed values nothing ever updated — so the stars a
+   * shopper saw had no relationship to what buyers actually wrote. Called
+   * whenever a review is added or its visibility changes, and it counts only
+   * visible reviews, since that is what the number claims to represent.
+   */
+  async recomputeSellerRating(sellerId: string) {
+    const agg = await this.prisma.review.aggregate({
+      where: { sellerId, hidden: false },
+      _avg: { rating: true },
+      _count: true,
+    });
+    return this.prisma.seller.update({
+      where: { id: sellerId },
+      data: {
+        rating: agg._avg.rating ? Math.round(agg._avg.rating * 10) / 10 : 0,
+        ratingCount: agg._count,
+      },
+      select: { rating: true, ratingCount: true },
+    });
+  }
+
+  /**
+   * Hide or unhide one of the seller's reviews.
+   *
+   * Hiding removes it from the storefront and from the public rating. It does
+   * not delete it: the row stays, the reason is recorded, and Loopy's admins
+   * still see it — so a seller can decline to display criticism but cannot
+   * make it disappear.
+   */
+  async hideReview(sellerId: string, id: string, hidden: boolean, reason?: string) {
+    const review = await this.prisma.review.findFirst({ where: { id, sellerId } });
+    if (!review) throw new NotFoundException('Review not found');
+
+    const updated = await this.prisma.review.update({
+      where: { id },
+      data: {
+        hidden,
+        hiddenReason: hidden ? (reason?.trim() || null) : null,
+        hiddenAt: hidden ? new Date() : null,
+      },
+      select: { id: true, hidden: true, hiddenReason: true, hiddenAt: true },
+    });
+
+    // The storefront's stars must follow what is actually on display.
+    await this.recomputeSellerRating(sellerId);
+    return updated;
   }
 
   async respondReview(sellerId: string, reviewId: string, response: string) {
@@ -356,6 +473,48 @@ export class SellersService {
     return orders.map((o) => ({ ...o, customer: (o.customerId && byId.get(o.customerId)) || null }));
   }
 
+  /**
+   * The three things the console shell needs: handle, logo, live-or-not.
+   *
+   * The sidebar was calling `getMe`, which returns the whole Seller row — and
+   * logos, banners and storeConfig live in that row as base64/JSON. For one
+   * store that was a 350KB transfer measured at 2.4s, on every single page
+   * load, to render a nav bar. The logo is still included because the switcher
+   * shows it; the banner and storeConfig are not.
+   */
+  async getSummary(sellerId: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+      select: {
+        username: true, storeName: true, logoUrl: true, published: true,
+        // The signing-in email, because two stores can share a name, an owner
+        // name and a logo — this is the only thing that always differs. The
+        // login response doesn't carry it, so it has to come from here.
+        user: { select: { email: true } },
+      },
+    });
+    if (!seller) throw new NotFoundException('Seller not found');
+    return { ...seller, email: seller.user?.email ?? null, user: undefined };
+  }
+
+  /**
+   * Everything the dashboard renders, in one request.
+   *
+   * The page used to fire four calls at once. They queued behind each other on
+   * a single high-latency link to Neon, so four ~550ms calls became four ~2.2s
+   * calls that all landed together. Running them server-side in parallel means
+   * one round trip for the browser and one connection for the database.
+   */
+  async getDashboard(sellerId: string) {
+    const [orders, wallet, analytics, onboarding] = await Promise.all([
+      this.getSellerOrders(sellerId),
+      this.getWallet(sellerId),
+      this.getAnalytics(sellerId),
+      this.getOnboarding(sellerId),
+    ]);
+    return { orders, wallet, analytics, onboarding };
+  }
+
   async getMe(sellerId: string) {
     const seller = await this.prisma.seller.findUnique({
       where: { id: sellerId },
@@ -374,23 +533,54 @@ export class SellersService {
   }
 
   // Escrow wallet computed from the order ledger (PRD §12 Payment/Escrow).
+  /**
+   * The seller's money, in four figures that add up.
+   *
+   *   lifetime  — everything ever earned on delivered orders, before payouts
+   *   pending   — sold but not yet delivered, so not yet claimable (escrow)
+   *   requested — withdrawal asked for, awaiting an admin decision
+   *   settled   — approved and paid out
+   *   available — lifetime minus settled minus requested: withdrawable now
+   *
+   * Each key is returned under both the name the dashboard uses and the name
+   * the payments page uses. They were different, which is why "Pending" and
+   * "Settled" on the payments screen read ₹0 no matter how much had sold —
+   * the page was reading keys the API never sent.
+   *
+   * The seller receives goods (net of their own coupon discounts) plus
+   * shipping; Loopy's fee is charged to the customer on top and so is never
+   * deducted here. See common/money.
+   */
   async getWallet(sellerId: string) {
-    const orders = await this.prisma.order.findMany({ where: { sellerId } });
-    // Seller receives goods + shipping; Loopy's fee is charged to the customer
-    // on top, so it is never deducted here. See common/money.
-    const net = (o: any) => (o.itemsAmount || 0) + (o.shippingCharge || 0);
-    const held = orders
-      .filter((o) => ['Paid', 'Accepted', 'Shipped'].includes(o.status))
-      .reduce((s, o) => s + net(o), 0);
-    const available = orders
-      .filter((o) => ['Delivered', 'Completed'].includes(o.status))
-      .reduce((s, o) => s + net(o), 0);
-    const payouts = await this.prisma.payout.findMany({
-      where: { sellerId },
-      orderBy: { createdAt: 'desc' },
-    });
-    const paid = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
-    return { available: Math.max(0, available - paid), held, paidOut: paid, payouts };
+    const [orders, payouts] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { sellerId },
+        select: { status: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
+      }),
+      this.prisma.payout.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } }),
+    ]);
+
+    const pending = sellerReceivableOf(orders.filter((o) => ['Paid', 'Accepted', 'Shipped'].includes(o.status)));
+    const lifetime = sellerReceivableOf(orders.filter((o) => ['Delivered', 'Completed'].includes(o.status)));
+
+    const settled = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+    const requested = payouts.filter((p) => p.status === 'requested').reduce((s, p) => s + p.amount, 0);
+    // Money already requested is in flight: it is neither withdrawable again
+    // nor settled yet. Leaving it in `available` would let a seller request
+    // the same rupees twice and make the three cards overlap.
+    const available = Math.max(0, lifetime - settled - requested);
+
+    return {
+      available,
+      lifetime,
+      pending,
+      settled,
+      requested,
+      // Legacy aliases — the dashboard reads these two.
+      held: pending,
+      paidOut: settled,
+      payouts,
+    };
   }
 
   /**

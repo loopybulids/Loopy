@@ -34,7 +34,7 @@ const POLICY_ICONS = [<ShieldLock key="0" size={20} />, <Truck key="1" size={20}
  * the editor preview.
  */
 export default function StorePreview({
-  config, products = [], storeName, mobile = false, username, page,
+  config, products = [], storeName, mobile = false, username, page, reviews = [],
 }: {
   config: StoreConfig;
   products?: any[];
@@ -42,6 +42,11 @@ export default function StorePreview({
   mobile?: boolean;
   username?: string;        // when set, nav links point at real storefront routes
   page?: StorePage | null;  // when set, render this custom page instead of the home layout
+  /**
+   * Visible reviews for this store. The API filters hidden ones out before
+   * they reach here, so anything in this list is meant to be public.
+   */
+  reviews?: any[];
 }) {
   const [overrideConfig, setOverrideConfig] = useState<StoreConfig | null>(null);
 
@@ -212,6 +217,51 @@ export default function StorePreview({
               {c.policies.items.map((p, i) => <PolicyCard key={i} p={p} i={i} accent={accent} />)}
             </div>
           )}
+        </section>
+      )}
+
+      {/* what buyers said — only reviews the seller has left visible reach here */}
+      {!page && reviews.length > 0 && (
+        <section className="bg-white px-5 py-12 sm:px-8">
+          <div className="mx-auto max-w-5xl">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-display text-[24px] font-extrabold">What buyers say</h2>
+              <span className="text-[13px] text-muted">
+                {(() => {
+                  const avg = Math.round((reviews.reduce((a, r) => a + r.rating, 0) / reviews.length) * 10) / 10;
+                  return `${avg}★ from ${reviews.length} review${reviews.length === 1 ? '' : 's'}`;
+                })()}
+              </span>
+            </div>
+
+            <div className={`mt-5 grid gap-4 ${mobile ? '' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+              {reviews.slice(0, mobile ? 3 : 6).map((r) => (
+                <div key={r.id} className="rounded-2xl border border-black/[0.06] bg-[#FAFAF7] p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[14px] tracking-[1px]" style={{ color: accent }}>
+                      {'★'.repeat(r.rating)}
+                      <span className="opacity-25">{'★'.repeat(5 - r.rating)}</span>
+                    </span>
+                    <span className="text-[11px] text-muted">
+                      {new Date(r.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+
+                  {r.comment && <p className="mt-2 text-[13.5px] leading-relaxed">{r.comment}</p>}
+                  <div className="mt-2 text-[12px] font-semibold text-muted">{r.buyerName}</div>
+
+                  {r.response && (
+                    <div className="mt-2.5 rounded-xl bg-white p-2.5">
+                      <div className="text-[10.5px] font-bold uppercase tracking-wide text-muted">
+                        {storeName} replied
+                      </div>
+                      <p className="mt-0.5 text-[12.5px] leading-relaxed">{r.response}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
       )}
 

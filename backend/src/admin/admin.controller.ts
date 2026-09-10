@@ -54,6 +54,37 @@ export class AdminController {
     });
   }
 
+  // Every review, hidden ones included — see reviews().
+  @Get('reviews')
+  reviews(@Req() req: any, @Query('filter') filter?: string) {
+    return this.admin.reviews(req.user, filter);
+  }
+
+  // The withdrawal queue — its own screen, see payouts().
+  @Get('payouts')
+  payouts(@Req() req: any) {
+    return this.admin.payouts(req.user);
+  }
+
+  /**
+   * Decide a seller's withdrawal. `expectedVersion` + Idempotency-Key are
+   * enforced in the service — this pays real money.
+   */
+  @Post('payouts/:id/:action')
+  payoutAction(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('action') action: 'approve' | 'reject',
+    @Body() body: any,
+    @Headers('idempotency-key') idem?: string,
+  ) {
+    return this.admin.payoutAction(req.user, id, action, {
+      expectedVersion: body?.expectedVersion,
+      idempotencyKey: idem || body?.idempotencyKey,
+      note: body?.note,
+    });
+  }
+
   @Get('orders/:id/audit')
   orderAudit(@Req() req: any, @Param('id') id: string) {
     return this.admin.orderAudit(req.user, id);

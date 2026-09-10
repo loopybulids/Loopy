@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Icon } from '@/components/admin/AdminKit';
 import Logo from '@/components/Logo';
 import { Loop } from '@/components/icons';
+import { clearApiDataCache } from '@/lib/use-api-data';
 
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'grid' as const },
@@ -12,6 +13,8 @@ const NAV = [
   { href: '/admin/sellers', label: 'Sellers', icon: 'store' as const },
   { href: '/admin/customers', label: 'Customers', icon: 'users' as const },
   { href: '/admin/finance', label: 'Finance', icon: 'wallet' as const },
+  { href: '/admin/payouts', label: 'Payouts', icon: 'rupee' as const },
+  { href: '/admin/reviews', label: 'Reviews', icon: 'star' as const },
   { href: '/admin/support', label: 'Support', icon: 'headset' as const },
   { href: '/admin/analytics', label: 'Analytics', icon: 'chart' as const },
 ];
@@ -55,7 +58,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <button
-          onClick={() => { ['loopy_token', 'loopy_role', 'loopy_user', 'loopy_name', 'loopy_admin_command'].forEach((k) => localStorage.removeItem(k)); router.push('/seller/login'); }}
+          onClick={() => { ['loopy_token', 'loopy_role', 'loopy_user', 'loopy_name', 'loopy_admin_command'].forEach((k) => localStorage.removeItem(k)); clearApiDataCache(); router.push('/seller/login'); }}
           className="m-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold text-white/60 hover:bg-white/5 hover:text-white"
         >
           <Icon name="logout" size={18} /> Sign out

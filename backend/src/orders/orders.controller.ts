@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/comm
 import { OrdersService } from './orders.service';
 import { CheckoutDto } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SellerGuard } from '../auth/seller.guard';
 
 @Controller('orders')
 export class OrdersController {
@@ -14,7 +15,7 @@ export class OrdersController {
   }
 
   // Seller records a manual order (e.g. from a DM) — marks Paid + decrements stock.
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SellerGuard)
   @Post('manual')
   manual(@Req() req: any, @Body() dto: any) {
     return this.orders.createManual(req.user.sellerId, dto);
@@ -33,25 +34,25 @@ export class OrdersController {
     return this.orders.findOne(id, req.user);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SellerGuard)
   @Post(':id/accept')
   accept(@Param('id') id: string, @Req() req: any) {
     return this.orders.transition(id, req.user.sellerId, 'Accepted');
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SellerGuard)
   @Post(':id/revert')
   revert(@Param('id') id: string, @Req() req: any) {
     return this.orders.revertStatus(id, req.user.sellerId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SellerGuard)
   @Post(':id/reject')
   reject(@Param('id') id: string, @Req() req: any, @Body() body: { reason?: string }) {
     return this.orders.rejectOrder(id, req.user.sellerId, body?.reason);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SellerGuard)
   @Post(':id/ship')
   ship(@Param('id') id: string, @Req() req: any, @Body() body: { courier?: string }) {
     return this.orders.transition(id, req.user.sellerId, 'Shipped', body?.courier);

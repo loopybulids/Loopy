@@ -52,6 +52,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
   const [username, setUsername] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     setImpersonating(typeof window !== 'undefined' ? localStorage.getItem('loopy_impersonating') : null);
@@ -63,10 +64,14 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
       return;
     }
     setReady(true);
-    api.myProfile().then((p) => {
+    // Only the shell's three fields — not the whole Seller row with its
+    // base64 media and store config. See getSummary on the backend.
+    api.mySummary().then((p) => {
       setUsername(p?.username || '');
       setLogoUrl(p?.logoUrl || null);
       setPublished(!!p?.published);
+      // Comes from the server: the stored login payload has no email.
+      setEmail(p?.email || null);
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -102,6 +107,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
             storeName={name || 'Your Store'}
             username={username}
             logoUrl={logoUrl}
+            email={email}
             published={published}
           />
         </div>

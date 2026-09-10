@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useApiData } from '@/lib/use-api-data';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import OrderDetail, { paymentState, statusLabel, statusChip } from '@/components/store/OrderDetail';
 import { Bag, Share, Plus } from '@/components/icons';
@@ -22,8 +23,11 @@ const FILTERS: { key: string; label: string; match: (o: any) => boolean }[] = [
 ];
 
 export default function Orders() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Painted from the last visit on the first frame, then refreshed. Mirrored
+  // into local state so accept/ship/reject can update a row optimistically.
+  const { data: fetched, loading } = useApiData<any[]>('seller:orders', () => api.myOrders());
+  const [orders, setOrders] = useState<any[]>(fetched ?? []);
+  useEffect(() => { if (fetched) setOrders(fetched); }, [fetched]);
   const [filter, setFilter] = useState('All');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
@@ -49,9 +53,6 @@ export default function Orders() {
     }
   };
 
-  useEffect(() => {
-    api.myOrders().then((o) => { setOrders(o || []); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
 
   const active = FILTERS.find((f) => f.key === filter) || FILTERS[0];
   const shown = orders.filter(active.match);

@@ -107,6 +107,37 @@ export function orderShippedEmail(order: any, storeName?: string) {
   };
 }
 
+/**
+ * Asks the buyer to rate an order that has just been delivered.
+ *
+ * Sent once, the moment a seller marks the order Delivered — the point at
+ * which the buyer has the goods in hand and an opinion worth capturing. The
+ * link goes straight to the order in their account, where the star form is.
+ */
+export function reviewRequestEmail(order: any, storeName?: string, reviewUrl?: string) {
+  const who = storeName ? ` from ${storeName}` : '';
+  const stars = reviewUrl
+    ? `<div style="text-align:center;margin:4px 0 18px">
+         <a href="${reviewUrl}" style="font-size:30px;letter-spacing:6px;text-decoration:none;color:#E8B10A">★★★★★</a>
+       </div>`
+    : '';
+
+  return {
+    subject: `How was your order${storeName ? ` from ${storeName}` : ''}?`,
+    text: `Your order #${ref(order)}${who} has been delivered. Tell others what you thought — rate it out of 5 and leave a comment${reviewUrl ? `: ${reviewUrl}` : ' in your account'}.`,
+    html: shell(
+      'How did we do? ⭐',
+      `Your order <b>#${ref(order)}</b>${who} has arrived. A quick rating helps other shoppers — and helps the seller.`,
+      stars + summary(order) +
+      (reviewUrl
+        ? `<div style="text-align:center;margin-top:18px">
+             <a href="${reviewUrl}" style="display:inline-block;background:#15784A;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px">Rate this order</a>
+           </div>`
+        : ''),
+    ),
+  };
+}
+
 /** Seller declined — nothing is owed, and any stock has been released. */
 export function orderRejectedEmail(order: any, storeName?: string, reason?: string) {
   const who = storeName ? ` by ${storeName}` : '';

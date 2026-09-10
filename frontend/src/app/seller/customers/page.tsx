@@ -1,16 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { useApiData } from '@/lib/use-api-data';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import { Heart } from '@/components/icons';
 
 export default function Customers() {
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Painted from the last visit on the first frame, then refreshed.
+  const { data, loading } = useApiData('seller:customers', () =>
+    api.myCustomers().then((c) => (c || []).map((x: any) => ({ ...x, email: x.email || x.phone || '—' }))),
+  );
+  const rows: any[] = data ?? [];
 
-  useEffect(() => {
-    api.myCustomers().then((c) => { setRows((c || []).map((x) => ({ ...x, email: x.email || x.phone || '—' }))); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
 
   return (
     <div>

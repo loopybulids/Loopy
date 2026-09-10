@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useApiData } from '@/lib/use-api-data';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
@@ -21,13 +22,13 @@ function toArray(p: any): string[] {
 }
 
 export default function Catalog() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Painted from the last visit on the first frame, then refreshed. Mirrored
+  // into local state so the row toggles can still update optimistically.
+  const { data, loading } = useApiData<any[]>('seller:products', () => api.myProducts());
+  const [products, setProducts] = useState<any[]>(data ?? []);
+  useEffect(() => { if (data) setProducts(data); }, [data]);
   const [editId, setEditId] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.myProducts().then((p) => { setProducts(p || []); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
 
   const patchLocal = (id: string, patch: any) => setProducts((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
 

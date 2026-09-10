@@ -10,18 +10,27 @@
  *
  * The approved model (LoopyNow Admin PRD):
  *
- *   customer pays      = items + shipping + platform fee
- *   seller receives    = items + shipping
- *   Loopy keeps        = platform fee
+ *   net goods          = items - discount
+ *   customer pays      = net goods + shipping + platform fee
+ *   seller receives    = net goods + shipping
+ *   Loopy keeps        = platform fee   (charged on net goods, not gross)
  *
  * which always satisfies:  customerTotal === sellerReceivable + fee
+ *
+ * A seller's coupon is the seller's own promotion, so the discount comes out
+ * of their share. The fee is charged on what the goods actually sold for —
+ * charging 5% of a price nobody paid would be a fee on fictional revenue.
  */
 
 export const COMMISSION_PCT = Number(process.env.COMMISSION_PERCENT || 5);
 
 export interface OrderAmounts {
-  /** Goods value, before shipping or fee. */
+  /** Goods value at list price, before any discount, shipping or fee. */
   items: number;
+  /** Coupon discount off the goods value. Borne by the seller. */
+  discount: number;
+  /** Goods value actually sold for: items - discount. The fee is charged on this. */
+  netItems: number;
   /** Delivery charge — collected from the customer, paid through to the seller. */
   shipping: number;
   /** Loopy's platform fee, charged on the goods value. */
@@ -35,17 +44,32 @@ export interface OrderAmounts {
 /** Round to whole rupees — amounts are stored as integers. */
 const r = (n: number) => Math.round(n);
 
-/** Compute every figure for an order from its goods value and shipping. */
-export function computeAmounts(itemsAmount: number, shippingCharge: number, pct = COMMISSION_PCT): OrderAmounts {
+/**
+ * Compute every figure for an order from its goods value, shipping and any
+ * coupon discount.
+ *
+ * The discount is clamped to the goods value: a coupon worth more than the
+ * cart cannot make the goods negative and turn shipping into a payout.
+ */
+export function computeAmounts(
+  itemsAmount: number,
+  shippingCharge: number,
+  discountAmount = 0,
+  pct = COMMISSION_PCT,
+): OrderAmounts {
   const items = r(itemsAmount);
   const shipping = r(shippingCharge);
-  const fee = r((items * pct) / 100);
+  const discount = Math.min(Math.max(r(discountAmount), 0), items);
+  const netItems = items - discount;
+  const fee = r((netItems * pct) / 100);
   return {
     items,
+    discount,
+    netItems,
     shipping,
     fee,
-    customerTotal: items + shipping + fee,
-    sellerReceivable: items + shipping,
+    customerTotal: netItems + shipping + fee,
+    sellerReceivable: netItems + shipping,
   };
 }
 
@@ -57,14 +81,17 @@ export function computeAmounts(itemsAmount: number, shippingCharge: number, pct 
  */
 export function amountsOf(order: {
   itemsAmount: number; shippingCharge: number; commissionAmount: number; totalAmount: number;
+  discountAmount?: number | null;
 }): OrderAmounts & { reconciles: boolean; difference: number } {
   const items = order.itemsAmount || 0;
+  const discount = order.discountAmount || 0;
+  const netItems = items - discount;
   const shipping = order.shippingCharge || 0;
   const fee = order.commissionAmount || 0;
-  const sellerReceivable = items + shipping;
+  const sellerReceivable = netItems + shipping;
   const expected = sellerReceivable + fee;
   return {
-    items, shipping, fee,
+    items, discount, netItems, shipping, fee,
     customerTotal: order.totalAmount || 0,
     sellerReceivable,
     // A stored total that disagrees with its parts is a ledger fault, not a
@@ -74,9 +101,19 @@ export function amountsOf(order: {
   };
 }
 
-/** What the seller is owed across a set of orders. */
-export function sellerReceivableOf(orders: { itemsAmount: number; shippingCharge: number }[]) {
-  return orders.reduce((s, o) => s + (o.itemsAmount || 0) + (o.shippingCharge || 0), 0);
+/** What the seller is owed across a set of orders, net of coupon discounts. */
+export function sellerReceivableOf(
+  orders: { itemsAmount: number; shippingCharge: number; discountAmount?: number | null }[],
+) {
+  return orders.reduce(
+    (s, o) => s + (o.itemsAmount || 0) - (o.discountAmount || 0) + (o.shippingCharge || 0),
+    0,
+  );
+}
+
+/** Total coupon discount given away across a set of orders. */
+export function discountOf(orders: { discountAmount?: number | null }[]) {
+  return orders.reduce((s, o) => s + (o.discountAmount || 0), 0);
 }
 
 /** Platform revenue across a set of orders. */
@@ -93,7 +130,7 @@ export function gmvOf(orders: { totalAmount: number }[]) {
  * Reconciliation across a set of orders: GMV must equal seller liability plus
  * platform fees. Any difference is reported rather than silently absorbed.
  */
-export function reconcile(orders: { itemsAmount: number; shippingCharge: number; commissionAmount: number; totalAmount: number }[]) {
+export function reconcile(orders: { itemsAmount: number; shippingCharge: number; commissionAmount: number; totalAmount: number; discountAmount?: number | null }[]) {
   const gmv = gmvOf(orders);
   const sellerLiability = sellerReceivableOf(orders);
   const platformFee = platformFeeOf(orders);
@@ -106,6 +143,6 @@ export function reconcile(orders: { itemsAmount: number; shippingCharge: number;
     difference,
     reconciled: difference === 0,
     unreconciledOrders: offenders,
-    formula: 'GMV = seller receivable (items + shipping) + platform fee',
+    formula: 'GMV = seller receivable (items - discount + shipping) + platform fee',
   };
 }
