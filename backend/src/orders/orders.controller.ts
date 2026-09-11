@@ -54,8 +54,8 @@ export class OrdersController {
 
   @UseGuards(JwtAuthGuard, SellerGuard)
   @Post(':id/ship')
-  ship(@Param('id') id: string, @Req() req: any, @Body() body: { courier?: string }) {
-    return this.orders.transition(id, req.user.sellerId, 'Shipped', body?.courier);
+  ship(@Param('id') id: string, @Req() req: any, @Body() body: { courier?: string; awbNumber?: string }) {
+    return this.orders.transition(id, req.user.sellerId, 'Shipped', body?.courier, body?.awbNumber);
   }
 
   // Stands in for the Shiprocket "delivered" webhook — the seller marks it from

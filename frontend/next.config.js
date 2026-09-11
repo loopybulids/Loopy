@@ -11,6 +11,10 @@ const nextConfig = {
   outputFileTracingRoot: __dirname,
   turbopack: { root: __dirname },
 
+  // The floating "N" badge Next renders in dev. It sits over the sidebar and
+  // is indistinguishable from part of the UI in screenshots.
+  devIndicators: false,
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },  

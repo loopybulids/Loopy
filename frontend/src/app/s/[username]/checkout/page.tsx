@@ -62,11 +62,12 @@ export default function CheckoutPage() {
   // Platform fee, charged on the goods value on top of shipping. Must match
   // computeAmounts() in backend/src/common/money.ts or the total shown here
   // won't be the total charged.
-  // A seller's coupon comes off the goods value, and the fee is charged on what
-  // the goods actually sell for — same order of operations as computeAmounts().
+  // A seller's coupon comes off the goods value. The platform fee is a flat
+  // percentage of the LIST price and is not reduced by it — same order of
+  // operations as computeAmounts() on the server.
   const discount = Math.min(coupon?.discount ?? 0, subtotal);
   const netItems = subtotal - discount;
-  const fee = feePct == null ? null : Math.round((netItems * feePct) / 100);
+  const fee = feePct == null ? null : Math.round((subtotal * feePct) / 100);
   const total = shipCost == null || fee == null ? null : netItems + shipCost + fee;
   const belowMin = shipping?.minOrderAmount != null && subtotal < shipping.minOrderAmount;
 

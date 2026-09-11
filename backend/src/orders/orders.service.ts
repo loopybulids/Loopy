@@ -192,7 +192,13 @@ export class OrdersService {
    * number is useless to the buyer without knowing who to track it with — and
    * emails them the details.
    */
-  async transition(id: string, sellerId: string, to: 'Accepted' | 'Shipped', courier?: string) {
+  async transition(
+    id: string,
+    sellerId: string,
+    to: 'Accepted' | 'Shipped',
+    courier?: string,
+    awbNumber?: string,
+  ) {
     const order = await this.prisma.order.findUnique({ where: { id } });
     if (!order) throw new NotFoundException('Order not found');
     if (order.sellerId !== sellerId) throw new ForbiddenException('Not your order');
@@ -203,8 +209,21 @@ export class OrdersService {
       if (!name) throw new BadRequestException('Enter the courier / shipping agency name.');
       if (name.length > 60) throw new BadRequestException('Courier name is too long.');
       data.courier = name;
-      // Stub AWB. Real impl: Shiprocket order_create → order_ship (PRD §15.2).
-      data.awbNumber = 'DL' + Math.floor(1000000000 + Math.random() * 8999999999);
+
+      // The seller's real tracking number when they have one — a generated
+      // stub is useless on the courier's website, so anything they enter wins.
+      const awb = String(awbNumber || '').trim();
+      if (awb) {
+        if (awb.length > 40) throw new BadRequestException('Tracking number is too long.');
+        if (!/^[A-Za-z0-9-]+$/.test(awb)) {
+          throw new BadRequestException('A tracking number can only contain letters, numbers and dashes.');
+        }
+        data.awbNumber = awb.toUpperCase();
+      } else {
+        // Placeholder so the buyer sees something until the real one is added.
+        // Real impl: Shiprocket order_create → order_ship (PRD §15.2).
+        data.awbNumber = 'DL' + Math.floor(1000000000 + Math.random() * 8999999999);
+      }
     }
     const updated = await this.prisma.order.update({ where: { id }, data, include: { items: true } });
 

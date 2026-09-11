@@ -9,6 +9,30 @@ const config: Config = {
         navy: { DEFAULT: '#0E2A47', deep: '#091B2E', 700: '#143A5E', 600: '#1B4B79' },
         ink: '#0E2A47',
         green: { DEFAULT: '#15784A', 600: '#1E9E63', 500: '#22C55E', mint: '#86EFAC', soft: '#E3F6EC' },
+        // ── Admin console only ───────────────────────────────────────
+        // The admin is a separate tool for Loopy's own staff, so it uses a
+        // cool slate palette rather than the storefront's navy + green. Kept
+        // as its own tokens (not an override of the brand ones) so changing
+        // the admin can never retint a seller's storefront.
+        // Low contrast on purpose. A near-black sidebar against a near-white
+        // page put the loudest edge in the layout between two things that are
+        // only furniture; the sidebar is now a shade of the page rather than
+        // its opposite, and the accent is desaturated so the numbers carry
+        // the screen instead of the chrome.
+        slate: '#2A3341',      // body text
+        slateink: '#FFFFFF',   // sidebar — white chrome
+        cool: '#F5F6F8',       // page ground — grey, so white cards lift off it
+        hair: '#E7E9ED',       // borders
+        dim: '#6B7683',        // secondary text
+        pale: '#9AA3AE',       // tertiary text
+        // Fresh green accent, used sparingly: primary actions, the active nav
+        // item, positive figures. Deeper than a pure #22C55E so it still
+        // passes contrast as small text on white, which the brighter value
+        // does not.
+        accent: { DEFAULT: '#1EA75B', 600: '#17864A', soft: '#EAF7F0' },
+        alert: { DEFAULT: '#B4554C', soft: '#F9EEEC' },
+        warn: { DEFAULT: '#9A7B37', soft: '#F7F2E7' },
+
         paper: '#F6F5F0',
         cream: '#FBFAF6',
         line: '#E8E6DE',
@@ -22,6 +46,8 @@ const config: Config = {
         // dashboard typography. Weight, not family, sets hierarchy.
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         display: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        // Figures. Fixed-width digits so money lines up down a column.
+        num: ['var(--font-num)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       boxShadow: {
         soft: '0 12px 40px -12px rgba(14,42,71,.18)',

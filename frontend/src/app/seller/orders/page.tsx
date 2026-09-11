@@ -35,13 +35,20 @@ export default function Orders() {
 
   // Move an order along the fulfilment chain and swap the updated row in place,
   // so the queue reflects the new status without a full refetch.
-  const act = async (order: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', extra?: string) => {
+  const act = async (
+    order: any,
+    to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted',
+    extra?: string,
+    // Shipping carries two values: the agency in `extra`, and the seller's own
+    // tracking number here when they have one.
+    awb?: string,
+  ) => {
     setActErr('');
     setActing(order.id);
     try {
       const updated =
         to === 'Accepted' ? await api.acceptOrder(order.id)
-        : to === 'Shipped' ? await api.shipOrder(order.id, extra || '')
+        : to === 'Shipped' ? await api.shipOrder(order.id, extra || '', awb)
         : to === 'Delivered' ? await api.deliverOrder(order.id)
         : to === 'Reverted' ? await api.revertOrder(order.id)
         : await api.rejectOrder(order.id, extra);
@@ -147,18 +154,19 @@ const BACK_LABEL: Record<string, string> = {
 
 const NEXT: Record<string, { to: 'Accepted' | 'Shipped' | 'Delivered'; label: string; hint: string }> = {
   Paid: { to: 'Accepted', label: 'Accept order', hint: 'Confirm you have this item and will fulfil it.' },
-  Accepted: { to: 'Shipped', label: 'Mark as shipped', hint: 'Generates a tracking number for the buyer.' },
+  Accepted: { to: 'Shipped', label: 'Mark as shipped', hint: 'Add the courier and tracking number.' },
   Shipped: { to: 'Delivered', label: 'Mark as delivered', hint: 'Buyer confirms to release your payout.' },
 };
 
 function OrderActions({ order, busy, onAct, err }: {
   order: any; busy: boolean; err: string;
-  onAct: (o: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', reason?: string) => void;
+  onAct: (o: any, to: 'Accepted' | 'Shipped' | 'Delivered' | 'Rejected' | 'Reverted', reason?: string, awb?: string) => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const [shipping, setShipping] = useState(false);
   const [courier, setCourier] = useState('');
+  const [awb, setAwb] = useState('');
   const step = NEXT[order.status];
   const canRevert = !!BACK_LABEL[order.status];
   const pay = paymentState(order);
@@ -198,30 +206,52 @@ function OrderActions({ order, busy, onAct, err }: {
 
           {shipping && step.to === 'Shipped' && (
             <div className="mt-3 rounded-xl border border-green/30 bg-green-soft/30 p-3.5">
-              <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">
-                Shipping agency <span className="text-rose">*</span>
-              </label>
-              <input
-                value={courier}
-                onChange={(e) => setCourier(e.target.value)}
-                placeholder="e.g. Delhivery, Blue Dart, India Post"
-                maxLength={60}
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && courier.trim() && onAct(order, 'Shipped', courier.trim())}
-                className="c-input mt-1.5 text-[13px]"
-              />
-              <p className="mt-1.5 text-[11.5px] text-muted">
-                A tracking number is generated automatically. Sending this emails the buyer the courier and tracking details.
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">
+                    Shipping agency <span className="text-rose">*</span>
+                  </label>
+                  <input
+                    value={courier}
+                    onChange={(e) => setCourier(e.target.value)}
+                    placeholder="e.g. Delhivery, Blue Dart, India Post"
+                    maxLength={60}
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && courier.trim() && onAct(order, 'Shipped', courier.trim(), awb.trim())}
+                    className="c-input mt-1.5 text-[13px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">
+                    Tracking number
+                  </label>
+                  <input
+                    value={awb}
+                    onChange={(e) => setAwb(e.target.value.toUpperCase())}
+                    placeholder="From your courier's receipt"
+                    maxLength={40}
+                    onKeyDown={(e) => e.key === 'Enter' && courier.trim() && onAct(order, 'Shipped', courier.trim(), awb.trim())}
+                    className="c-input mt-1.5 font-mono text-[13px] uppercase"
+                  />
+                </div>
+              </div>
+
+              <p className="mt-2 text-[11.5px] text-muted">
+                {awb.trim()
+                  ? 'The buyer will be emailed this courier and tracking number.'
+                  : 'Leave the tracking number blank and a placeholder is generated — you can add the real one later by reverting and re-shipping. Sending emails the buyer either way.'}
               </p>
+
               <div className="mt-2.5 flex gap-2">
                 <button
-                  onClick={() => onAct(order, 'Shipped', courier.trim())}
+                  onClick={() => onAct(order, 'Shipped', courier.trim(), awb.trim())}
                   disabled={busy || !courier.trim()}
                   className="btn-green px-4 py-2 text-[13px] disabled:opacity-50"
                 >
                   {busy ? 'Sending…' : 'Send'}
                 </button>
-                <button onClick={() => { setShipping(false); setCourier(''); }} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy">
+                <button onClick={() => { setShipping(false); setCourier(''); setAwb(''); }} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy">
                   Cancel
                 </button>
               </div>

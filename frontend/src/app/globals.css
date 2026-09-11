@@ -26,6 +26,13 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
   .chip-amber { @apply chip text-amber; background: #FBF1DC; }
   .chip-rose { @apply chip text-rose; background: #FCEAE8; }
 
+  /* Admin console chips — the slate palette. Separate classes rather than
+     overriding .chip-green etc., so the seller console keeps the brand ones. */
+  .chip-accent { @apply chip bg-accent-soft text-accent; }
+  .chip-alert { @apply chip bg-alert-soft text-alert; }
+  .chip-warn  { @apply chip bg-warn-soft text-warn; }
+  .chip-ink   { @apply chip text-slate; background: rgba(28, 37, 48, 0.08); }
+
   /* the green protection ribbon under the nav */
   .protect-bar {
     @apply flex items-center justify-center gap-2 text-[12.5px] font-semibold text-white;

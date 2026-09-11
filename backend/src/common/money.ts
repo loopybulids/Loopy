@@ -13,13 +13,15 @@
  *   net goods          = items - discount
  *   customer pays      = net goods + shipping + platform fee
  *   seller receives    = net goods + shipping
- *   Loopy keeps        = platform fee   (charged on net goods, not gross)
+ *   Loopy keeps        = platform fee   (a flat 5% of the LIST price)
  *
  * which always satisfies:  customerTotal === sellerReceivable + fee
  *
  * A seller's coupon is the seller's own promotion, so the discount comes out
- * of their share. The fee is charged on what the goods actually sold for —
- * charging 5% of a price nobody paid would be a fee on fictional revenue.
+ * of their share alone. The fee is a flat percentage of the list price and is
+ * deliberately unaffected by it — running a discount does not reduce what
+ * Loopy charges, so the rate is predictable for both sides at 5% of the
+ * ticket price regardless of promotions.
  */
 
 export const COMMISSION_PCT = Number(process.env.COMMISSION_PERCENT || 5);
@@ -61,7 +63,9 @@ export function computeAmounts(
   const shipping = r(shippingCharge);
   const discount = Math.min(Math.max(r(discountAmount), 0), items);
   const netItems = items - discount;
-  const fee = r((netItems * pct) / 100);
+  // Charged on `items`, the list price — not on `netItems`. A seller's coupon
+  // is their promotion to fund; it does not discount Loopy's fee.
+  const fee = r((items * pct) / 100);
   return {
     items,
     discount,

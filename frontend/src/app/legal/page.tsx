@@ -1,22 +1,40 @@
-import { LegalShell, Clause } from '@/components/legal';
+import Link from 'next/link';
+import { LegalShell, Policy } from '@/components/legal';
+import { LEGAL_SECTIONS } from '@/lib/legal-content';
 
 export const metadata = {
-  title: 'Loopy — Legal',
-  description: 'Loopy legal information.',
+  title: 'Loopy — Legal Policies',
+  description: 'Every Loopy policy in one place: terms, privacy, refunds, shipping, payouts and more.',
 };
 
+/**
+ * The complete policy document, in document order, with a contents list.
+ *
+ * The topic-specific pages (/privacy, /terms, /refunds, …) render subsets of
+ * the same sections, so nothing here is a second copy of the wording.
+ */
 export default function LegalPage() {
   return (
-    <LegalShell title="Legal" active="/legal">
-      <Clause n={1} title="Who runs Loopy">Loopy is currently run by its three founders as a partnership — not yet a registered company. The founders are personally responsible for the business until it's incorporated. This will be updated once Loopy becomes a registered company.</Clause>
-      <Clause n={2} title="Liability">Loopy isn't responsible for disputes between buyers and sellers beyond facilitating the order. Our responsibility for any single order is capped at the value of that order, except where the law doesn't allow such limits.</Clause>
-      <Clause n={3} title="Force majeure">Neither side is responsible for delays caused by things genuinely out of their control — natural disasters, internet outages, government action, strikes, etc.</Clause>
-      <Clause n={4} title="Complaints & disputes">Email grievance@loopy.in. We'll acknowledge within 48 hours and try to resolve within a month. If unresolved, you can approach the National Consumer Helpline or the courts.</Clause>
-      <Clause n={5} title="Governing law">These terms are governed by Indian law, and any legal proceedings will be handled in the courts of Mumbai, Maharashtra.</Clause>
+    <LegalShell
+      title="Legal Policies"
+      sub="Every policy governing Loopy, in one document."
+      active="/legal"
+    >
+      <nav className="mt-8 rounded-xl border border-line bg-white p-4">
+        <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-faint">Contents</div>
+        <ol className="mt-2.5 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          {LEGAL_SECTIONS.map((s) => (
+            <li key={s.id} className="text-[13.5px]">
+              <Link href={`#${s.id}`} className="text-muted transition-colors hover:text-navy">
+                <span className="mr-1.5 font-num text-[12px] text-faint">{s.n}.</span>
+                {s.title}
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </nav>
 
-      <div id="contact" className="mt-8 scroll-mt-24 rounded-lg border border-line bg-white p-5 text-[13.5px] text-muted">
-        Questions? Reach us at <span className="font-semibold text-navy">legal@loopy.in</span> · Grievances: <span className="font-semibold text-navy">grievance@loopy.in</span>
-      </div>
+      {LEGAL_SECTIONS.map((s) => <Policy key={s.id} section={s} />)}
     </LegalShell>
   );
 }

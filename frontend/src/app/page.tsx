@@ -274,12 +274,18 @@ export default function Landing() {
           <div>
             <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Company</div>
             <ul className="mt-3 space-y-2 text-[14px] text-muted">
+              {/* Real routes — each policy has its own page, and Contact points at
+                  the Grievance Officer section, which is the one with contact
+                  details in it. The old '#refunds' and '#contact' anchors no
+                  longer existed. */}
               {[
                 { l: 'Terms', href: '/terms' },
                 { l: 'Privacy Policy', href: '/privacy' },
-                { l: 'Refund Policy', href: '/terms#refunds' },
-                { l: 'Legal', href: '/legal' },
-                { l: 'Contact', href: '/legal#contact' },
+                { l: 'Refunds & Returns', href: '/refunds' },
+                { l: 'Shipping', href: '/shipping' },
+                { l: 'Selling on Loopy', href: '/sellers-terms' },
+                { l: 'All policies', href: '/legal' },
+                { l: 'Contact', href: '/legal#grievance-redressal-policy' },
               ].map((x) => (
                 <li key={x.l}><Link href={x.href} className="transition-colors hover:text-navy">{x.l}</Link></li>
               ))}

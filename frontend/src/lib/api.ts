@@ -177,8 +177,9 @@ export const api = {
     req<any>(`/orders/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
   /** Step an order back one stage (Shipped → Accepted, etc). */
   revertOrder: (id: string) => req<any>(`/orders/${id}/revert`, { method: 'POST' }),
-  shipOrder: (id: string, courier: string) =>
-    req<any>(`/orders/${id}/ship`, { method: 'POST', body: JSON.stringify({ courier }) }),
+  /** Mark shipped. `awbNumber` is the seller's own tracking number, when they have one. */
+  shipOrder: (id: string, courier: string, awbNumber?: string) =>
+    req<any>(`/orders/${id}/ship`, { method: 'POST', body: JSON.stringify({ courier, awbNumber }) }),
 
   // admin (auth required, role=admin)
   adminStats: () => req<any>(`/admin/stats`),

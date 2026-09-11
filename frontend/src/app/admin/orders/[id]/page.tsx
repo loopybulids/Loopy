@@ -69,22 +69,22 @@ This cannot be undone. Continue?`
     setBusy('');
   };
 
-  if (err) return <Card className="p-6 text-rose">{err} — <Link href="/admin/orders" className="underline">back to orders</Link></Card>;
-  if (!d) return <div className="animate-pulse"><div className="h-8 w-48 rounded bg-line" /></div>;
+  if (err) return <Card className="p-6 text-alert">{err} — <Link href="/admin/orders" className="underline">back to orders</Link></Card>;
+  if (!d) return <div className="animate-pulse"><div className="h-8 w-48 rounded bg-hair" /></div>;
 
   const riskTone = d.risk > 50 ? 'rose' : d.risk > 20 ? 'amber' : 'green';
 
   return (
     <div className="space-y-5">
-      <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-navy"><Icon name="back" size={15} /> Orders</Link>
+      <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-dim hover:text-slate"><Icon name="back" size={15} /> Orders</Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-[26px] font-extrabold text-navy">Order #{d.id.slice(-6).toUpperCase()}</h1>
+            <h1 className="font-display text-[26px] font-extrabold text-slate">Order #{d.id.slice(-6).toUpperCase()}</h1>
             {statusChip(d.status)}
           </div>
-          <p className="text-[13px] text-muted">Placed {new Date(d.createdAt).toLocaleString('en-IN')}</p>
+          <p className="text-[13px] text-dim">Placed {new Date(d.createdAt).toLocaleString('en-IN')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Chip tone={riskTone as any}>Risk {d.risk}/100</Chip>
@@ -98,15 +98,15 @@ This cannot be undone. Continue?`
           {/* timeline */}
           <Card className="p-5">
             <SectionTitle>Order Timeline</SectionTitle>
-            <ol className="relative ml-2 space-y-4 border-l-2 border-line pl-5">
+            <ol className="relative ml-2 space-y-4 border-l-2 border-hair pl-5">
               {d.timeline.map((t: any) => (
                 <li key={t.key} className="relative">
-                  <span className={`absolute -left-[1.65rem] top-0.5 grid h-5 w-5 place-items-center rounded-full text-white ${t.done ? 'bg-green-600' : 'bg-line'}`}><Icon name="check" size={12} /></span>
+                  <span className={`absolute -left-[1.65rem] top-0.5 grid h-5 w-5 place-items-center rounded-full text-white ${t.done ? 'bg-accent' : 'bg-hair'}`}><Icon name="check" size={12} /></span>
                   <div className="flex items-center justify-between">
-                    <span className={`text-[13.5px] font-bold ${t.done ? 'text-navy' : 'text-faint'}`}>{t.label}</span>
-                    {t.at && <span className="text-[11px] text-muted">{new Date(t.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                    <span className={`text-[13.5px] font-bold ${t.done ? 'text-slate' : 'text-pale'}`}>{t.label}</span>
+                    {t.at && <span className="text-[11px] text-dim">{new Date(t.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
                   </div>
-                  {t.note && <div className="text-[11px] text-muted">{t.note}</div>}
+                  {t.note && <div className="text-[11px] text-dim">{t.note}</div>}
                 </li>
               ))}
             </ol>
@@ -118,9 +118,9 @@ This cannot be undone. Continue?`
             <div className="space-y-3">
               {d.items.map((it: any, i: number) => (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-paper">{it.image ? <img src={it.image} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-faint"><Icon name="box" size={18} /></span>}</span>
-                  <div className="min-w-0 flex-1"><div className="truncate font-semibold text-navy">{it.title}</div><div className="text-[11px] text-muted">{[it.brand, it.category, it.condition].filter(Boolean).join(' · ')}</div></div>
-                  <div className="text-right text-[13px]"><div className="font-bold text-navy">{money(it.price)}</div><div className="text-[11px] text-muted">×{it.qty}</div></div>
+                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-cool">{it.image ? <img src={it.image} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-pale"><Icon name="box" size={18} /></span>}</span>
+                  <div className="min-w-0 flex-1"><div className="truncate font-semibold text-slate">{it.title}</div><div className="text-[11px] text-dim">{[it.brand, it.category, it.condition].filter(Boolean).join(' · ')}</div></div>
+                  <div className="text-right text-[13px]"><div className="font-bold text-slate">{money(it.price)}</div><div className="text-[11px] text-dim">×{it.qty}</div></div>
                 </div>
               ))}
             </div>
@@ -138,20 +138,20 @@ This cannot be undone. Continue?`
             {/* Customer-facing lines. These three always sum to the total —
                 platform economics are shown separately below so the breakdown
                 can never appear to disagree with what was charged. */}
-            <div className="mt-4 border-t border-line pt-3">
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-faint">What the customer paid</div>
+            <div className="mt-4 border-t border-hair pt-3">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-pale">What the customer paid</div>
               <div className="space-y-1.5 text-[13px]">
                 <Line label="Items" value={money(d.amounts.items)} />
                 <Line label="Shipping" value={money(d.amounts.shipping)} />
                 <Line label={`Platform fee (${d.amounts.items ? Math.round((d.amounts.platformFee / d.amounts.items) * 100) : 0}%)`} value={money(d.amounts.platformFee)} />
-                <div className="flex justify-between border-t border-line pt-1.5 text-[14px] font-bold text-navy">
+                <div className="flex justify-between border-t border-hair pt-1.5 text-[14px] font-bold text-slate">
                   <span>Order total</span><span>{money(d.amounts.total)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 border-t border-line pt-3">
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-faint">Settlement</div>
+            <div className="mt-4 border-t border-hair pt-3">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-pale">Settlement</div>
               <div className="space-y-1.5 text-[13px]">
                 <Line label="Seller receivable (items + shipping)" value={money(d.amounts.sellerReceivable)} />
                 <Line label="Loopy keeps (platform fee)" value={money(d.amounts.platformFee)} />
@@ -161,9 +161,9 @@ This cannot be undone. Continue?`
 
             {/* A stored total that disagrees with its parts is a ledger fault. */}
             {d.amounts.reconciles ? (
-              <p className="mt-3 text-[12px] font-semibold text-green-600">✓ Reconciled — total equals items + shipping + fee.</p>
+              <p className="mt-3 text-[12px] font-semibold text-accent">✓ Reconciled — total equals items + shipping + fee.</p>
             ) : (
-              <p className="mt-3 rounded-lg bg-rose-soft px-3 py-2 text-[12px] font-bold text-rose">
+              <p className="mt-3 rounded-lg bg-alert-soft px-3 py-2 text-[12px] font-bold text-alert">
                 ⚠ Ledger mismatch of {money(d.amounts.difference)} — stored total does not equal its components. Do not settle this order until it is corrected.
               </p>
             )}
@@ -172,7 +172,7 @@ This cannot be undone. Continue?`
           {d.dispute && (
             <Card className="p-5">
               <SectionTitle action={statusChip(d.dispute.status)}>Dispute</SectionTitle>
-              <div className="text-[13px] text-navy"><b>{d.dispute.issueType}</b> — {d.dispute.description || 'No description'}</div>
+              <div className="text-[13px] text-slate"><b>{d.dispute.issueType}</b> — {d.dispute.description || 'No description'}</div>
             </Card>
           )}
         </div>
@@ -197,11 +197,11 @@ This cannot be undone. Continue?`
               <Action label="Contact Customer" onClick={() => d.customer.phone && (window.location.href = `tel:${d.customer.phone}`)} />
             </div>
             {!(d.allowedActions || []).length && (
-              <p className="mt-2 text-[12px] text-muted">
+              <p className="mt-2 text-[12px] text-dim">
                 No further action is possible — this order is {d.status.toLowerCase()}.
               </p>
             )}
-            <p className="mt-3 border-t border-line pt-2 text-[11px] text-faint">
+            <p className="mt-3 border-t border-hair pt-2 text-[11px] text-pale">
               Version {d.version} · actions are checked against this version, so a stale screen cannot overwrite someone else&apos;s decision.
             </p>
           </Card>
@@ -212,10 +212,10 @@ This cannot be undone. Continue?`
             <Card className="p-5">
               <SectionTitle>Refund</SectionTitle>
               <div className="mb-3 flex items-center gap-2">
-                <span className={d.refundState === 'Refunded' ? 'chip-green' : d.refundState === 'Failed' ? 'chip-rose' : 'chip-amber'}>
+                <span className={d.refundState === 'Refunded' ? 'chip-accent' : d.refundState === 'Failed' ? 'chip-alert' : 'chip-warn'}>
                   {d.refundState}
                 </span>
-                <span className="text-[12.5px] text-muted">{money(d.amounts.total)} owed to the customer</span>
+                <span className="text-[12.5px] text-dim">{money(d.amounts.total)} owed to the customer</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {REFUND_NEXT[d.refundState]?.map((to: string) => (
@@ -229,7 +229,7 @@ This cannot be undone. Continue?`
                 ))}
               </div>
               {!REFUND_NEXT[d.refundState]?.length && (
-                <p className="text-[12px] text-muted">This refund is settled. Nothing further to do.</p>
+                <p className="text-[12px] text-dim">This refund is settled. Nothing further to do.</p>
               )}
             </Card>
           )}
@@ -240,12 +240,12 @@ This cannot be undone. Continue?`
             {audit.length ? (
               <ol className="space-y-2.5">
                 {audit.map((a) => (
-                  <li key={a.id} className="border-l-2 border-line pl-3">
+                  <li key={a.id} className="border-l-2 border-hair pl-3">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                      <span className="text-[13px] font-bold text-navy">{a.action}</span>
-                      <span className="text-[11px] text-muted">{new Date(a.at).toLocaleString('en-IN')}</span>
+                      <span className="text-[13px] font-bold text-slate">{a.action}</span>
+                      <span className="text-[11px] text-dim">{new Date(a.at).toLocaleString('en-IN')}</span>
                     </div>
-                    <div className="text-[12px] text-muted">
+                    <div className="text-[12px] text-dim">
                       {a.before?.status && a.after?.status && a.before.status !== a.after.status
                         ? `${a.before.status} → ${a.after.status}`
                         : a.before?.refundState || a.after?.refundState
@@ -253,12 +253,12 @@ This cannot be undone. Continue?`
                           : ''}
                       {a.amount ? ` · ${money(a.amount)}` : ''}
                     </div>
-                    <div className="text-[11px] text-faint">by {a.actor}</div>
+                    <div className="text-[11px] text-pale">by {a.actor}</div>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="text-[12.5px] text-muted">No admin action has been taken on this order.</p>
+              <p className="text-[12.5px] text-dim">No admin action has been taken on this order.</p>
             )}
           </Card>
 
@@ -276,13 +276,13 @@ This cannot be undone. Continue?`
 
           {/* seller */}
           <Card className="p-5">
-            <SectionTitle action={<Link href={`/admin/sellers/${d.seller.id}`} className="text-[12px] font-semibold text-green-600">Open →</Link>}>Seller</SectionTitle>
+            <SectionTitle action={<Link href={`/admin/sellers/${d.seller.id}`} className="text-[12px] font-semibold text-accent">Open →</Link>}>Seller</SectionTitle>
             <div className="space-y-2 text-[13px]">
               <Field label="Store" value={d.seller.storeName} />
               <Field label="Email" value={d.seller.email || '—'} />
               <Field label="City" value={d.seller.city || '—'} />
               <Field label="Rating" value={`${(d.seller.rating || 0).toFixed(1)} ★`} />
-              <div className="flex items-center justify-between"><span className="text-faint">KYC</span>{statusChip(d.seller.kyc)}</div>
+              <div className="flex items-center justify-between"><span className="text-pale">KYC</span>{statusChip(d.seller.kyc)}</div>
             </div>
           </Card>
         </div>
@@ -294,15 +294,15 @@ This cannot be undone. Continue?`
 function Field({ label, value, bold, accent }: { label: string; value: any; bold?: boolean; accent?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="shrink-0 text-faint">{label}</span>
-      <span className={`truncate text-right ${bold ? 'font-extrabold text-navy' : accent ? 'font-bold text-green-600' : 'font-semibold text-navy'}`}>{value}</span>
+      <span className="shrink-0 text-pale">{label}</span>
+      <span className={`truncate text-right ${bold ? 'font-extrabold text-slate' : accent ? 'font-bold text-accent' : 'font-semibold text-slate'}`}>{value}</span>
     </div>
   );
 }
 
 function Action({ label, onClick, tone, busy }: { label: string; onClick: () => void; tone?: 'rose'; busy?: boolean }) {
   return (
-    <button onClick={onClick} disabled={busy} className={`rounded-xl px-3 py-2.5 text-[12.5px] font-bold disabled:opacity-50 ${tone === 'rose' ? 'bg-rose-soft text-rose hover:bg-rose/10' : 'bg-paper text-navy hover:bg-line/60'}`}>
+    <button onClick={onClick} disabled={busy} className={`rounded-xl px-3 py-2.5 text-[12.5px] font-bold disabled:opacity-50 ${tone === 'rose' ? 'bg-alert-soft text-alert hover:bg-alert/10' : 'bg-cool text-slate hover:bg-hair/60'}`}>
       {busy ? '…' : label}
     </button>
   );
@@ -312,8 +312,8 @@ function Action({ label, onClick, tone, busy }: { label: string; onClick: () => 
 function Line({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="flex justify-between">
-      <span className={muted ? 'text-faint' : 'text-muted'}>{label}</span>
-      <span className={muted ? 'font-semibold text-faint' : 'font-semibold text-navy'}>{value}</span>
+      <span className={muted ? 'text-pale' : 'text-dim'}>{label}</span>
+      <span className={muted ? 'font-semibold text-pale' : 'font-semibold text-slate'}>{value}</span>
     </div>
   );
 }

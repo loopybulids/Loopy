@@ -50,50 +50,113 @@ export function Icon({ name, size = 18, className = '' }: { name: IconName; size
 
 /* ───────────────────────── building blocks ───────────────────────── */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-line bg-white shadow-card ${className}`}>{children}</div>;
+  // Hairline border, no drop shadow: on a warm off-white ground a shadow on
+  // every panel is what makes a layout look padded rather than composed.
+  return <div className={`rounded-xl border border-hair bg-white ${className}`}>{children}</div>;
 }
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <h2 className="font-display text-[15px] font-extrabold text-navy">{children}</h2>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h2 className="font-display text-[13.5px] font-bold tracking-[-0.01em] text-slate">{children}</h2>
       {action}
     </div>
   );
 }
 
-export function Delta({ value, suffix = '%' }: { value: number; suffix?: string }) {
+/**
+ * A change against the previous period.
+ *
+ * Deliberately quiet. At Loopy's current volume a single order swings
+ * day-over-day revenue by 99%, and rendering that in alarm red made a normal
+ * Tuesday look like a crisis — the colour said "emergency" where the number
+ * only meant "small sample". It now reads as a caption, and says what it is
+ * compared against so the figure can be judged rather than just felt.
+ */
+export function Delta({ value, suffix = '%', since = 'vs yesterday' }: { value: number; suffix?: string; since?: string }) {
   const up = value >= 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold ${up ? 'text-green-600' : 'text-rose'}`}>
-      {up ? '▲' : '▼'} {Math.abs(value)}{suffix}
+    <span className="inline-flex items-center gap-1 text-[11px] text-dim">
+      <span className={`font-num font-medium tabular-nums ${up ? 'text-accent' : 'text-alert/80'}`}>
+        {up ? '+' : '−'}{Math.abs(value)}{suffix}
+      </span>
+      <span className="text-pale">{since}</span>
     </span>
   );
 }
 
+/**
+ * A single figure.
+ *
+ * Deliberately plain. Every one of these used to carry a coloured icon pill —
+ * green, violet, amber, rose, navy — so a screen of thirteen of them read as
+ * decoration with no hierarchy, and colour meant nothing because everything
+ * had some. Now the card is a label and a number; colour appears only when
+ * `accent` is 'amber' or 'rose', which is the card saying something is wrong.
+ *
+ * Labels are rendered as written rather than forced to uppercase, so they read
+ * as words instead of shouting.
+ */
 export function StatCard({ label, value, delta, icon, accent, hint, href }: { label: string; value: ReactNode; delta?: number; icon?: IconName; accent?: 'green' | 'navy' | 'rose' | 'amber' | 'violet'; hint?: string; href?: string }) {
-  const ring = accent === 'green' ? 'text-green-600 bg-green-mint' : accent === 'rose' ? 'text-rose bg-rose-soft' : accent === 'amber' ? 'text-amber bg-amber-soft' : accent === 'violet' ? 'text-violet-600 bg-violet-50' : 'text-navy bg-paper';
+  // Only states that need attention get colour. Everything else stays quiet.
+  const alert = accent === 'rose' || accent === 'amber';
+  const tone = accent === 'rose' ? 'text-alert' : accent === 'amber' ? 'text-warn' : 'text-pale';
+
   const inner = (
     <>
-      <div className="flex items-start justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-faint">{label}</span>
-        {icon && <span className={`grid h-7 w-7 place-items-center rounded-lg ${ring}`}><Icon name={icon} size={15} /></span>}
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[12px] font-medium leading-snug tracking-[0.01em] text-dim">{label}</span>
+        {icon && <span className={`shrink-0 ${tone}`}><Icon name={icon} size={15} /></span>}
       </div>
-      <div className="mt-2 font-display text-[24px] font-extrabold leading-none text-navy">{value}</div>
-      <div className="mt-1.5 flex items-center gap-2">
-        {delta !== undefined && <Delta value={delta} />}
-        {hint && <span className="text-[11px] text-muted">{hint}</span>}
+      <div className={`mt-3 font-num text-[25px] font-semibold leading-none tracking-[-0.03em] tabular-nums ${alert ? tone : 'text-slate'}`}>
+        {value}
       </div>
+      {(delta !== undefined || hint) && (
+        <div className="mt-1.5 flex items-center gap-2">
+          {delta !== undefined && <Delta value={delta} />}
+          {hint && <span className="text-[11.5px] text-pale">{hint}</span>}
+        </div>
+      )}
     </>
   );
-  if (href) return <Link href={href} className="block rounded-2xl border border-line bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-green-600/40 hover:shadow-soft">{inner}</Link>;
-  return <Card className="p-4">{inner}</Card>;
+
+  const box = `block rounded-xl border bg-white px-4 py-[18px] transition-colors ${alert ? 'border-current/25' : 'border-hair'}`;
+  if (href) return <Link href={href} className={`${box} hover:border-slate/25`}>{inner}</Link>;
+  return <div className={box}>{inner}</div>;
+}
+
+/**
+ * A row of small counts sharing one card, divided by hairlines.
+ *
+ * Seven separate cards for "active / processing / delivered / cancelled /
+ * returns / customers / sellers" gave each the same visual weight as GMV,
+ * which is the main reason the dashboard read as a wall of boxes. They are
+ * counts, so they belong together in one strip.
+ */
+export function MetricStrip({ items }: { items: { label: string; value: ReactNode; href?: string; alert?: boolean }[] }) {
+  return (
+    <div className="grid grid-cols-2 divide-hair rounded-xl border border-hair bg-white sm:grid-cols-4 sm:divide-x lg:grid-cols-7">
+      {items.map((it) => {
+        const body = (
+          <>
+            <div className="text-[11.5px] font-medium tracking-[0.01em] text-dim">{it.label}</div>
+            <div className={`mt-1.5 font-num text-[19px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${it.alert ? 'text-alert' : 'text-slate'}`}>
+              {it.value}
+            </div>
+          </>
+        );
+        return it.href
+          ? <Link key={it.label} href={it.href} className="px-4 py-3.5 transition-colors hover:bg-cool/70">{body}</Link>
+          : <div key={it.label} className="px-4 py-3.5">{body}</div>;
+      })}
+    </div>
+  );
 }
 
 export function Chip({ tone, children }: { tone: 'green' | 'rose' | 'amber' | 'navy' | 'violet' | 'gray'; children: ReactNode }) {
   const c = {
-    green: 'bg-green-mint text-green', rose: 'bg-rose-soft text-rose', amber: 'bg-amber-soft text-amber',
-    navy: 'bg-navy/10 text-navy', violet: 'bg-violet-50 text-violet-700', gray: 'bg-paper text-muted',
+    green: 'bg-accent-soft text-accent', rose: 'bg-alert-soft text-alert', amber: 'bg-warn-soft text-warn',
+    navy: 'bg-slate/10 text-slate', violet: 'bg-slate/10 text-slate', gray: 'bg-cool text-dim',
   }[tone];
   return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ${c}`}>{children}</span>;
 }
@@ -110,13 +173,95 @@ export function statusChip(status: string) {
 /* ───────────────────────── charts (recharts) ───────────────────────── */
 const TT = ({ active, payload, label, fmt }: any) =>
   active && payload?.length ? (
-    <div className="rounded-lg border border-line bg-white px-3 py-1.5 text-[12px] shadow-card">
-      <div className="font-bold text-navy">{label}</div>
-      <div className="text-muted">{fmt ? fmt(payload[0].value) : payload[0].value}</div>
+    <div className="rounded-lg border border-hair bg-white px-3 py-1.5 text-[12px] shadow-card">
+      <div className="font-bold text-slate">{label}</div>
+      <div className="text-dim">{fmt ? fmt(payload[0].value) : payload[0].value}</div>
     </div>
   ) : null;
 
-export function AreaTrend({ data, color = '#16a34a', height = 220, money: asMoney }: { data: { label: string; value: number }[]; color?: string; height?: number; money?: boolean }) {
+/**
+ * A chart with no axes, sized to sit inside a card next to a figure.
+ *
+ * The point is shape, not values — whether a number is climbing or falling —
+ * so everything that would invite reading an exact amount is removed.
+ */
+export function Spark({ data, color = '#1EA75B', height = 40, up = true }: { data: { label: string; value: number }[]; color?: string; height?: number; up?: boolean }) {
+  const tone = up ? color : '#B4554C';
+  const id = `s${tone.replace('#', '')}`;
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={tone} stopOpacity={0.22} />
+            <stop offset="100%" stopColor={tone} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <Area type="monotone" dataKey="value" stroke={tone} strokeWidth={1.75} fill={`url(#${id})`} dot={false} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/**
+ * A headline figure with an icon, its movement, and its recent shape.
+ *
+ * Used for the two or three numbers that carry a screen. The icon sits in a
+ * soft tinted tile — affordable here precisely because there are only a few
+ * of these; the same treatment on thirteen cards is what made the old
+ * dashboard read as decoration.
+ */
+export function StatTile({
+  label, value, icon, delta, series, hint, href, tone = 'accent',
+}: {
+  label: string;
+  value: ReactNode;
+  icon?: IconName;
+  delta?: number;
+  series?: { label: string; value: number }[];
+  hint?: string;
+  href?: string;
+  tone?: 'accent' | 'warn' | 'alert';
+}) {
+  const tile = tone === 'alert' ? 'bg-alert-soft text-alert'
+    : tone === 'warn' ? 'bg-warn-soft text-warn'
+    : 'bg-accent-soft text-accent';
+  const line = tone === 'alert' ? '#B4554C' : tone === 'warn' ? '#9A7B37' : '#1EA75B';
+
+  const inner = (
+    <div className="flex items-start gap-3">
+      {icon && (
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${tile}`}>
+          <Icon name={icon} size={18} />
+        </span>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="text-[11.5px] font-medium tracking-[0.01em] text-dim">{label}</div>
+        <div className="mt-1 font-num text-[22px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-slate">
+          {value}
+        </div>
+        {(delta !== undefined || hint) && (
+          <div className="mt-1.5">
+            {delta !== undefined ? <Delta value={delta} /> : <span className="text-[11px] text-pale">{hint}</span>}
+          </div>
+        )}
+      </div>
+
+      {series && series.length > 1 && (
+        <div className="w-[76px] shrink-0 self-center">
+          <Spark data={series} color={line} up={(delta ?? 0) >= 0} />
+        </div>
+      )}
+    </div>
+  );
+
+  const box = 'block rounded-xl border border-hair bg-white px-4 py-[18px] transition-colors';
+  if (href) return <Link href={href} className={`${box} hover:border-accent/35`}>{inner}</Link>;
+  return <div className={box}>{inner}</div>;
+}
+
+export function AreaTrend({ data, color = '#1EA75B', height = 220, money: asMoney }: { data: { label: string; value: number }[]; color?: string; height?: number; money?: boolean }) {
   const id = `g${color.replace('#', '')}`;
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -127,8 +272,8 @@ export function AreaTrend({ data, color = '#16a34a', height = 220, money: asMone
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={20} />
-        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} tickFormatter={(v) => (asMoney ? compact(v) : num(v))} />
+        <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9AA3AE', fontFamily: 'var(--font-num)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={20} />
+        <YAxis tick={{ fontSize: 10, fill: '#9AA3AE', fontFamily: 'var(--font-num)' }} axisLine={false} tickLine={false} width={44} tickFormatter={(v) => (asMoney ? compact(v) : num(v))} />
         <Tooltip content={<TT fmt={(v: number) => (asMoney ? money(v) : num(v))} />} />
         <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2.2} fill={`url(#${id})`} />
       </AreaChart>
@@ -146,8 +291,20 @@ export function MiniArea({ data, color = '#16a34a', height = 48 }: { data: { val
   );
 }
 
-const DONUT = ['#16a34a', '#6366f1', '#f59e0b', '#ef4444', '#0ea5e9', '#a855f7', '#14b8a6', '#ec4899'];
-export function Donut({ data, height = 220, money: asMoney }: { data: { name: string; value: number }[]; height?: number; money?: boolean }) {
+/**
+ * Chart palette, drawn from the brand only.
+ *
+ * This used to be eight unrelated hues — emerald, indigo, amber, red, sky,
+ * purple, teal, pink — which made every chart look like a sample dataset and
+ * carried no meaning: nothing about "indigo" says "processing". It is now the
+ * navy/green brand ramp, with amber and rose reserved for the two slices that
+ * genuinely mean "attention" and "problem".
+ */
+const DONUT = ['#1EA75B', '#4A86B4', '#A9DCC0', '#2A3341', '#1EA75B', '#9A7B37', '#B4554C'];
+export function Donut({ data, height = 220, money: asMoney, colors }: { data: { name: string; value: number }[]; height?: number; money?: boolean; colors?: string[] }) {
+  // A positional ramp can't know that "Cancelled" should not look like a
+  // success, so callers may pass a palette matched to their own slices.
+  const ramp = colors?.length ? colors : DONUT;
   const total = data.reduce((s, d) => s + d.value, 0);
   return (
     <div className="flex items-center gap-4">
@@ -155,7 +312,7 @@ export function Donut({ data, height = 220, money: asMoney }: { data: { name: st
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data.length ? data : [{ name: 'No data', value: 1 }]} dataKey="value" nameKey="name" innerRadius="62%" outerRadius="100%" paddingAngle={2} stroke="none">
-              {(data.length ? data : [{ name: 'x', value: 1 }]).map((_, i) => <Cell key={i} fill={data.length ? DONUT[i % DONUT.length] : '#e2e8f0'} />)}
+              {(data.length ? data : [{ name: 'x', value: 1 }]).map((_, i) => <Cell key={i} fill={data.length ? ramp[i % ramp.length] : '#e2e8f0'} />)}
             </Pie>
             <Tooltip content={<TT fmt={(v: number) => (asMoney ? money(v) : num(v))} />} />
           </PieChart>
@@ -164,11 +321,11 @@ export function Donut({ data, height = 220, money: asMoney }: { data: { name: st
       <ul className="flex-1 space-y-1.5">
         {data.slice(0, 6).map((d, i) => (
           <li key={d.name} className="flex items-center justify-between text-[12.5px]">
-            <span className="flex items-center gap-2 truncate text-navy"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: DONUT[i % DONUT.length] }} />{d.name}</span>
-            <span className="font-semibold text-muted">{total ? Math.round((d.value / total) * 100) : 0}%</span>
+            <span className="flex items-center gap-2 truncate text-slate"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: ramp[i % ramp.length] }} />{d.name}</span>
+            <span className="font-semibold text-dim">{total ? Math.round((d.value / total) * 100) : 0}%</span>
           </li>
         ))}
-        {!data.length && <li className="text-[12px] text-muted">No data yet</li>}
+        {!data.length && <li className="text-[12px] text-dim">No data yet</li>}
       </ul>
     </div>
   );
@@ -178,8 +335,8 @@ export function Bars({ data, color = '#6366f1', height = 220, money: asMoney }: 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-        <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
-        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} tickFormatter={(v) => (asMoney ? compact(v) : num(v))} />
+        <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9AA3AE', fontFamily: 'var(--font-num)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
+        <YAxis tick={{ fontSize: 10, fill: '#9AA3AE', fontFamily: 'var(--font-num)' }} axisLine={false} tickLine={false} width={44} tickFormatter={(v) => (asMoney ? compact(v) : num(v))} />
         <Tooltip cursor={{ fill: '#f1f5f9' }} content={<TT fmt={(v: number) => (asMoney ? money(v) : num(v))} />} />
         <Bar dataKey="value" fill={color} radius={[5, 5, 0, 0]} maxBarSize={28} />
       </BarChart>

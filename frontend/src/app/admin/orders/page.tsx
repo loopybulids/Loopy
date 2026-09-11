@@ -18,21 +18,21 @@ export default function OrdersCenter() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-[26px] font-extrabold text-navy">Orders Control Center</h1>
-        <p className="text-[14px] text-muted">Every order across all sellers — search, filter and investigate.</p>
+        <h1 className="font-display text-[26px] font-extrabold text-slate">Orders Control Center</h1>
+        <p className="text-[14px] text-dim">Every order across all sellers — search, filter and investigate.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
-          <Icon name="search" size={16} className="text-faint" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()} placeholder="Order ID, customer, phone, seller, payment ID, AWB…" className="w-full bg-transparent text-[13.5px] outline-none placeholder:text-faint" />
-          <button onClick={load} className="rounded-lg bg-navy px-3 py-1 text-[12px] font-bold text-white">Search</button>
+        <div className="flex flex-1 items-center gap-2 rounded-xl border border-hair bg-white px-3 py-2">
+          <Icon name="search" size={16} className="text-pale" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()} placeholder="Order ID, customer, phone, seller, payment ID, AWB…" className="w-full bg-transparent text-[13.5px] outline-none placeholder:text-pale" />
+          <button onClick={load} className="rounded-lg bg-slate px-3 py-1 text-[12px] font-bold text-white">Search</button>
         </div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto pb-1">
         {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[12.5px] font-bold capitalize ${tab === t ? 'bg-navy text-white' : 'bg-white text-muted hover:bg-paper'}`}>
+          <button key={t} onClick={() => setTab(t)} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[12.5px] font-bold capitalize ${tab === t ? 'bg-slate text-white' : 'bg-white text-dim hover:bg-cool'}`}>
             {t === 'all' ? 'All' : t === 'PendingPayment' ? 'Pending' : t}
           </button>
         ))}
@@ -42,7 +42,7 @@ export default function OrdersCenter() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-[13px]">
             <thead>
-              <tr className="border-b border-line text-[11px] uppercase tracking-wide text-faint">
+              <tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale">
                 <th className="px-4 py-3 font-bold">Order</th>
                 <th className="py-3 font-bold">Customer</th>
                 <th className="py-3 font-bold">Seller</th>
@@ -53,25 +53,25 @@ export default function OrdersCenter() {
                 <th className="py-3 font-bold"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody className="divide-y divide-hair">
               {rows.map((o) => (
-                <tr key={o.id} className="hover:bg-paper/60">
-                  <td className="px-4 py-3 font-bold text-navy">#{o.id.slice(-6).toUpperCase()}</td>
-                  <td className="py-3"><div className="font-semibold text-navy">{o.buyerName || 'Customer'}</div><div className="text-[11px] text-muted">{o.buyerPhone || '—'}</div></td>
-                  <td className="py-3 text-navy">{o.seller || '—'}</td>
-                  <td className="py-3"><span className="text-navy">{o.firstItem}</span>{o.itemCount > 1 && <span className="text-muted"> +{o.itemCount - 1}</span>}</td>
-                  <td className="py-3 font-bold text-navy">{money(o.total)}</td>
+                <tr key={o.id} className="hover:bg-cool/60">
+                  <td className="px-4 py-3 font-bold text-slate">#{o.id.slice(-6).toUpperCase()}</td>
+                  <td className="py-3"><div className="font-semibold text-slate">{o.buyerName || 'Customer'}</div><div className="text-[11px] text-dim">{o.buyerPhone || '—'}</div></td>
+                  <td className="py-3 text-slate">{o.seller || '—'}</td>
+                  <td className="py-3"><span className="text-slate">{o.firstItem}</span>{o.itemCount > 1 && <span className="text-dim"> +{o.itemCount - 1}</span>}</td>
+                  <td className="py-3 font-bold text-slate">{money(o.total)}</td>
                   <td className="py-3">{statusChip(o.status)}</td>
-                  <td className="py-3 text-[12px] text-muted">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                  <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-green-600 hover:underline">Investigate →</Link></td>
+                  <td className="py-3 text-[12px] text-dim">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                  <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-accent hover:underline">Investigate →</Link></td>
                 </tr>
               ))}
-              {!loading && !rows.length && <tr><td colSpan={8} className="px-4 py-10 text-center text-muted">No orders found.</td></tr>}
-              {loading && <tr><td colSpan={8} className="px-4 py-10 text-center text-muted animate-pulse">Loading orders…</td></tr>}
+              {!loading && !rows.length && <tr><td colSpan={8} className="px-4 py-10 text-center text-dim">No orders found.</td></tr>}
+              {loading && <tr><td colSpan={8} className="px-4 py-10 text-center text-dim animate-pulse">Loading orders…</td></tr>}
             </tbody>
           </table>
         </div>
-        {!loading && <div className="border-t border-line px-4 py-3 text-[12px] text-muted">{rows.length} orders</div>}
+        {!loading && <div className="border-t border-hair px-4 py-3 text-[12px] text-dim">{rows.length} orders</div>}
       </Card>
     </div>
   );
