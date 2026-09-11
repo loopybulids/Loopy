@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { storeUrl } from '@/lib/store-url';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import { Check, Plus, Share, Tag } from '@/components/icons';
 
@@ -64,7 +65,8 @@ export default function CheckoutLinks() {
     for (const r of rows) if (byId.has(r.pid)) merged.set(r.pid, (merged.get(r.pid) || 0) + r.qty);
     if (!merged.size) return '';
     const add = [...merged].map(([id, q]) => `${id}:${q}`).join(',');
-    return `${origin}/s/${username}/cart?add=${add}`;
+    // The seller's own address when a wildcard domain is configured.
+    return storeUrl(username, `/cart?add=${add}`);
   }, [origin, username, rows, byId]);
 
   const copy = async () => {

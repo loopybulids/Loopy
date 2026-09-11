@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
+import { storeUrl } from '@/lib/store-url';
 import { exitImpersonation } from '@/lib/impersonate';
 import NotificationsBell from '@/components/NotificationsBell';
 import Logo from '@/components/Logo';
@@ -168,7 +169,9 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           <div className="ml-auto flex items-center gap-2">
             <Link href="/seller/links" className="btn-green hidden px-3.5 py-2 text-[12.5px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
             <NotificationsBell />
-            <Link href={username ? `/s/${username}` : '/seller/profile'} target={username ? '_blank' : undefined} title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>
+            {username
+              ? <a href={storeUrl(username)} target="_blank" rel="noreferrer" title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></a>
+              : <Link href="/seller/profile" title="Set a store handle" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>}
           </div>
         </header>
 

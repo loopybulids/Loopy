@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { storeUrl } from '@/lib/store-url';
 import { useRef } from 'react';
 import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, TEMPLATES, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
 
@@ -101,7 +102,8 @@ export default function StoreEditor() {
     if (config && username) {
       try { localStorage.setItem(`loopy_draft_${username}`, JSON.stringify(config)); } catch { /* ignore */ }
     }
-    window.open(`/s/${username}?preview=1`, '_blank');
+    // Opens the seller's own address when a wildcard domain is configured.
+    window.open(storeUrl(username, '?preview=1'), '_blank');
 
     if (!config) return;
     // Persist in the background so a reload of the preview still shows this design.

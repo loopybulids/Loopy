@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { storeUrl, storeUrlLabel } from '@/lib/store-url';
 import Link from 'next/link';
 import { Store, Check, Share, Cog, Verified } from '@/components/icons';
 
@@ -40,12 +41,13 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published,
   }, []);
 
   // Built at click time — `window` isn't there during the server render.
-  const storeUrl = () => `${window.location.origin}/s/${username}`;
-  const prettyUrl = username ? `/s/${username}` : 'Set a store handle';
+  // Absolute and display forms both come from one place — see lib/store-url.
+  const shopUrl = () => storeUrl(username);
+  const prettyUrl = username ? storeUrlLabel(username) : 'Set a store handle';
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(storeUrl());
+      await navigator.clipboard.writeText(shopUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch { /* clipboard blocked — the menu still links out */ }
@@ -93,7 +95,7 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published,
           {username ? (
             <>
               <a
-                href={`/s/${username}`}
+                href={storeUrl(username)}
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setOpen(false)}

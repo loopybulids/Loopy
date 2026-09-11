@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { rootDomain, storeUrl, storeUrlLabel } from '@/lib/store-url';
 import { PageHead, Panel } from '@/components/seller-ui';
 import MediaInput from '@/components/MediaInput';
 import { Verified, Check } from '@/components/icons';
@@ -40,15 +41,15 @@ export default function SellerProfile() {
     } catch { /* ignore */ } finally { setBusy(false); }
   };
 
-  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const root = rootDomain();
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const storeUrl = root ? `${p.username}.${root}` : `${origin.replace(/^https?:\/\//, '')}/s/${p.username}`;
+  const shopUrl = p.username ? storeUrlLabel(p.username) : '';
 
   if (loading) return <p className="py-10 text-center text-[13px] text-faint">Loading…</p>;
 
   return (
     <div className="max-w-2xl">
-      <PageHead title="Seller profile" sub="Your public store identity — shown on your storefront." action={p.username ? <Link href={`/s/${p.username}`} target="_blank" className="btn-ghost px-3 py-2 text-[13px]">View store</Link> : undefined} />
+      <PageHead title="Seller profile" sub="Your public store identity — shown on your storefront." action={p.username ? <a href={storeUrl(p.username)} target="_blank" rel="noreferrer" className="btn-ghost px-3 py-2 text-[13px]">View store</a> : undefined} />
 
       {/* profile preview */}
       <div className="card mb-6 overflow-hidden">
@@ -72,7 +73,7 @@ export default function SellerProfile() {
         <Field label="Store name" value={p.storeName} onChange={(v) => set('storeName', v)} />
         <div>
           <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store URL</label>
-          <div className="mt-1.5 c-input break-all bg-paper text-muted">{p.username ? storeUrl : '—'}</div>
+          <div className="mt-1.5 c-input break-all bg-paper text-muted">{p.username ? shopUrl : '—'}</div>
         </div>
         <Field label="Tagline" value={p.tagline} onChange={(v) => set('tagline', v)} placeholder="Thrifted fashion, curated with love" />
         <div className="grid gap-4 sm:grid-cols-3">

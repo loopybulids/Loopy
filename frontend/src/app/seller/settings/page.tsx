@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { rootDomain, storeUrl, storeUrlLabel } from '@/lib/store-url';
 import { useAuth } from '@/store/auth';
 import { PageHead, Panel } from '@/components/seller-ui';
 import { Share, Eye } from '@/components/icons';
@@ -58,10 +59,10 @@ export default function Settings() {
   const persist = (k: string, v: boolean, set: (v: boolean) => void) => { set(v); localStorage.setItem(k, String(v)); };
 
   const username = profile?.username || 'yourstore';
-  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const root = rootDomain();
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   // Subdomain once a wildcard domain is configured, else the live path-based URL.
-  const storeUrl = root ? `${username}.${root}` : `${origin.replace(/^https?:\/\//, '')}/s/${username}`;
+  const shopUrl = storeUrlLabel(username);
   const email = profile?.user?.email || '—';
   const storeId = user?.sellerId || profile?.id || '—';
 
@@ -75,7 +76,7 @@ export default function Settings() {
   };
 
   const copyUrl = async () => {
-    const full = root ? `https://${username}.${root}` : `${origin}/s/${username}`;
+    const full = storeUrl(username);
     await navigator.clipboard.writeText(full).catch(() => {});
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
@@ -158,9 +159,9 @@ export default function Settings() {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-paper px-4 py-3">
-            <span className="font-mono text-[14px] text-navy">{storeUrl}</span>
+            <span className="font-mono text-[14px] text-navy">{shopUrl}</span>
             <div className="ml-auto flex items-center gap-3 text-[13px] font-bold text-navy/70">
-              {profile?.username && <a href={`/s/${username}?preview=1`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-navy"><Share size={14} /> Preview</a>}
+              {profile?.username && <a href={storeUrl(username, '?preview=1')} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-navy"><Share size={14} /> Preview</a>}
               <button onClick={copyUrl} className="hover:text-navy">{copied ? 'Copied!' : 'Copy'}</button>
             </div>
           </div>
