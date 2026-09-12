@@ -91,23 +91,39 @@ export function useApiData<T>(key: string, fetcher: () => Promise<T>): ApiData<T
   const fetchRef = useRef(fetcher);
   fetchRef.current = fetcher;
 
-  const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  /**
+   * Which fetch is allowed to publish its result.
+   *
+   * This was a single `alive` ref flipped to false on unmount — which broke
+   * outright under React Strict Mode. In development React mounts, unmounts,
+   * then remounts every component; the unmount set the flag false and nothing
+   * ever set it back, so every setState afterwards was skipped and the page
+   * sat on its skeletons forever. Production has no Strict Mode, so it worked
+   * there and only there.
+   *
+   * A token per run fixes both problems at once: a stale response from a
+   * superseded fetch is ignored, and a remount simply starts a new run.
+   */
+  const runId = useRef(0);
+  useEffect(() => () => { runId.current += 1; }, []);
 
   const run = useCallback(async () => {
+    const mine = (runId.current += 1);
+    const current = () => runId.current === mine;
+
     setRefreshing(true);
     try {
       const fresh = await fetchRef.current();
-      if (!alive.current) return;
+      if (!current()) return;
       setData(fresh);
       setError('');
       write(key, fresh);
     } catch (e: any) {
-      if (!alive.current) return;
+      if (!current()) return;
       // Keep showing what we have; only surface the error if there's nothing.
       setError(e?.message || 'Could not load.');
     } finally {
-      if (alive.current) { setLoading(false); setRefreshing(false); }
+      if (current()) { setLoading(false); setRefreshing(false); }
     }
   }, [key]);
 

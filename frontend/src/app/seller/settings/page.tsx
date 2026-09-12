@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { rootDomain, storeUrl, storeUrlLabel } from '@/lib/store-url';
 import { useAuth } from '@/store/auth';
-import { PageHead, Panel } from '@/components/seller-ui';
+import { PageHead, AccountTabs, Panel } from '@/components/seller-ui';
 import { Share, Eye } from '@/components/icons';
 
 const EyeOff = ({ size = 16 }: { size?: number }) => (
@@ -109,6 +109,8 @@ export default function Settings() {
   return (
     <div className="max-w-2xl">
       <PageHead title="Settings" sub="Manage your store settings." />
+
+      <AccountTabs active="/seller/settings" />
 
       {/* notice */}
       <div className="mb-6 rounded-xl border border-amber/30 bg-amber-soft px-4 py-3 text-[13px] leading-relaxed text-navy/80">

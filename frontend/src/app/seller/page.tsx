@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
-import { StatCard, Panel, Empty, money } from '@/components/seller-ui';
+import { StatCard, StatStrip, Panel, Empty, money } from '@/components/seller-ui';
 import { AreaTrend } from '@/components/admin/AdminKit';
 import { Bag, Check, Eye, Plus, Share, Star, Users, Wallet } from '@/components/icons';
 
@@ -66,27 +66,42 @@ export default function Dashboard() {
         impossible to answer by looking at the screen.
       */}
       {loading && !data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card p-5">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card px-4 py-3.5">
               <div className="h-3 w-24 animate-pulse rounded bg-line" />
-              <div className="mt-3 h-7 w-20 animate-pulse rounded bg-line" />
-              <div className="mt-3 h-3 w-16 animate-pulse rounded bg-line/70" />
+              <div className="mt-2 h-5 w-20 animate-pulse rounded bg-line" />
+              <div className="mt-2 h-3 w-16 animate-pulse rounded bg-line/70" />
             </div>
           ))}
         </div>
       ) : (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <>
+      {/* Money first, three across — the figures a seller opens this page for. */}
+      <div className="grid gap-3 sm:grid-cols-3">
         {/* All-time earnings first: it's the number sellers actually look for.
             Same formula as the wallet — delivered orders, net of discounts. */}
         <StatCard label="All-time earnings" value={money(lifetime)} delta={lifetime ? 'Delivered orders' : 'Nothing delivered yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
         <StatCard label="Revenue" value={money(revenue)} delta={revenue ? `${an?.paidOrders ?? 0} paid orders` : 'No sales yet'} icon={<Wallet size={18} />} href="/seller/payments" />
         <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} href="/seller/orders" />
-        <StatCard label="Customers" value={an?.customers ?? 0} delta="Unique buyers" icon={<Users size={18} />} href="/seller/customers" />
-        <StatCard label="Store visits" value={an?.totalVisits ?? 0} delta={`${an?.visitsToday ?? 0} today`} icon={<Eye size={18} />} />
-        <LiveCard live={an?.liveUsers ?? 0} conversion={an?.conversion ?? 0} />
-        <StatCard label="Rating" value={an?.avgRating ? `${an.avgRating}★` : '—'} delta={`${an?.reviewCount ?? 0} reviews`} icon={<Star size={18} />} href="/seller/reviews" />
       </div>
+
+      {/*
+        Store activity as one divided strip of four.
+        Seven cards in a six-column grid left the seventh alone on its own row
+        beside a screen's width of nothing — and these are context, not
+        headline figures, so they don't need a card each.
+      */}
+      <StatStrip
+        cols={4}
+        items={[
+          { label: 'Customers', value: an?.customers ?? 0, hint: 'Unique buyers', href: '/seller/customers' },
+          { label: 'Store visits', value: an?.totalVisits ?? 0, hint: `${an?.visitsToday ?? 0} today` },
+          { label: 'Live now', value: an?.liveUsers ?? 0, hint: `${an?.conversion ?? 0}% visit→order`, live: true },
+          { label: 'Rating', value: an?.avgRating ? `${an.avgRating}★` : '—', hint: `${an?.reviewCount ?? 0} reviews`, href: '/seller/reviews' },
+        ]}
+      />
+      </>
       )}
 
       {/* Which store these figures belong to — two stores can share a name. */}
@@ -198,18 +213,6 @@ function Onboarding({ ob }: { ob: any }) {
   );
 }
 
-function LiveCard({ live, conversion }: { live: number; conversion: number }) {
-  return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] font-bold uppercase tracking-wide text-faint">Live now</span>
-        <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-600" /></span>
-      </div>
-      <div className="mt-3 font-display text-[28px] font-extrabold text-navy">{live}</div>
-      <div className="mt-1 text-[12px] font-semibold text-green-600">{conversion}% visit→order</div>
-    </div>
-  );
-}
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (

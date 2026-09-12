@@ -14,19 +14,25 @@ export function StatCard({
   accent?: boolean;
   href?: string;
 }) {
+  /*
+   * Compact on purpose. At p-5 with a 28px figure these cards were taller than
+   * the content below them, so three counts of zero occupied the whole first
+   * screen. Labels read as words rather than shouting in caps, and the figure
+   * is set in the numeric face so columns of money line up.
+   */
   const inner = (
     <>
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] font-bold uppercase tracking-wide text-faint">{label}</span>
-        {icon && <span className="text-green-600">{icon}</span>}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11.5px] font-medium leading-snug text-muted">{label}</span>
+        {icon && <span className="shrink-0 text-green-600">{icon}</span>}
       </div>
-      <div className="mt-3 font-display text-[28px] font-extrabold text-navy">{value}</div>
-      {delta && <div className="mt-1 text-[12px] font-semibold text-green-600">{delta}</div>}
+      <div className="mt-1.5 font-num text-[21px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-navy">{value}</div>
+      {delta && <div className="mt-1 text-[11.5px] text-faint">{delta}</div>}
     </>
   );
   if (href) {
     return (
-      <Link href={href} className={`card block p-5 transition hover:-translate-y-0.5 hover:shadow-soft ${accent ? 'ring-1 ring-green/20' : ''}`}>
+      <Link href={href} className={`card block px-4 py-3.5 transition-colors hover:border-green/40 ${accent ? 'ring-1 ring-green/20' : ''}`}>
         {inner}
       </Link>
     );
@@ -36,7 +42,7 @@ export function StatCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className={`card p-5 ${accent ? 'ring-1 ring-green/20' : ''}`}
+      className={`card px-4 py-3.5 ${accent ? 'ring-1 ring-green/20' : ''}`}
     >
       {inner}
     </motion.div>
@@ -92,14 +98,149 @@ export function Bars({ data, labels }: { data: number[]; labels?: string[] }) {
 }
 
 /* Section header used at the top of scaffold pages. */
+/**
+ * The line above a page's content: what this screen is for, and its main action.
+ *
+ * It deliberately does NOT render the page name. The console's topbar already
+ * shows it, so every screen printed its title twice — "Shipping / Shipping",
+ * "Customers / Customers" — and burned ~90px of vertical space before any
+ * content appeared. `title` is still accepted so call sites read clearly and
+ * so it can be used as the accessible label, but it isn't drawn.
+ */
 export function PageHead({ title, sub, action }: { title: string; sub: string; action?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="font-display text-[24px] font-extrabold text-navy">{title}</h1>
-        <p className="mt-1 text-[13.5px] text-muted">{sub}</p>
-      </div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <p aria-label={title} className="text-[13.5px] text-muted">{sub}</p>
       {action}
+    </div>
+  );
+}
+
+/**
+ * A row of small counts sharing one card, divided by hairlines.
+ *
+ * Three separate cards for three single-digit counts gave each the width of a
+ * headline figure and left most of it empty. Counts belong together.
+ */
+export function StatStrip({
+  items, cols = 3,
+}: {
+  items: { label: string; value: ReactNode; hint?: string; href?: string; live?: boolean }[];
+  /** Columns on a wide screen. Pick the item count so no cell is left empty. */
+  cols?: 3 | 4;
+}) {
+  const wide = cols === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3';
+  return (
+    <div className={`grid grid-cols-2 divide-line overflow-hidden rounded-xl border border-line bg-white sm:divide-x ${wide}`}>
+      {items.map((it) => {
+        const body = (
+          <>
+            <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-muted">
+              {it.label}
+              {it.live && (
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-600" />
+                </span>
+              )}
+            </div>
+            <div className="mt-1 font-num text-[19px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-navy">
+              {it.value}
+            </div>
+            {it.hint && <div className="mt-0.5 text-[11px] text-faint">{it.hint}</div>}
+          </>
+        );
+        return it.href
+          ? <Link key={it.label} href={it.href} className="px-4 py-3 transition-colors hover:bg-paper/70">{body}</Link>
+          : <div key={it.label} className="px-4 py-3">{body}</div>;
+      })}
+    </div>
+  );
+}
+
+/**
+ * Switches between the two account pages.
+ *
+ * Profile and Settings are one job split across two screens, so each shows
+ * the pair and marks which you're on — otherwise changing your handle means
+ * going back to the sidebar to find the other half.
+ */
+export function AccountTabs({ active }: { active: '/seller/profile' | '/seller/settings' }) {
+  const tabs = [
+    { href: '/seller/profile', label: 'Profile', hint: 'Public store identity' },
+    { href: '/seller/settings', label: 'Settings', hint: 'Account & store preferences' },
+  ] as const;
+
+  return (
+    <div className="mb-5 flex gap-2">
+      {tabs.map((t) => {
+        const on = t.href === active;
+        return (
+          <Link
+            key={t.href}
+            href={t.href}
+            aria-current={on ? 'page' : undefined}
+            className={`flex-1 rounded-xl border px-4 py-2.5 transition-colors ${
+              on ? 'border-green bg-green-soft/50' : 'border-line bg-white hover:border-green/40'
+            }`}
+          >
+            <div className={`text-[13.5px] font-bold ${on ? 'text-navy' : 'text-muted'}`}>{t.label}</div>
+            <div className="text-[11.5px] text-faint">{t.hint}</div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * A titled group of settings rows.
+ *
+ * The heading sits on the page background and the rows sit in one bordered
+ * card beneath it, so a long form reads as a few labelled groups instead of
+ * one tall wall of inputs. Used by Profile and Settings.
+ */
+export function SettingsSection({
+  icon, title, sub, children,
+}: { icon?: ReactNode; title: string; sub?: string; children: ReactNode }) {
+  return (
+    <section className="mt-7 first:mt-0">
+      <div className="mb-2 flex items-start gap-2.5 px-1">
+        {icon && (
+          <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-green-soft text-green-600">
+            {icon}
+          </span>
+        )}
+        <div>
+          <h2 className="font-display text-[14px] font-extrabold text-navy">{title}</h2>
+          {sub && <p className="text-[12px] text-muted">{sub}</p>}
+        </div>
+      </div>
+      <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * One setting: what it is on the left, the control on the right.
+ *
+ * Stacks on narrow screens — a label and a text field side by side below
+ * ~520px leaves the field too narrow to read what you typed.
+ */
+export function SettingsRow({
+  label, hint, children, stack,
+}: { label: string; hint?: string; children?: ReactNode; stack?: boolean }) {
+  return (
+    <div className={`gap-3 px-4 py-3.5 ${stack ? '' : 'sm:flex sm:items-center sm:justify-between'}`}>
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold text-navy">{label}</div>
+        {hint && <p className="mt-0.5 text-[12px] leading-snug text-muted">{hint}</p>}
+      </div>
+      {children && (
+        <div className={stack ? 'mt-2' : 'mt-2 shrink-0 sm:mt-0 sm:w-[min(320px,45%)]'}>{children}</div>
+      )}
     </div>
   );
 }

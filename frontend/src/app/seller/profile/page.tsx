@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { rootDomain, storeUrl, storeUrlLabel } from '@/lib/store-url';
-import { PageHead, Panel } from '@/components/seller-ui';
+import { PageHead, AccountTabs, SettingsSection, SettingsRow } from '@/components/seller-ui';
 import MediaInput from '@/components/MediaInput';
-import { Verified, Check } from '@/components/icons';
+import { Verified, Check, Store, Tag } from '@/components/icons';
 
 export default function SellerProfile() {
   const [p, setP] = useState({ storeName: '', username: '', tagline: '', category: '', description: '', city: '', establishedYear: '', contactEmail: '', contactPhone: '', instagram: '', whatsapp: '', logoUrl: '', bannerUrl: '' });
@@ -48,8 +48,10 @@ export default function SellerProfile() {
   if (loading) return <p className="py-10 text-center text-[13px] text-faint">Loading…</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <PageHead title="Seller profile" sub="Your public store identity — shown on your storefront." action={p.username ? <a href={storeUrl(p.username)} target="_blank" rel="noreferrer" className="btn-ghost px-3 py-2 text-[13px]">View store</a> : undefined} />
+
+      <AccountTabs active="/seller/profile" />
 
       {/* profile preview */}
       <div className="card mb-6 overflow-hidden">
@@ -68,46 +70,84 @@ export default function SellerProfile() {
         </div>
       </div>
 
-      <Panel title="Edit profile">
-        <div className="space-y-4">
-        <Field label="Store name" value={p.storeName} onChange={(v) => set('storeName', v)} />
-        <div>
-          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Store URL</label>
-          <div className="mt-1.5 c-input break-all bg-paper text-muted">{p.username ? shopUrl : '—'}</div>
-        </div>
-        <Field label="Tagline" value={p.tagline} onChange={(v) => set('tagline', v)} placeholder="Thrifted fashion, curated with love" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Category" value={p.category} onChange={(v) => set('category', v)} placeholder="Vintage & Thrift" />
-          <Field label="City" value={p.city} onChange={(v) => set('city', v)} placeholder="Mumbai" />
-          <Field label="Established (year)" value={p.establishedYear} onChange={(v) => set('establishedYear', v.replace(/[^0-9]/g, ''))} placeholder="2023" />
-        </div>
-        <div>
-          <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Bio / description</label>
-          <textarea value={p.description} onChange={(e) => set('description', e.target.value)} rows={3} className="c-input mt-1.5" placeholder="Curated vintage & thrift, quality-checked." />
-        </div>
+      <SettingsSection icon={<Store size={15} />} title="Store identity" sub="How your shop introduces itself.">
+        <SettingsRow label="Store name" hint="Shown in your storefront header and on every order.">
+          <input value={p.storeName} onChange={(e) => set('storeName', e.target.value)} className="c-input" />
+        </SettingsRow>
 
-        </div>
+        <SettingsRow label="Store address" hint="Your public link. Change the handle in Settings.">
+          <div className="c-input break-all bg-paper font-num text-[12.5px] text-muted">{p.username ? shopUrl : '—'}</div>
+        </SettingsRow>
 
-        <div className="mt-6 text-[12px] font-bold uppercase tracking-wide text-faint">Contact &amp; socials</div>
-        <div className="mt-2 grid gap-4 sm:grid-cols-2">
-          <Field label="Contact email" value={p.contactEmail} onChange={(v) => set('contactEmail', v)} placeholder="hello@store.com" />
-          <Field label="Contact phone" value={p.contactPhone} onChange={(v) => set('contactPhone', v)} placeholder="+91 98765 43210" />
-          <Field label="Instagram" value={p.instagram} onChange={(v) => set('instagram', v)} placeholder="@yourstore" />
-          <Field label="WhatsApp" value={p.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+91 98765 43210" />
-        </div>
+        <SettingsRow label="Tagline" hint="One line under your store name.">
+          <input
+            value={p.tagline}
+            onChange={(e) => set('tagline', e.target.value)}
+            placeholder="Thrifted fashion, curated with love"
+            className="c-input"
+          />
+        </SettingsRow>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Logo</label>
-            <div className="mt-1.5"><MediaInput value={p.logoUrl} onChange={(v) => set('logoUrl', v)} /></div>
-          </div>
-          <div>
-            <label className="block text-[12px] font-bold uppercase tracking-wide text-faint">Banner</label>
-            <div className="mt-1.5"><MediaInput value={p.bannerUrl} onChange={(v) => set('bannerUrl', v)} /></div>
-          </div>
-        </div>
-        <button onClick={save} disabled={busy} className="btn-green mt-5 disabled:opacity-60">{busy ? 'Saving…' : saved ? <><Check size={16} /> Saved</> : 'Save profile'}</button>
-      </Panel>
+        <SettingsRow label="Category">
+          <input value={p.category} onChange={(e) => set('category', e.target.value)} placeholder="Vintage & Thrift" className="c-input" />
+        </SettingsRow>
+
+        <SettingsRow label="City">
+          <input value={p.city} onChange={(e) => set('city', e.target.value)} placeholder="Mumbai" className="c-input" />
+        </SettingsRow>
+
+        <SettingsRow label="Trading since" hint="Shown as “Since 2023” on your storefront.">
+          <input
+            value={p.establishedYear}
+            onChange={(e) => set('establishedYear', e.target.value.replace(/[^0-9]/g, ''))}
+            placeholder="2023"
+            maxLength={4}
+            className="c-input"
+          />
+        </SettingsRow>
+
+        <SettingsRow label="About your store" hint="A short description shoppers read before buying." stack>
+          <textarea
+            value={p.description}
+            onChange={(e) => set('description', e.target.value)}
+            rows={3}
+            placeholder="Curated vintage & thrift, quality-checked."
+            className="c-input"
+          />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection icon={<Verified size={15} />} title="Contact" sub="How buyers reach you. Shown on your storefront.">
+        <SettingsRow label="Email">
+          <input value={p.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} placeholder="hello@store.com" className="c-input" />
+        </SettingsRow>
+        <SettingsRow label="Phone">
+          <input value={p.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} placeholder="+91 98765 43210" className="c-input" />
+        </SettingsRow>
+        <SettingsRow label="Instagram">
+          <input value={p.instagram} onChange={(e) => set('instagram', e.target.value)} placeholder="@yourstore" className="c-input" />
+        </SettingsRow>
+        <SettingsRow label="WhatsApp">
+          <input value={p.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} placeholder="+91 98765 43210" className="c-input" />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection icon={<Tag size={15} />} title="Branding" sub="Your logo and banner, used across the storefront.">
+        <SettingsRow label="Logo" hint="Square works best. Leave empty to use your store's initial." stack>
+          <MediaInput value={p.logoUrl} onChange={(v) => set('logoUrl', v)} />
+        </SettingsRow>
+        <SettingsRow label="Banner" hint="Wide image behind your store name." stack>
+          <MediaInput value={p.bannerUrl} onChange={(v) => set('bannerUrl', v)} />
+        </SettingsRow>
+      </SettingsSection>
+
+      {/* One save for the whole page, pinned so it's reachable from any section. */}
+      <div className="sticky bottom-4 mt-6 flex items-center gap-3 rounded-xl border border-line bg-white/95 px-4 py-3 backdrop-blur">
+        <button onClick={save} disabled={busy} className="btn-green disabled:opacity-60">
+          {busy ? 'Saving…' : saved ? <><Check size={16} /> Saved</> : 'Save profile'}
+        </button>
+        <span className="text-[12px] text-muted">Changes appear on your storefront straight away.</span>
+      </div>
     </div>
   );
 }

@@ -24,15 +24,67 @@ export default function GlobalSearch() {
 
   return (
     <div className="space-y-5">
-      <div><h1 className="font-display text-[26px] font-extrabold text-slate">Global Investigation Center</h1><p className="text-[14px] text-dim">Search any order, seller, customer, phone, payment ID or AWB.</p></div>
-
-      <div className="flex items-center gap-2 rounded-2xl border border-hair bg-white px-4 py-3 shadow-card">
-        <Icon name="search" size={18} className="text-pale" />
-        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()} placeholder="e.g. order id, 98765…, store name, payment id, AWB" className="w-full bg-transparent text-[14px] outline-none placeholder:text-pale" />
-        <button onClick={run} className="rounded-lg bg-accent px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-600">Search</button>
+      <div>
+        <h1 className="font-display text-[25px] font-extrabold tracking-[-0.02em] text-slate sm:text-[28px]">Search</h1>
+        <p className="text-[13.5px] text-dim">Orders, sellers, customers, phone numbers, payment IDs and tracking numbers.</p>
       </div>
 
-      {loading && <Card className="p-6 text-center text-dim animate-pulse">Searching…</Card>}
+      <div className="flex items-center gap-3 rounded-xl border border-hair bg-white px-4 py-3">
+        <Icon name="search" size={18} className="shrink-0 text-pale" />
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && run()}
+          placeholder="Order ID, store name, phone, payment ID or AWB"
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-slate outline-none placeholder:text-pale"
+        />
+        {q && (
+          <button onClick={() => { setQ(''); setRes(null); }} className="shrink-0 text-[12px] font-semibold text-pale hover:text-slate">
+            Clear
+          </button>
+        )}
+        <button
+          onClick={run}
+          disabled={!q.trim() || loading}
+          className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-600 disabled:opacity-45"
+        >
+          {loading ? 'Searching…' : 'Search'}
+        </button>
+      </div>
+
+      {/* Something to look at before a query is typed — the page was otherwise
+          a heading above an empty screen. */}
+      {!res && !loading && (
+        <div className="rounded-xl border border-hair bg-white px-5 py-10 text-center">
+          <div className="text-[13.5px] font-bold text-slate">Search across every seller</div>
+          <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-relaxed text-dim">
+            Paste anything you have. Partial values work — the last six characters of an
+            order reference, part of a store name, or a customer&apos;s phone number.
+          </p>
+          <div className="mt-3.5 flex flex-wrap items-center justify-center gap-1.5">
+            {['S5OKP4', 'cpaybara', '98765', 'DL1234567890'].map((ex) => (
+              <button
+                key={ex}
+                onClick={() => { setQ(ex); }}
+                className="rounded-lg border border-hair bg-cool px-2.5 py-1 font-num text-[11.5px] text-dim transition-colors hover:border-accent/35 hover:text-slate"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loading && <Card className="animate-pulse p-6 text-center text-dim">Searching…</Card>}
+
+      {/* A query that found nothing should say so, not look like a blank page. */}
+      {res && !res.orders.length && !res.sellers.length && !res.customers.length && (
+        <div className="rounded-xl border border-hair bg-white px-5 py-10 text-center">
+          <div className="text-[13.5px] font-bold text-slate">Nothing matched “{q}”</div>
+          <p className="mt-1 text-[12.5px] text-dim">Check the spelling, or try a shorter fragment.</p>
+        </div>
+      )}
 
       {res && (
         <div className="space-y-5">

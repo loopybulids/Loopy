@@ -62,8 +62,13 @@ export class SellersService {
     return {
       storeName: seller.storeName,
       username: seller.username,
-      // The header logo is edited in the store editor; fall back to the profile logo.
-      logoUrl: cfg?.header?.logoUrl || seller.logoUrl || null,
+      // The header logo is edited in the store editor; the profile logo is only
+      // a fallback when the editor has never set one. An empty string there is
+      // a removal and must be honoured, or a logo the seller deleted comes
+      // straight back on the storefront.
+      logoUrl: cfg?.header?.logoUrl !== undefined
+        ? (cfg.header.logoUrl || null)
+        : (seller.logoUrl || null),
       accent: cfg?.theme?.accent || null,
     };
   }
@@ -76,6 +81,13 @@ export class SellersService {
       },
     });
     if (!seller) throw new NotFoundException('Store not found');
+
+    // Published collections, so the store editor can arrange them into rows.
+    const collections = await this.prisma.collection.findMany({
+      where: { sellerId: seller.id, published: true },
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+      include: { items: { orderBy: { position: 'asc' }, select: { productId: true } } },
+    });
 
     // Visible reviews only — a hidden one must not reach the storefront by
     // any route. Capped because this payload is already large.
@@ -109,6 +121,16 @@ export class SellersService {
         freeShipThreshold: seller.freeShipThreshold ?? null,
         shipDays: seller.shipDays ?? null,
       },
+      // Collections reference products already in the `products` array above,
+      // so only ids travel — the catalogue isn't duplicated per collection.
+      collections: collections.map((c) => ({
+        id: c.id,
+        title: c.title,
+        slug: c.slug,
+        description: c.description,
+        imageUrl: c.imageUrl,
+        productIds: c.items.map((i) => i.productId),
+      })),
       // Platform fee rate, so checkout can show the real total before payment.
       // The server recomputes it on checkout — this is display only.
       platformFeePct: Number(process.env.COMMISSION_PERCENT || 5),
@@ -360,6 +382,160 @@ export class SellersService {
     const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
     if (!review || review.sellerId !== sellerId) throw new NotFoundException('Review not found');
     return this.prisma.review.update({ where: { id: reviewId }, data: { response, respondedAt: new Date() } });
+  }
+
+  // ── collections ──
+
+  /**
+   * Turn a title into a per-seller unique slug.
+   *
+   * Collections are addressed as /s/<store>/c/<slug>, so the slug has to be
+   * stable and unique within the store. A clash gets a numeric suffix rather
+   * than an error, because a seller naming two collections "Sale" is a
+   * reasonable thing to do and shouldn't be a failure.
+   */
+  private async collectionSlug(sellerId: string, title: string, exceptId?: string) {
+    const base = (title || 'collection')
+      .toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'collection';
+
+    const taken = new Set(
+      (await this.prisma.collection.findMany({
+        where: { sellerId, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
+        select: { slug: true },
+      })).map((c) => c.slug),
+    );
+
+    if (!taken.has(base)) return base;
+    for (let i = 2; i < 500; i++) {
+      const next = `${base}-${i}`;
+      if (!taken.has(next)) return next;
+    }
+    return `${base}-${Date.now()}`;
+  }
+
+  /** Only the seller's own products may go in their collections. */
+  private async ownProductIds(sellerId: string, productIds: unknown): Promise<string[] | null> {
+    if (!Array.isArray(productIds)) return null;
+    const wanted = [...new Set(productIds.map(String))];
+    if (!wanted.length) return [];
+    const mine = await this.prisma.product.findMany({
+      where: { id: { in: wanted }, sellerId },
+      select: { id: true },
+    });
+    // Keep the order the seller sent — that's the display order.
+    const allowed = new Set(mine.map((p) => p.id));
+    return wanted.filter((id) => allowed.has(id));
+  }
+
+  async getCollections(sellerId: string) {
+    const collections = await this.prisma.collection.findMany({
+      where: { sellerId },
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+      include: { items: { orderBy: { position: 'asc' }, select: { productId: true } } },
+    });
+
+    const ids = [...new Set(collections.flatMap((c) => c.items.map((i) => i.productId)))];
+    const products = ids.length
+      ? await this.prisma.product.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, title: true, price: true, images: true, quantity: true, isActive: true },
+        })
+      : [];
+    const byId = new Map(products.map((p) => [p.id, p]));
+
+    return collections.map((c) => ({
+      id: c.id,
+      title: c.title,
+      slug: c.slug,
+      description: c.description,
+      imageUrl: c.imageUrl,
+      published: c.published,
+      position: c.position,
+      productIds: c.items.map((i) => i.productId),
+      // Enough to render a row of thumbnails without a second request.
+      products: c.items
+        .map((i) => byId.get(i.productId))
+        .filter(Boolean)
+        .map((pr: any) => ({
+          id: pr.id, title: pr.title, price: pr.price,
+          // Images are stored as a JSON array string; the thumbnail is the first.
+          image: safeParse(pr.images)[0] || null,
+          inStock: pr.quantity > 0,
+          isActive: pr.isActive,
+        })),
+    }));
+  }
+
+  async createCollection(sellerId: string, dto: any) {
+    const title = String(dto?.title || '').trim();
+    if (!title) throw new BadRequestException('Give the collection a name.');
+    if (title.length > 60) throw new BadRequestException('That name is too long (60 characters max).');
+
+    const productIds = (await this.ownProductIds(sellerId, dto?.productIds)) || [];
+    const slug = await this.collectionSlug(sellerId, title);
+    const last = await this.prisma.collection.findFirst({
+      where: { sellerId }, orderBy: { position: 'desc' }, select: { position: true },
+    });
+
+    const created = await this.prisma.collection.create({
+      data: {
+        sellerId, title, slug,
+        description: String(dto?.description || '').trim() || null,
+        imageUrl: dto?.imageUrl || null,
+        published: dto?.published !== false,
+        position: (last?.position ?? -1) + 1,
+        items: { create: productIds.map((productId, i) => ({ productId, position: i })) },
+      },
+    });
+    return { id: created.id, slug: created.slug };
+  }
+
+  async updateCollection(sellerId: string, id: string, dto: any) {
+    const existing = await this.prisma.collection.findFirst({ where: { id, sellerId } });
+    if (!existing) throw new NotFoundException('Collection not found');
+
+    const data: any = {};
+    if (typeof dto?.title === 'string') {
+      const title = dto.title.trim();
+      if (!title) throw new BadRequestException('Give the collection a name.');
+      if (title.length > 60) throw new BadRequestException('That name is too long (60 characters max).');
+      data.title = title;
+      // Re-slug only on a real rename, so existing links keep working otherwise.
+      if (title !== existing.title) data.slug = await this.collectionSlug(sellerId, title, id);
+    }
+    if (dto?.description !== undefined) data.description = String(dto.description || '').trim() || null;
+    if (dto?.imageUrl !== undefined) data.imageUrl = dto.imageUrl || null;
+    if (dto?.published !== undefined) data.published = !!dto.published;
+    if (dto?.position !== undefined) data.position = Math.max(0, Math.round(Number(dto.position) || 0));
+
+    const productIds = await this.ownProductIds(sellerId, dto?.productIds);
+
+    return this.prisma.$transaction(async (tx) => {
+      if (Object.keys(data).length) await tx.collection.update({ where: { id }, data });
+      if (productIds) {
+        // Replace membership wholesale — the editor sends the full list, and
+        // diffing it here would only be a chance to get it wrong.
+        await tx.collectionItem.deleteMany({ where: { collectionId: id } });
+        if (productIds.length) {
+          await tx.collectionItem.createMany({
+            data: productIds.map((productId, i) => ({ collectionId: id, productId, position: i })),
+          });
+        }
+      }
+      const after = await tx.collection.findUnique({ where: { id }, select: { id: true, slug: true } });
+      return after!;
+    });
+  }
+
+  async deleteCollection(sellerId: string, id: string) {
+    const existing = await this.prisma.collection.findFirst({ where: { id, sellerId }, select: { id: true } });
+    if (!existing) throw new NotFoundException('Collection not found');
+    // Items cascade; the products themselves are untouched.
+    await this.prisma.collection.delete({ where: { id } });
+    return { ok: true };
   }
 
   // ── coupons ──

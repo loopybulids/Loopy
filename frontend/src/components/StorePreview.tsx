@@ -34,7 +34,7 @@ const POLICY_ICONS = [<ShieldLock key="0" size={20} />, <Truck key="1" size={20}
  * the editor preview.
  */
 export default function StorePreview({
-  config, products = [], storeName, mobile = false, username, page, reviews = [],
+  config, products = [], storeName, mobile = false, username, page, reviews = [], collections = [],
 }: {
   config: StoreConfig;
   products?: any[];
@@ -47,6 +47,12 @@ export default function StorePreview({
    * they reach here, so anything in this list is meant to be public.
    */
   reviews?: any[];
+  /**
+   * Published collections: { title, slug, description, productIds }.
+   * Products are resolved against the `products` array rather than repeated,
+   * so a product in three collections is still sent once.
+   */
+  collections?: any[];
 }) {
   const [overrideConfig, setOverrideConfig] = useState<StoreConfig | null>(null);
 
@@ -187,19 +193,7 @@ export default function StorePreview({
               <p className="col-span-full py-10 text-center text-[13.5px] text-faint">No products in “{tab}” yet.</p>
             ) : (
               filterByTab(products, tab).slice(0, 8).map((p) => (
-                <Link key={p.id} href={username ? `/s/${username}/product/${p.id}` : '#'} className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card">
-                  <div className="relative aspect-square overflow-hidden bg-green-soft">
-                    <AutoImages images={Array.isArray(p.images) ? p.images : (firstImage(p) ? [firstImage(p)] : [])} />
-                  </div>
-                  <div className="p-3">
-                    <div className="truncate font-display text-[14px] font-bold">{p.title || p.name}</div>
-                    <div className="mt-1 leading-tight">
-                      <div className="font-display text-[15px] font-extrabold" style={{ color: accent }}>{rupees(p.price)}</div>
-                      {p.mrp && p.mrp > p.price && <div className="text-[12px] text-faint line-through">{rupees(p.mrp)}</div>}
-                    </div>
-                    {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}
-                  </div>
-                </Link>
+                <ProductCard key={p.id} p={p} username={username} accent={accent} />
               ))
             )}
           </div>
@@ -217,6 +211,59 @@ export default function StorePreview({
               {c.policies.items.map((p, i) => <PolicyCard key={i} p={p} i={i} accent={accent} />)}
             </div>
           )}
+        </section>
+      )}
+
+      {/* collections — curated rows the seller arranged in /seller/collections */}
+      {!page && c.collections?.enabled && collections.length > 0 && (
+        <section className="px-5 py-12 sm:px-8">
+          <div className="mx-auto max-w-6xl">
+            {c.collections.heading && (
+              <h2 className="font-display text-[24px] font-extrabold">{c.collections.heading}</h2>
+            )}
+
+            <div className="mt-6 space-y-9">
+              {collections.map((col) => {
+                // Resolve ids against the catalogue, preserving the seller's order.
+                const byId = new Map(products.map((p: any) => [p.id, p]));
+                const items = (col.productIds || [])
+                  .map((id: string) => byId.get(id))
+                  .filter(Boolean)
+                  .slice(0, (c.collections.perRow || 4) * 2);
+                if (!items.length) return null;
+
+                return (
+                  <div key={col.id || col.slug}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div>
+                        <h3 className="font-display text-[18px] font-extrabold">{col.title}</h3>
+                        {col.description && (
+                          <p className="mt-0.5 text-[13px] text-muted">{col.description}</p>
+                        )}
+                      </div>
+                      <span className="text-[12px] text-muted">
+                        {items.length} item{items.length === 1 ? '' : 's'}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`mt-3.5 grid gap-4 ${
+                        mobile
+                          ? 'grid-cols-2'
+                          : (c.collections.perRow || 4) >= 4
+                            ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+                            : 'grid-cols-2 sm:grid-cols-3'
+                      }`}
+                    >
+                      {items.map((p: any) => (
+                        <ProductCard key={p.id} p={p} username={username} accent={accent} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </section>
       )}
 
@@ -319,6 +366,33 @@ function PageBody({ page, accent }: { page: StorePage; accent: string }) {
 }
 
 /* a single policy card */
+/**
+ * One product tile.
+ *
+ * Extracted so the product tabs and the collection rows render identically —
+ * two copies of this markup would drift the moment either was touched.
+ */
+function ProductCard({ p, username, accent }: { p: any; username?: string; accent: string }) {
+  return (
+    <Link
+      href={username ? `/s/${username}/product/${p.id}` : '#'}
+      className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card"
+    >
+      <div className="relative aspect-square overflow-hidden bg-green-soft">
+        <AutoImages images={Array.isArray(p.images) ? p.images : (firstImage(p) ? [firstImage(p)] : [])} />
+      </div>
+      <div className="p-3">
+        <div className="truncate font-display text-[14px] font-bold">{p.title || p.name}</div>
+        <div className="mt-1 leading-tight">
+          <div className="font-display text-[15px] font-extrabold" style={{ color: accent }}>{rupees(p.price)}</div>
+          {p.mrp && p.mrp > p.price && <div className="text-[12px] text-faint line-through">{rupees(p.mrp)}</div>}
+        </div>
+        {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}
+      </div>
+    </Link>
+  );
+}
+
 function PolicyCard({ p, i, accent }: { p: { title: string; body: string }; i: number; accent: string }) {
   return (
     <div className="h-full rounded-lg border border-line bg-white p-6 text-center">

@@ -331,6 +331,49 @@ model CouponRedemption {
   @@index([orderId])
 }
 
+/// A seller-curated group of their own products.
+///
+/// Collections exist so a storefront can say something more than "all
+/// products" — "New in", "Under ₹999", "Festive picks" — and be arranged in
+/// the store editor. Membership is explicit rather than rule-based: the seller
+/// picks the items, so what a shopper sees is never a surprise.
+model Collection {
+  id          String   @id @default(cuid())
+  sellerId    String
+  title       String
+  /// URL-safe name, unique per seller — /s/<store>/c/<slug>
+  slug        String
+  description String?
+  /// Cover image for the collection card. A data URI or a URL.
+  imageUrl    String?
+  /// Hidden collections stay editable but off the storefront.
+  published   Boolean  @default(true)
+  /// Manual ordering in the store editor; lowest first.
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  items CollectionItem[]
+
+  @@unique([sellerId, slug])
+  @@index([sellerId])
+}
+
+/// One product's place in one collection.
+model CollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  productId    String
+  /// Order within the collection; lowest first.
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  /// A product appears at most once in a given collection.
+  @@unique([collectionId, productId])
+  @@index([productId])
+}
+
 model Coupon {
   id               String    @id @default(cuid())
   sellerId         String

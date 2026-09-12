@@ -41,6 +41,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
         storeName={store.storeName}
         username={username}
         reviews={store.reviews || []}
+        collections={store.collections || []}
       />
     </main>
   );

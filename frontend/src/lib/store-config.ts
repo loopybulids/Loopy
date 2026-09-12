@@ -65,6 +65,14 @@ export interface StoreConfig {
   banners: { enabled: boolean; images: string[] };
   productTabs: { enabled: boolean; heading: string; sub: string; tabs: string[] };
   policies: { enabled: boolean; items: Policy[] };
+  /**
+   * Collection rows on the storefront.
+   *
+   * The collections themselves live in the database (managed in
+   * /seller/collections); this only records whether to show them, what to
+   * head the area with, and how many products to put in each row.
+   */
+  collections: { enabled: boolean; heading: string; perRow: number };
   socials: { enabled: boolean; instagram: string; facebook: string; whatsapp: string };
   contact: { enabled: boolean; email: string; phone: string; address: string };
   footer: { text: string };
@@ -78,6 +86,7 @@ export const SECTION_ORDER: { key: keyof StoreConfig | 'theme'; label: string }[
   { key: 'hero', label: 'Hero Banner' },
   { key: 'banners', label: 'Banner Images' },
   { key: 'productTabs', label: 'Product Tabs' },
+  { key: 'collections', label: 'Collections' },
   { key: 'policies', label: 'Policies' },
   { key: 'socials', label: 'Social Links' },
   { key: 'contact', label: 'Contact' },
@@ -117,6 +126,7 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
       sub: 'Our best picks, just for you',
       tabs: ['Featured', 'On Sale', 'Bestsellers', 'Latest'],
     },
+    collections: { enabled: true, heading: 'Shop by collection', perRow: 4 },
     policies: {
       enabled: true,
       items: [
@@ -136,7 +146,17 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
    renderer never hits undefined sections. */
 export function withDefaults(storeName: string, saved?: Partial<StoreConfig> | null, fallbackLogoUrl?: string | null): StoreConfig {
   const d = defaultConfig(storeName);
-  const logoUrl = saved?.header?.logoUrl || fallbackLogoUrl || '';
+  /**
+   * An empty logo is a decision, not a missing value.
+   *
+   * This used to be `saved?.header?.logoUrl || fallbackLogoUrl`, and '' is
+   * falsy — so removing your logo in the editor worked until you reloaded,
+   * at which point the seller's stored logo was pulled back in and the
+   * removal silently undone. Only an *absent* key means "never chosen".
+   */
+  const logoUrl = saved?.header?.logoUrl !== undefined
+    ? saved.header.logoUrl
+    : (fallbackLogoUrl || '');
   if (!saved) return { ...d, header: { ...d.header, logoUrl } };
   return {
     theme: { ...d.theme, ...saved.theme },
@@ -145,6 +165,7 @@ export function withDefaults(storeName: string, saved?: Partial<StoreConfig> | n
     hero: { ...d.hero, ...saved.hero },
     banners: { ...d.banners, ...saved.banners, images: saved.banners?.images ?? d.banners.images },
     productTabs: { ...d.productTabs, ...saved.productTabs, tabs: saved.productTabs?.tabs ?? d.productTabs.tabs },
+    collections: { ...d.collections, ...saved.collections },
     policies: { ...d.policies, ...saved.policies, items: saved.policies?.items ?? d.policies.items },
     socials: { ...d.socials, ...saved.socials },
     contact: { ...d.contact, ...saved.contact },

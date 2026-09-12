@@ -81,6 +81,31 @@ export class SellersController {
     return this.sellers.getCustomers(req.user.sellerId);
   }
 
+  // ── collections: seller-curated groups of their own products ──
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @Get('me/collections')
+  collections(@Req() req: any) {
+    return this.sellers.getCollections(req.user.sellerId);
+  }
+
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @Post('me/collections')
+  createCollection(@Req() req: any, @Body() body: any) {
+    return this.sellers.createCollection(req.user.sellerId, body);
+  }
+
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @Put('me/collections/:id')
+  updateCollection(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    return this.sellers.updateCollection(req.user.sellerId, id, body);
+  }
+
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @Delete('me/collections/:id')
+  deleteCollection(@Req() req: any, @Param('id') id: string) {
+    return this.sellers.deleteCollection(req.user.sellerId, id);
+  }
+
   @UseGuards(JwtAuthGuard, SellerGuard)
   @Get('me/coupons')
   coupons(@Req() req: any) {

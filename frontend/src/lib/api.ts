@@ -157,6 +157,15 @@ export const api = {
   myNotifications: () => req<any>(`/sellers/me/notifications`),
   readNotifications: () => req<any>(`/sellers/me/notifications/read`, { method: 'POST' }),
   myCustomers: () => req<any[]>(`/sellers/me/customers`),
+  // ── collections ──
+  myCollections: () => req<any[]>(`/sellers/me/collections`),
+  createCollection: (body: any) =>
+    req<any>(`/sellers/me/collections`, { method: 'POST', body: JSON.stringify(body) }),
+  updateCollection: (id: string, body: any) =>
+    req<any>(`/sellers/me/collections/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCollection: (id: string) =>
+    req<any>(`/sellers/me/collections/${id}`, { method: 'DELETE' }),
+
   myCoupons: () => req<any[]>(`/sellers/me/coupons`),
   createCoupon: (body: any) => req<any>(`/sellers/me/coupons`, { method: 'POST', body: JSON.stringify(body) }),
   updateCoupon: (id: string, body: any) => req<any>(`/sellers/me/coupons/${id}`, { method: 'PUT', body: JSON.stringify(body) }),

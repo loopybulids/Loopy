@@ -19,6 +19,7 @@ const NAV = [
   { href: '/seller/catalog', label: 'Products', icon: <Tag size={18} /> },
   { href: '/seller/orders', label: 'Orders', icon: <Bag size={18} /> },
   { href: '/seller/customers', label: 'Customers', icon: <Heart size={18} /> },
+  { href: '/seller/collections', label: 'Collections', icon: <Tag size={18} /> },
   { href: '/seller/store-editor', label: 'Store Editor', icon: <Store size={18} /> },
   { href: '/seller/links', label: 'Checkout links', icon: <Share size={18} /> },
   { href: '/seller/shipping', label: 'Shipping', icon: <Truck size={18} /> },
@@ -26,11 +27,25 @@ const NAV = [
   { href: '/seller/discounts', label: 'Discounts', icon: <Tag size={18} /> },
   { href: '/seller/reviews', label: 'Reviews', icon: <MessageDots size={18} /> },
   { href: '/seller/profile', label: 'Profile', icon: <Verified size={18} /> },
+];
+
+/**
+ * Console pages with no sidebar entry of their own.
+ *
+ * Settings is reached from the switcher on the Profile page, so listing it in
+ * the sidebar too would be the same destination twice. It still needs to be
+ * here: this list is what gives a route the console chrome and tells the
+ * topbar what to call it — drop it and /seller/settings would render bare and
+ * be titled "Dashboard".
+ */
+const OFF_NAV = [
   { href: '/seller/settings', label: 'Settings', icon: <Cog size={18} /> },
 ];
 
+const ALL_NAV = [...NAV, ...OFF_NAV];
+
 // console routes that get the sidebar chrome (NAV tabs + extra nested pages)
-const CONSOLE = new Set([...NAV.map((n) => n.href), '/seller/products/new']);
+const CONSOLE = new Set([...ALL_NAV.map((n) => n.href), '/seller/products/new']);
 
 // nested console pages (product edit, manual order) also get the chrome
 const CONSOLE_PREFIXES = ['/seller/catalog/', '/seller/orders/'];
@@ -84,17 +99,23 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
     );
   }
 
-  const active = NAV.find((n) => n.href === pathname);
+  const active = ALL_NAV.find((n) => n.href === pathname);
   const initial = (name || 'S').trim().charAt(0).toUpperCase();
   const out = () => { signOut(); router.replace('/seller/login'); };
 
   return (
     <div className="min-h-screen bg-paper text-navy">
       {/* ───── sidebar ───── */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-[248px] border-r border-line bg-white px-4 py-6 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      {/*
+        A flex column, not a block with an absolutely-positioned footer.
+        Thirteen nav items plus the account block overflowed on a short window
+        and the footer sat on top of "Settings" with no way to reach it. The
+        nav scrolls; the brand and the account row stay put.
+      */}
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-line bg-white transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Brand block: "Seller Console" is the loud part — it says where you are.
             Loopy stays present but recedes to a small mark above it. */}
-        <div className="mb-4 rounded-2xl bg-gradient-to-b from-green-soft/70 to-transparent p-3 pb-3.5">
+        <div className="mx-4 mt-6 shrink-0 rounded-2xl bg-gradient-to-b from-green-soft/70 to-transparent p-3 pb-3.5">
           <div className="mb-2.5 flex items-center justify-between px-0.5">
             <Link href="/" title="Loopy home" className="transition-opacity hover:opacity-70">
               <Logo height={19} />
@@ -113,7 +134,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           />
         </div>
 
-        <nav className="space-y-0.5">
+        <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-4 py-3">
           {NAV.map((n) => {
             const on = pathname === n.href;
             return (
@@ -130,16 +151,18 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           })}
         </nav>
 
-        {/* user card */}
-        <div className="absolute inset-x-4 bottom-6">
-          <div className="card flex items-center gap-3 p-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green text-[14px] font-extrabold text-white">{initial}</span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-display text-[13px] font-bold text-navy">{name || 'Your Store'}</div>
-              <div className="truncate text-[11px] text-faint">{user?.role === 'seller' ? 'Verified seller' : 'Seller'}</div>
+        {/* Who's signed in, and the way out. A bordered card here read as a
+            third panel competing with the store switcher above it; this is
+            chrome, so it sits on the sidebar rather than on top of it. */}
+        <div className="shrink-0 border-t border-line px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-green-soft text-[11px] font-bold text-green-600">{initial}</span>
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-[12.5px] font-semibold text-navy">{name || 'Your Store'}</div>
+              <div className="truncate text-[10.5px] text-faint">{user?.role === 'seller' ? 'Verified seller' : 'Seller'}</div>
             </div>
-            <button onClick={out} title="Log out" className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-green-soft hover:text-navy">
-              <LogOut size={16} />
+            <button onClick={out} title="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy">
+              <LogOut size={15} />
             </button>
           </div>
         </div>
@@ -158,14 +181,16 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           </div>
         )}
         {/* topbar */}
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-paper/80 px-5 py-4 backdrop-blur sm:px-8">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-paper/80 px-5 py-3 backdrop-blur sm:px-8">
           <button onClick={() => setOpen(true)} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white lg:hidden">
             <Grid size={18} />
           </button>
-          <div>
-            <h1 className="font-display text-[19px] font-extrabold text-navy">{active?.label || 'Dashboard'}</h1>
-            <p className="text-[12px] text-muted">Welcome back, {(name || 'seller').split(' ')[0]} 👋</p>
-          </div>
+          {/* The only place the page name appears. The greeting used to sit
+              under it on every screen, which said nothing and often read
+              "Welcome back, seller" when no name was loaded yet. */}
+          <h1 className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-navy">
+            {active?.label || 'Dashboard'}
+          </h1>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/seller/links" className="btn-green hidden px-3.5 py-2 text-[12.5px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
             <NotificationsBell />

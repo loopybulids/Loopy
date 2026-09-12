@@ -1,9 +1,8 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { storeUrl } from '@/lib/store-url';
-import { useRef } from 'react';
 import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, TEMPLATES, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
 
 const ACCENT_PRESETS = ['#15784A', '#0E2A47', '#7C3AED', '#DB2777', '#EA580C', '#0891B2', '#CA8A04', '#E11D48'];
@@ -64,15 +63,34 @@ export default function StoreEditor() {
   // multi-hundred-KB base64 data URI when nothing about it changed.
   const savedLogo = useRef<string | null>(null);
 
+  /**
+   * Autosave.
+   *
+   * The editor previously wrote to the server only when you hit Preview or
+   * Publish; every other edit lived in local state and a localStorage draft
+   * that `load()` never read back. So removing your logo, then reloading,
+   * restored it from the server — the removal had never been saved anywhere
+   * that survived a refresh.
+   *
+   * `lastSaved` holds the serialised config as the server has it, so an edit
+   * that changes nothing costs no request. The delay matters: this payload
+   * carries base64 images, so saving on every keystroke would be expensive.
+   */
+  const lastSaved = useRef<string | null>(null);
+  const [autoSave, setAutoSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
   useEffect(() => {
     Promise.all([api.myProfile().catch(() => null), api.myProducts().catch(() => [])]).then(([p, prods]) => {
       const name = p?.storeName || 'Your Store';
       setStoreName(name);
       setUsername(p?.username || '');
       const parsed = typeof p?.storeConfig === 'string' ? safeParse(p.storeConfig) : p?.storeConfig;
-      setConfig(withDefaults(name, parsed, p?.logoUrl));
+      const initial = withDefaults(name, parsed, p?.logoUrl);
+      setConfig(initial);
       setProducts(prods || []);
       savedLogo.current = p?.logoUrl || null;
+      // Baseline for the autosave comparison — nothing to save until this changes.
+      lastSaved.current = JSON.stringify(initial);
     });
   }, []);
 
@@ -85,6 +103,36 @@ export default function StoreEditor() {
       try { localStorage.setItem(`loopy_draft_${username}`, JSON.stringify(config)); } catch { /* ignore */ }
     }
   }, [config, username]);
+
+  // Persist edits to the server shortly after you stop making them, so a
+  // refresh shows what's on screen rather than what was last published.
+  useEffect(() => {
+    if (!config || lastSaved.current === null) return;
+    const serialised = JSON.stringify(config);
+    if (serialised === lastSaved.current) return;
+
+    setAutoSave('saving');
+    const t = setTimeout(async () => {
+      try {
+        await api.updateStoreConfig(config);
+
+        // Keep the store's avatar (Seller.logoUrl) in step, including when it
+        // has been cleared — this is the other half of the removal bug.
+        const logo = config.header?.logoUrl ?? '';
+        if (logo !== (savedLogo.current ?? '')) {
+          savedLogo.current = logo;
+          await api.updateProfile({ logoUrl: logo || null }).catch(() => {});
+        }
+
+        lastSaved.current = serialised;
+        setAutoSave('saved');
+      } catch {
+        setAutoSave('error');
+      }
+    }, 1200);
+
+    return () => clearTimeout(t);
+  }, [config]);
 
   /**
    * Open the preview tab *synchronously*, then save in the background.
@@ -108,10 +156,14 @@ export default function StoreEditor() {
     if (!config) return;
     // Persist in the background so a reload of the preview still shows this design.
     api.updateStoreConfig(config).catch(() => {});
-    const logo = config.header?.logoUrl;
-    if (logo && logo !== savedLogo.current) {
+    // Sync the brand logo in both directions. The old condition required a
+    // truthy value, so clearing the logo never reached the profile and the
+    // storefront avatar kept showing the removed image.
+    const logo = config.header?.logoUrl ?? '';
+    if (logo !== (savedLogo.current ?? '')) {
+      const previous = savedLogo.current;
       savedLogo.current = logo;
-      api.updateProfile({ logoUrl: logo }).catch(() => { savedLogo.current = null; });
+      api.updateProfile({ logoUrl: logo || null }).catch(() => { savedLogo.current = previous; });
     }
   };
 
@@ -138,7 +190,16 @@ export default function StoreEditor() {
     finally { setSaving(false); }
   };
 
-  const previewWidth = useMemo(() => (device === 'mobile' ? 'max-w-[400px]' : 'max-w-none'), [device]);
+  /**
+   * The viewport each mode is pretending to be.
+   *
+   * The preview used to render at whatever width the middle pane happened to
+   * be — about 500px — so "Desktop" showed a desktop layout squeezed into a
+   * tablet: nav items wrapping onto two lines, a hero the wrong shape. It now
+   * renders at a real desktop width and is scaled down to fit, which is what
+   * the seller's shoppers will actually see.
+   */
+  const frameWidth = device === 'mobile' ? 390 : 1280;
 
   if (!config) return <p className="py-10 text-center text-[13px] text-faint">Loading store editor…</p>;
 
@@ -152,7 +213,7 @@ export default function StoreEditor() {
     <div className="-mx-5 -my-6 flex flex-col sm:-mx-8 sm:-my-8 lg:h-[calc(100vh-69px)]">
       {/* toolbar */}
       <div className="flex items-center gap-4 border-b border-line bg-white px-4 py-1.5 sm:px-6">
-        <h1 className="text-[13.5px] font-bold text-navy">Store Editor</h1>
+        {/* No heading here — the console topbar already says "Store Editor". */}
         <div className="ml-auto flex items-center gap-0.5 rounded-lg bg-paper p-0.5 text-[12px] font-semibold">
           {(['desktop', 'mobile'] as const).map((d) => (
             <button key={d} onClick={() => setDevice(d)} className={`rounded-md px-2.5 py-1 capitalize transition-colors ${device === d ? 'bg-white text-navy shadow-sm' : 'text-faint hover:text-navy'}`}>{d}</button>
@@ -165,7 +226,15 @@ export default function StoreEditor() {
           <button onClick={undo} disabled={!hist.current.past.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Undo"><IUndo /></button>
           <button onClick={redo} disabled={!hist.current.future.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Redo"><IRedo /></button>
         </div>
-        <button onClick={publish} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3.5 py-1.5 text-[12.5px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-60">
+        {/* Autosave is invisible work; say so, or "Publish" looks like the only
+            thing that keeps a change. */}
+        <span className="mr-1 min-w-[68px] text-right text-[11.5px] text-faint">
+          {autoSave === 'saving' ? 'Saving…'
+            : autoSave === 'saved' ? 'Changes saved'
+            : autoSave === 'error' ? <span className="text-rose">Not saved</span>
+            : ''}
+        </span>
+        <button onClick={publish} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-green px-3.5 py-1.5 text-[12.5px] font-bold text-white transition-colors hover:bg-green-600 disabled:opacity-60">
           {saving ? 'Publishing…' : saved ? <><Check size={14} /> Published</> : <><ISend /> Publish</>}
         </button>
       </div>
@@ -235,11 +304,17 @@ export default function StoreEditor() {
           </div>
         </aside>
 
-        {/* live preview */}
+        {/* live preview — rendered at device size, scaled to fit the pane */}
         <main className="order-3 min-w-0 flex-1 bg-paper p-4 lg:order-2 lg:overflow-y-auto">
-          <div className={`mx-auto overflow-hidden rounded-lg border border-line shadow-card transition-all ${previewWidth}`}>
-            <StorePreview config={config} products={products} storeName={storeName} mobile={device === 'mobile'} page={active === 'pages' && pageId ? (config.pages || []).find((p) => p.id === pageId) : null} />
-          </div>
+          <DevicePreview width={frameWidth} label={device === 'mobile' ? '390 × mobile' : '1280 × desktop'}>
+            <StorePreview
+              config={config}
+              products={products}
+              storeName={storeName}
+              mobile={device === 'mobile'}
+              page={active === 'pages' && pageId ? (config.pages || []).find((p) => p.id === pageId) : null}
+            />
+          </DevicePreview>
         </main>
 
         {/* field editor — only when editing a section */}
@@ -265,6 +340,57 @@ const IPalette = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="non
 function safeParse(s: string) { try { return JSON.parse(s); } catch { return null; } }
 
 /* ───── per-section field editors ───── */
+/**
+ * Renders its children at a fixed pixel width, then scales the whole thing
+ * down to fit the space available.
+ *
+ * A preview that reflows to the pane's width isn't a preview — it shows a
+ * layout nobody will ever see. Scaling keeps every breakpoint, font size and
+ * column count exactly as a visitor gets them, just smaller.
+ *
+ * The height has to be measured and scaled too, or the scaled content either
+ * leaves a gap beneath it or overflows the scroll container.
+ */
+function DevicePreview({ width, label, children }: { width: number; label: string; children: React.ReactNode }) {
+  const pane = useRef<HTMLDivElement>(null);
+  const frame = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const available = pane.current?.clientWidth ?? width;
+      // Never scale up — a 390px mobile frame in a wide pane stays 390px.
+      const s = Math.min(1, available / width);
+      setScale(s);
+      setHeight((frame.current?.offsetHeight ?? 0) * s);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (pane.current) ro.observe(pane.current);
+    if (frame.current) ro.observe(frame.current);
+    return () => ro.disconnect();
+  }, [width]);
+
+  return (
+    <div ref={pane} className="mx-auto">
+      <div className="mb-1.5 text-center font-num text-[10.5px] text-faint">{label}</div>
+      <div
+        className="mx-auto overflow-hidden rounded-lg border border-line bg-white shadow-card"
+        style={{ width: width * scale, height: height || undefined }}
+      >
+        <div
+          ref={frame}
+          style={{ width, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }: {
   active: SectionKey;
   config: StoreConfig;
@@ -368,6 +494,34 @@ function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }
           <Text label="Subheading" value={config.productTabs.sub} onChange={(v) => set('productTabs', 'sub', v)} />
           <div className="mt-4 text-[12px] font-bold uppercase tracking-wide text-faint">Tabs (comma separated)</div>
           <input className="c-input mt-1.5" value={config.productTabs.tabs.join(', ')} onChange={(e) => set('productTabs', 'tabs', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))} />
+        </>
+      )}
+
+      {active === 'collections' && (
+        <>
+          <Text
+            label="Heading above the rows"
+            value={config.collections.heading}
+            onChange={(v) => set('collections', 'heading', v)}
+          />
+
+          <label className="mt-4 block text-[12px] font-bold uppercase tracking-wide text-faint">Products per row</label>
+          <select
+            value={config.collections.perRow}
+            onChange={(e) => set('collections', 'perRow', Number(e.target.value))}
+            className="c-input mt-1.5"
+          >
+            <option value={3}>3 across</option>
+            <option value={4}>4 across</option>
+          </select>
+
+          {/* The collections themselves are managed elsewhere — this section
+              only controls how they're presented. */}
+          <p className="mt-3 rounded-lg border border-line bg-paper/60 p-3 text-[12.5px] leading-relaxed text-muted">
+            Build your collections in{' '}
+            <a href="/seller/collections" className="font-semibold text-green-600 underline decoration-line">Collections</a>
+            . Every published one appears here, in the order you arranged them.
+          </p>
         </>
       )}
 

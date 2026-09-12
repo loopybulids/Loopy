@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { PageHead, StatCard, Panel, Empty, money } from '@/components/seller-ui';
+import { PageHead, StatStrip, Panel, Empty, money } from '@/components/seller-ui';
 import { Truck, Check } from '@/components/icons';
 
 const STATUS_CHIP: Record<string, string> = {
@@ -71,11 +71,13 @@ export default function Shipping() {
     <div>
       <PageHead title="Shipping" sub="Generate labels, mark shipments, and keep customers updated." />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Orders to ship" value={toShip.length} icon={<Truck size={18} />} accent />
-        <StatCard label="In transit" value={inTransit} />
-        <StatCard label="Delivered" value={delivered} />
-      </div>
+      <StatStrip
+        items={[
+          { label: 'Orders to ship', value: toShip.length, href: '/seller/orders' },
+          { label: 'In transit', value: inTransit },
+          { label: 'Delivered', value: delivered },
+        ]}
+      />
 
       <div className="mt-6 max-w-xl">
         <Panel title="Shipping settings">

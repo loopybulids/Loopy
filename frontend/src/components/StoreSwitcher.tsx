@@ -41,9 +41,18 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published,
   }, []);
 
   // Built at click time — `window` isn't there during the server render.
-  // Absolute and display forms both come from one place — see lib/store-url.
+  // Absolute form for copying; a short, stable label for display.
   const shopUrl = () => storeUrl(username);
-  const prettyUrl = username ? storeUrlLabel(username) : 'Set a store handle';
+  const fullUrl = username ? storeUrlLabel(username) : '';
+  /*
+   * The card shows the handle, not the whole address.
+   *
+   * A full URL never fits 200px: truncating the right cut off the handle —
+   * the one thing telling two same-named stores apart — and truncating the
+   * left produced "…01/s/cpaybara". On a wildcard domain the handle *is* the
+   * subdomain, so it reads correctly either way; the full URL is on hover.
+   */
+  const handle = username ? `@${username}` : 'Set a store handle';
 
   const copy = async () => {
     try {
@@ -81,7 +90,9 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published,
               />
             )}
           </span>
-          <span className="mt-0.5 block text-[11.5px] font-semibold text-muted">{prettyUrl}</span>
+          <span title={fullUrl} className="mt-0.5 block truncate font-num text-[11.5px] text-muted">
+            {handle}
+          </span>
           {email && (
             <span className="block truncate text-[10.5px] text-faint" title={email}>{email}</span>
           )}
