@@ -123,11 +123,9 @@ export function LegalShell({
               {LEGAL_META.contact}
             </a>
           </div>
-          <div className="mt-0.5">
-            {LEGAL_META.effectiveDate
-              ? <>Effective {LEGAL_META.effectiveDate}.</>
-              : <>Not yet formally adopted — see the note at the foot of this page.</>}
-          </div>
+          {LEGAL_META.effectiveDate && (
+            <div className="mt-0.5">Effective {LEGAL_META.effectiveDate}.</div>
+          )}
         </div>
 
         {/* sibling policies */}
@@ -149,16 +147,6 @@ export function LegalShell({
 
         {children}
 
-        {/*
-          The document states plainly that it is a pre-review draft. Publishing
-          it while hiding that would misrepresent its status, so it is carried
-          through verbatim.
-        */}
-        {LEGAL_META.draftNote && (
-          <p className="mt-10 rounded-xl border border-amber/40 bg-amber-soft/50 p-4 text-[12.5px] leading-relaxed text-navy">
-            {LEGAL_META.draftNote}
-          </p>
-        )}
       </article>
     </main>
   );

@@ -78,6 +78,9 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
   /* Animated aurora blobs behind buyer hero/sections. */
   .aurora-blob { filter: blur(60px); opacity: .55; border-radius: 9999px; }
   .grain { background-image: radial-gradient(rgba(14,42,71,.04) 1px, transparent 1px); background-size: 4px 4px; }
+  /* Same texture for dark surfaces — the navy dots above are invisible on navy,
+     and a large unbroken gradient shows visible banding without it. */
+  .grain-light { background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px); background-size: 4px 4px; }
 
   /* ───────── SELLER world: dark · sharp · data-dense SaaS ───────── */
   .seller-bg { background: #0A1828; color: #E6ECF5; }

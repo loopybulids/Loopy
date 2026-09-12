@@ -1,237 +1,252 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic, Tilt } from '@/components/motion';
+import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic } from '@/components/motion';
 import RedirectAuthed from '@/components/RedirectAuthed';
 import Logo from '@/components/Logo';
-import {
-  ArrowRight, Bolt, Check, Loop, Plus, Share,
-  ShieldLock, Star, Store, Truck, Verified, Wallet,
-} from '@/components/icons';
+import LoopyIntro from '@/components/LoopyIntro';
+import HeroDiagram from '@/components/HeroDiagram';
+import LoopyFlow from '@/components/LoopyFlow';
+import { ArrowRight, Bolt, Plus, Share, ShieldLock, Star, Store, Truck } from '@/components/icons';
 
 /* ──────────────────────────────────────────────────────────────
-   DM2Order-style marketing landing — built on Loopy's design system.
-   Sections: nav · hero+flow · stats · problem · solution · features
-   · testimonials · pricing · faq · footer
-   ────────────────────────────────────────────────────────────── */
+   Loopy marketing landing.
 
-// Brand logos shown in the "trusted by" row (Clearbit logo API).
-const BRANDS = [
-  { name: 'Zara', domain: 'zara.com' },
-  { name: 'H&M', domain: 'hm.com' },
-  { name: 'Levi\'s', domain: 'levi.com' },
-  { name: 'Nike', domain: 'nike.com' },
-  { name: 'Uniqlo', domain: 'uniqlo.com' },
-];
+   White and airy. Two colours only — navy #0E2A47 for every word
+   that matters, green #15784A for the things you can act on —
+   and a single pale green gradient bleeding in from the top
+   right. That one wash is the entire decoration; there is no
+   second gradient, no dark band, no floating blobs.
+
+   The hero is centred, with the visual beneath the copy rather
+   than beside it, so the page opens with one clear line of
+   reading instead of two columns competing for the first glance.
+
+   Two things do move, and both earn it: <HeroDiagram> assembles
+   the three planes of the flow once on entry, and <LoopyFlow> in
+   "How it works" runs the four stages on a loop, because the
+   product's name is the shape of its process. Everything else is
+   scroll-triggered once — Reveal on entry, Stagger down lists,
+   WordReveal on the headline, CountUp on figures — so whitespace
+   stays the thing doing the work.
+   ────────────────────────────────────────────────────────────── */
 
 const SOLUTIONS = [
   { icon: <Share size={20} />, t: 'Chat to order', d: 'Turn any DM into a structured order in seconds.' },
   { icon: <Bolt size={20} />, t: 'Instant checkout links', d: 'Pre-filled carts your customer pays in one tap.' },
-  { icon: <Store size={20} />, t: 'Centralized dashboard', d: 'Every order, payment and shipment in one place.' },
-  { icon: <ShieldLock size={20} />, t: 'Automated notifications', d: 'Order, payment and delivery updates on autopilot.' },
-  { icon: <Truck size={20} />, t: 'Shipping management', d: 'Generate labels and track every shipment live.' },
-  { icon: <Star size={20} />, t: 'Analytics', d: 'Revenue, conversion and product insights at a glance.' },
+  { icon: <Store size={20} />, t: 'Your own storefront', d: 'A real shop at your own address, live in minutes.' },
+  { icon: <ShieldLock size={20} />, t: 'Protected payments', d: 'Money held safely until the order is delivered.' },
+  { icon: <Truck size={20} />, t: 'Shipping & tracking', d: 'Add a courier and tracking number; buyers get both.' },
+  { icon: <Star size={20} />, t: 'Reviews & analytics', d: 'Revenue, conversion and what buyers actually said.' },
 ];
 
+
 const TESTIMONIALS = [
-  { name: 'Riya Mehta', store: '@vintagefinds.in', quote: 'I used to lose half my DMs. Now every chat becomes a paid order — my revenue doubled in two months.', growth: '+118% revenue', avatar: 'bg-rose' },
-  { name: 'Arjun Nair', store: '@thesneakerloop', quote: 'Checkout links killed the payment chasing. Customers pay instantly and I ship the same day.', growth: '+74% orders', avatar: 'bg-navy-600' },
-  { name: 'Sana Kapoor', store: '@sanas.closet', quote: 'One dashboard for orders, payments and shipping. It finally feels like a real business, not a side hustle.', growth: '+2.3x AOV', avatar: 'bg-green-500' },
+  { name: 'Riya Mehta', store: '@vintagefinds.in', quote: 'I used to lose half my DMs. Now every chat becomes a paid order — my revenue doubled in two months.', growth: '+118% revenue' },
+  { name: 'Arjun Nair', store: '@thesneakerloop', quote: 'Checkout links killed the payment chasing. Customers pay instantly and I ship the same day.', growth: '+74% orders' },
+  { name: 'Sana Kapoor', store: '@sanas.closet', quote: 'One dashboard for orders, payments and shipping. It finally feels like a real business, not a side hustle.', growth: '+2.3× AOV' },
 ];
 
 const FAQS = [
   { q: 'How does a DM become an order?', a: 'Pick a product, generate a checkout link, paste it in chat. Your customer pays and the order lands in your dashboard.' },
-  { q: 'Do I need a website?', a: 'No — you get a hosted storefront the moment you sign up.' },
+  { q: 'Do I need a website?', a: 'No — you get a hosted storefront at your own address the moment you sign up.' },
   { q: 'Which payments are supported?', a: 'UPI, cards, net banking and wallets.' },
-  { q: 'How do payouts work?', a: 'Funds are held in escrow and settled to your bank after delivery is confirmed.' },
+  { q: 'How do payouts work?', a: 'Funds are held until delivery is confirmed, then settled to your UPI ID or bank account.' },
+  { q: 'What does Loopy charge?', a: 'A flat 5% platform fee, shown to the buyer at checkout. It is not deducted from your payout.' },
   { q: 'Can I track inventory?', a: 'Yes — stock updates automatically as orders come in, with low-stock alerts.' },
-  { q: 'Is there a free plan?', a: 'Yes. Storefront, unlimited products and checkout links — no card required.' },
 ];
 
 export default function Landing() {
   return (
-    <main className="relative min-h-screen bg-paper text-navy">
+    <main className="relative min-h-screen bg-white text-navy">
       <RedirectAuthed />
-      {/* ───── animated aurora background (fixed so it never traps scroll) ───── */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="aurora-blob animate-aurora absolute -left-24 -top-24 h-[42vw] w-[42vw] bg-green-mint" />
-        <div className="aurora-blob animate-aurora absolute right-[-10%] top-[8%] h-[34vw] w-[34vw] bg-green-600/70" style={{ animationDelay: '-6s' }} />
-        <div className="aurora-blob animate-aurora absolute bottom-[-12%] left-[28%] h-[36vw] w-[36vw] bg-navy/20" style={{ animationDelay: '-11s' }} />
-        <div className="absolute inset-0 grain" />
-      </div>
+      <LoopyIntro />
 
-      {/* ───── top bar ───── */}
-      <header className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-5 sm:px-8">
-        <Logo height={34} />
-        <nav className="hidden items-center gap-1 text-[15px] font-semibold text-navy/75 md:flex">
+      {/*
+        The only decoration on the page: one pale green wash bleeding in from
+        the top right, fading to nothing well before the fold. Fixed so it
+        never affects layout, and behind everything.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[680px]"
+        style={{
+          background:
+            'radial-gradient(1100px 620px at 88% -8%, rgba(227,246,236,0.95) 0%, rgba(227,246,236,0.45) 38%, rgba(255,255,255,0) 72%)',
+        }}
+      />
+
+      {/* ───── nav ───── */}
+      <header className="relative mx-auto flex max-w-6xl items-center gap-4 px-6 py-6 sm:px-8">
+        <Link href="/" className="transition-opacity hover:opacity-70">
+          <Logo height={30} />
+        </Link>
+        <nav className="hidden items-center gap-1 text-[14.5px] text-muted md:flex">
           <a href="#how" className="rounded-full px-3 py-2 transition-colors hover:text-navy">How it works</a>
+          <a href="#features" className="rounded-full px-3 py-2 transition-colors hover:text-navy">Features</a>
           <a href="#faq" className="rounded-full px-3 py-2 transition-colors hover:text-navy">FAQ</a>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <Link href="/seller/login" className="rounded-full px-4 py-2.5 text-[14px] font-semibold text-navy/80 transition-colors hover:bg-white/60 hover:text-navy">Log in</Link>
-          <Link href="/seller/login" className="rounded-full bg-navy px-5 py-2.5 text-[14px] font-bold text-white transition-transform hover:scale-[1.03]">Start Selling</Link>
+        <div className="ml-auto flex items-center gap-1.5">
+          <Link href="/seller/login" className="rounded-full px-4 py-2.5 text-[14px] font-medium text-muted transition-colors hover:text-navy">
+            Log in
+          </Link>
+          <Link
+            href="/seller/login"
+            className="rounded-full bg-navy px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-navy-700"
+          >
+            Start selling
+          </Link>
         </div>
       </header>
 
-      {/* ───── hero ───── */}
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-6 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-8">
-        <div className="text-left">
-          <Reveal>
-            <span className="protect-pill"><ShieldLock size={12} /> The most trusted way to thrift in India</span>
-          </Reveal>
-          <h1 className="mt-6 max-w-xl font-display text-[44px] font-extrabold leading-[1.04] tracking-tight sm:text-[64px]">
-            <WordReveal text="Your thrift store," />{' '}
-            <span className="vivid-text"><WordReveal text="protected end-to-end" delay={0.3} /></span>
-          </h1>
-          <Reveal delay={0.2}>
-            <p className="mt-6 max-w-md text-balance text-[16px] leading-relaxed text-muted sm:text-[18px]">
-              Turn your Instagram DMs into a real storefront with built-in escrow protection.
-              No more ghosting, no more payment anxiety.
-            </p>
-          </Reveal>
-          <Reveal delay={0.32}>
-            <div className="mt-9 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <Magnetic>
-                <Link href="/seller/login" className="btn-navy">Create Your Store <ArrowRight size={16} /></Link>
-              </Magnetic>
-              <a href="#how" className="btn-ghost">How it works</a>
-            </div>
-          </Reveal>
-          <Reveal delay={0.42}>
-            <div className="mt-10 flex items-center gap-3">
-              <div className="flex -space-x-2">
-                {BRANDS.map((b) => (
-                  <span key={b.domain} className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-white shadow-card ring-2 ring-paper">
-                    <img
-                      src={`https://www.google.com/s2/favicons?domain=${b.domain}&sz=128`}
-                      alt={b.name}
-                      className="h-full w-full object-contain p-1.5"
-                      onError={(e) => { (e.currentTarget.style.display = 'none'); }}
-                    />
-                  </span>
-                ))}
-              </div>
-              <p className="text-[14px] text-muted">
-                Trusted by <span className="font-bold text-navy">125+</span> sellers across India
-              </p>
-            </div>
-          </Reveal>
-        </div>
-
-        {/* hero visual — the protected-order product card */}
-        <Reveal delay={0.25}>
-          <Tilt max={7}>
-            <div className="glass-card relative mx-auto w-full max-w-[420px] rounded-[28px] p-4 sm:p-5">
-              {/* seller header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600" />
-                  <div>
-                    <div className="flex items-center gap-1 font-display text-[15px] font-extrabold text-navy">
-                      @VintageFindsIn <Verified size={15} className="text-green-600" />
-                    </div>
-                    <div className="text-[12px] text-muted">Verified Seller</div>
-                  </div>
-                </div>
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-green-soft text-green-600"><Check size={15} /></span>
-              </div>
-
-              {/* product image + floating badges */}
-              <div className="relative mt-4 overflow-hidden rounded-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=72"
-                  alt="Classic Leather Boots"
-                  className="aspect-[4/3] w-full object-cover"
-                />
-                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-green-600 px-2.5 py-1 text-[11px] font-extrabold text-white shadow-card">
-                  <ShieldLock size={12} /> Loopy Protected
-                </span>
-                <span className="absolute -left-1 top-14 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-navy shadow-card">
-                  <Truck size={14} className="text-green-600" /> Auto label created
-                </span>
-              </div>
-
-              {/* product meta */}
-              <div className="mt-4 flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-display text-[19px] font-extrabold text-navy">Classic Leather Boots</div>
-                  <div className="mt-0.5 font-display text-[22px] font-extrabold text-navy">₹2,499</div>
-                </div>
-                <button className="btn-green shrink-0 self-center">Buy with Protection</button>
-              </div>
-
-              {/* escrow strip */}
-              <div className="relative mt-4 flex items-center gap-2 rounded-2xl bg-green-soft px-4 py-3 text-[13px] font-semibold text-green">
-                <ShieldLock size={15} /> Money held in Loopy Escrow
-                <span className="absolute -top-4 right-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-navy shadow-card">
-                  <Wallet size={14} className="text-amber" /> ₹2,499 released
-                </span>
-              </div>
-            </div>
-          </Tilt>
+      {/* ───── hero — copy left, diagram right ───── */}
+      <section className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1fr_1.05fr] lg:gap-6">
+        <div className="text-center lg:text-left">
+        <Reveal y={12}>
+          <span className="inline-flex items-center gap-2 rounded-full border border-green/15 bg-white/70 px-3.5 py-1.5 text-[12px] font-semibold text-green-600 backdrop-blur">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-600" />
+            </span>
+            The safest way to sell in DMs
+          </span>
         </Reveal>
+
+        <h1 className="mt-7 font-display text-[40px] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[54px]">
+          <WordReveal text="Your thrift store," />
+          <br />
+          {/* One word carries the colour. Everything else is navy. */}
+          <span className="text-green-600"><WordReveal text="protected end-to-end" delay={0.22} /></span>
+        </h1>
+
+        <Reveal delay={0.4} y={14}>
+          <p className="mx-auto mt-6 max-w-lg text-[16.5px] leading-relaxed text-muted lg:mx-0">
+            Turn Instagram DMs into a real storefront with payments held until delivery.
+            No ghosting, no chasing screenshots, no payment anxiety.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.5} y={14}>
+          <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+            <Magnetic>
+              <Link
+                href="/seller/login"
+                className="group inline-flex items-center justify-center gap-2 rounded-full bg-green-600 px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_30px_-12px_rgba(21,120,74,0.55)] transition-all hover:bg-green"
+              >
+                Create your store
+                <ArrowRight size={17} className="transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </Magnetic>
+            <a
+              href="#how"
+              className="inline-flex items-center justify-center rounded-full border border-line bg-white px-6 py-3.5 text-[15px] font-semibold text-navy transition-colors hover:border-navy/25"
+            >
+              How it works
+            </a>
+          </div>
+          <p className="mt-6 text-[12.5px] text-faint">Free to start · No card required · Live in minutes</p>
+        </Reveal>
+      </div>
+
+        {/* The visual: three planes that assemble into the flow. */}
+        <HeroDiagram />
       </section>
 
-      {/* ───── trust stats ───── */}
-      <section className="mx-auto max-w-5xl px-5 py-14 sm:px-8">
+      {/* ───── stats ───── */}
+      <section className="mx-auto max-w-4xl px-6 py-24 sm:px-8">
         <Reveal>
-          <div className="glass-panel grid grid-cols-2 gap-6 rounded-3xl px-6 py-8 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-y-10 sm:grid-cols-4">
             {[
-              { to: 500, suffix: '+', label: 'Orders processed' },
-              { to: 125, suffix: '', label: 'Active sellers' },
-              { to: 30, suffix: 's', label: 'Chat to checkout' },
-              { to: 48, suffix: 'h', label: 'Protected payout' },
+              { to: 500, suffix: '+', l: 'Orders processed' },
+              { to: 125, suffix: '', l: 'Active sellers' },
+              { to: 30, suffix: 's', l: 'Chat to checkout' },
+              { to: 48, suffix: 'h', l: 'Protected payout' },
             ].map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="font-display text-[28px] font-extrabold text-navy sm:text-[34px]">
-                  <CountUp to={s.to} suffix={s.suffix} />
-                </div>
-                <div className="mt-1 text-[12px] font-semibold uppercase tracking-wide text-muted">{s.label}</div>
+              <div key={s.l} className="text-center">
+                <CountUp
+                  to={s.to}
+                  suffix={s.suffix}
+                  className="font-num text-[30px] font-semibold tracking-[-0.03em] tabular-nums text-navy"
+                />
+                <div className="mt-1.5 text-[12.5px] text-muted">{s.l}</div>
               </div>
             ))}
           </div>
         </Reveal>
       </section>
 
-      {/* ───── solution ───── */}
-      <section id="how" className="mx-auto max-w-5xl scroll-mt-24 px-5 py-12 sm:px-8">
+      {/* ───── how it works ───── */}
+      <section id="how" className="mx-auto max-w-5xl scroll-mt-24 px-6 pb-28 sm:px-8">
         <Reveal>
-          <p className="text-center text-[13px] font-extrabold uppercase tracking-widest text-green-600">The solution</p>
-          <h2 className="mt-3 text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Everything organized in one place</h2>
+          <div className="text-center">
+            <SectionLabel>How it works</SectionLabel>
+            <h2 className="mx-auto mt-4 max-w-xl font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+              Three steps from a chat to money in your account
+            </h2>
+          </div>
         </Reveal>
-        <Stagger className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SOLUTIONS.map((s) => (
-            <StaggerItem key={s.t}>
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="glass-card h-full rounded-2xl p-6">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-navy text-green-mint">{s.icon}</span>
-                <div className="mt-4 font-display text-[17px] font-bold text-navy">{s.t}</div>
-                <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{s.d}</p>
-              </motion.div>
-            </StaggerItem>
-          ))}
-        </Stagger>
+
+        <Reveal delay={0.15}>
+          <div className="mt-14"><LoopyFlow /></div>
+        </Reveal>
+      </section>
+
+      {/* ───── features ───── */}
+      <section id="features" className="scroll-mt-24 border-t border-line/70 bg-paper/40 py-28">
+        <div className="mx-auto max-w-5xl px-6 sm:px-8">
+          <Reveal>
+            <div className="text-center">
+              <SectionLabel>Everything in one place</SectionLabel>
+              <h2 className="mx-auto mt-4 max-w-lg font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+                The whole business, not just the chat
+              </h2>
+            </div>
+          </Reveal>
+
+          <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" gap={0.07}>
+            {SOLUTIONS.map((s) => (
+              <StaggerItem key={s.t}>
+                <div className="group h-full rounded-2xl border border-line bg-white p-6 transition-all hover:-translate-y-1 hover:border-green/30 hover:shadow-[0_20px_44px_-28px_rgba(14,42,71,0.28)]">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-green-soft text-green-600 transition-transform group-hover:scale-105">
+                    {s.icon}
+                  </span>
+                  <h3 className="mt-4 font-display text-[16px] font-extrabold">{s.t}</h3>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{s.d}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
       </section>
 
       {/* ───── testimonials ───── */}
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+      <section className="mx-auto max-w-6xl px-6 py-28 sm:px-8">
         <Reveal>
-          <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Sellers who closed the loop</h2>
+          <div className="text-center">
+            <SectionLabel>Sellers who closed the loop</SectionLabel>
+            <h2 className="mx-auto mt-4 max-w-lg font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+              Built with the people using it
+            </h2>
+          </div>
         </Reveal>
-        <Stagger className="mt-12 grid gap-5 lg:grid-cols-3">
+
+        <Stagger className="mt-14 grid gap-5 md:grid-cols-3" gap={0.1}>
           {TESTIMONIALS.map((t) => (
             <StaggerItem key={t.name}>
-              <div className="glass-card flex h-full flex-col rounded-3xl p-7">
-                <div className="flex items-center gap-1 text-amber">
-                  {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={16} />)}
+              <div className="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
+                <div className="flex gap-0.5 text-green-600">
+                  {[0, 1, 2, 3, 4].map((i) => <Star key={i} size={13} />)}
                 </div>
-                <p className="mt-4 flex-1 text-[15px] leading-relaxed text-navy/85">“{t.quote}”</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <span className={`grid h-11 w-11 place-items-center rounded-full font-display text-[15px] font-extrabold text-white ${t.avatar}`}>{t.name[0]}</span>
-                  <div>
-                    <div className="font-display text-[15px] font-bold text-navy">{t.name}</div>
-                    <div className="text-[12.5px] text-muted">{t.store}</div>
+                <p className="mt-4 flex-1 text-[14.5px] leading-relaxed text-navy/85">“{t.quote}”</p>
+                <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green-soft text-[12px] font-bold text-green-600">
+                    {t.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <div className="truncate text-[13.5px] font-bold">{t.name}</div>
+                    <div className="truncate text-[11.5px] text-faint">{t.store}</div>
                   </div>
-                  <span className="ml-auto chip-green">{t.growth}</span>
+                  <span className="shrink-0 font-num text-[11.5px] font-semibold text-green-600">{t.growth}</span>
                 </div>
               </div>
             </StaggerItem>
@@ -240,44 +255,66 @@ export default function Landing() {
       </section>
 
       {/* ───── faq ───── */}
-      <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-5 py-16 sm:px-8">
+      <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-6 pb-28 sm:px-8">
         <Reveal>
-          <h2 className="text-center font-display text-[30px] font-extrabold text-navy sm:text-[40px]">Frequently asked questions</h2>
+          <div className="text-center">
+            <SectionLabel>Questions</SectionLabel>
+            <h2 className="mt-4 font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+              Everything you might ask
+            </h2>
+          </div>
         </Reveal>
-        <div className="mt-10 space-y-3">
-          {FAQS.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
-        </div>
+        <Stagger className="mt-12 space-y-3" gap={0.05}>
+          {FAQS.map((f) => (
+            <StaggerItem key={f.q}><FaqItem q={f.q} a={f.a} /></StaggerItem>
+          ))}
+        </Stagger>
       </section>
 
-      {/* ───── final CTA ───── */}
-      <section className="mx-auto max-w-5xl px-5 pb-20 sm:px-8">
+      {/* ───── closing CTA — a soft green panel, not a dark band ───── */}
+      <section className="mx-auto max-w-5xl px-6 pb-28 sm:px-8">
         <Reveal>
-          <div className="seller-bg seller-grid relative overflow-hidden rounded-[32px] border border-white/10 px-8 py-14 text-center">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-green-500/20 blur-3xl" />
-            <h2 className="font-display text-[30px] font-extrabold text-white sm:text-[40px]">Start turning chats into checkouts today</h2>
-            <p className="mx-auto mt-4 max-w-md text-[15px] text-[#8A98AD]">Set up your store, drop your first checkout link, and get paid — all in the next few minutes.</p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Magnetic><Link href="/seller/login" className="btn-green">Create your store <ArrowRight size={16} /></Link></Magnetic>
-              <a href="#how" className="s-btn">See how it works</a>
+          <div className="rounded-[28px] bg-green-soft px-8 py-16 text-center">
+            <h2 className="mx-auto max-w-lg font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[40px]">
+              Start turning chats into <span className="text-green-600">checkouts</span>
+            </h2>
+            <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-navy/70">
+              Set up your store, drop your first checkout link, and get paid — all in the next few minutes.
+            </p>
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Magnetic>
+                <Link
+                  href="/seller/login"
+                  className="group inline-flex items-center gap-2 rounded-full bg-green-600 px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_30px_-12px_rgba(21,120,74,0.55)] transition-all hover:bg-green"
+                >
+                  Create your store
+                  <ArrowRight size={17} className="transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </Magnetic>
+              <a href="#how" className="rounded-full border border-navy/15 bg-white px-6 py-3.5 text-[15px] font-semibold text-navy transition-colors hover:border-navy/30">
+                See how it works
+              </a>
             </div>
           </div>
         </Reveal>
       </section>
 
       {/* ───── footer ───── */}
-      <footer className="border-t border-line/70 bg-white/40">
-        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
+      <footer className="border-t border-line">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr]">
           <div>
-            <Logo height={30} />
-            <p className="mt-3 max-w-xs text-[13.5px] leading-relaxed text-muted">Conversational commerce that turns Instagram DMs and WhatsApp chats into real, protected orders.</p>
+            <Logo height={28} />
+            <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-muted">
+              Conversational commerce that turns Instagram DMs and WhatsApp chats into real,
+              protected orders.
+            </p>
           </div>
           <div>
-            <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Company</div>
-            <ul className="mt-3 space-y-2 text-[14px] text-muted">
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-faint">Company</div>
+            <ul className="mt-4 space-y-2.5 text-[13.5px] text-muted">
               {/* Real routes — each policy has its own page, and Contact points at
                   the Grievance Officer section, which is the one with contact
-                  details in it. The old '#refunds' and '#contact' anchors no
-                  longer existed. */}
+                  details in it. */}
               {[
                 { l: 'Terms', href: '/terms' },
                 { l: 'Privacy Policy', href: '/privacy' },
@@ -287,20 +324,22 @@ export default function Landing() {
                 { l: 'All policies', href: '/legal' },
                 { l: 'Contact', href: '/legal#grievance-redressal-policy' },
               ].map((x) => (
-                <li key={x.l}><Link href={x.href} className="transition-colors hover:text-navy">{x.l}</Link></li>
+                <li key={x.l}>
+                  <Link href={x.href} className="transition-colors hover:text-navy">{x.l}</Link>
+                </li>
               ))}
             </ul>
           </div>
           <div>
-            <div className="font-display text-[13px] font-extrabold uppercase tracking-wide text-navy">Follow</div>
-            <ul className="mt-3 space-y-2 text-[14px] text-muted">
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-faint">Follow</div>
+            <ul className="mt-4 space-y-2.5 text-[13.5px] text-muted">
               {['Instagram', 'Facebook', 'LinkedIn', 'YouTube'].map((l) => (
-                <li key={l}><a className="transition-colors hover:text-navy">{l}</a></li>
+                <li key={l}><span className="cursor-default transition-colors hover:text-navy">{l}</span></li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="border-t border-line/70 py-6 text-center text-[12.5px] text-faint">
+        <div className="border-t border-line py-6 text-center text-[12px] text-faint">
           © 2026 Loopy · Conversational commerce for social sellers
         </div>
       </footer>
@@ -308,16 +347,34 @@ export default function Landing() {
   );
 }
 
+/** The small green kicker above every section heading. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-green-600">{children}</span>
+  );
+}
+
 /* ───── FAQ accordion item ───── */
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-white/70">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
-        <span className="font-display text-[15.5px] font-bold text-navy">{q}</span>
-        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full bg-green-soft text-green-600 transition-transform ${open ? 'rotate-45' : ''}`}><Plus size={15} /></span>
+    <div className={`overflow-hidden rounded-2xl border bg-white transition-colors ${open ? 'border-green/35' : 'border-line'}`}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+      >
+        <span className="font-display text-[15px] font-bold text-navy">{q}</span>
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full transition-all ${open ? 'rotate-45 bg-green-600 text-white' : 'bg-green-soft text-green-600'}`}>
+          <Plus size={15} />
+        </span>
       </button>
-      <motion.div initial={false} animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
+      <motion.div
+        initial={false}
+        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="overflow-hidden"
+      >
         <p className="px-5 pb-5 text-[14px] leading-relaxed text-muted">{a}</p>
       </motion.div>
     </div>
