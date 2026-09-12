@@ -4,6 +4,15 @@ import { sellerReceivableOf } from '../common/money';
 
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 
+/**
+ * Just enough of a Prisma client to read the wallet, so the same code can run
+ * against `this.prisma` or a transaction client without either being widened.
+ */
+type PrismaClientLike = {
+  order: { findMany: (args: any) => Promise<any[]> };
+  payout: { findMany: (args: any) => Promise<any[]> };
+};
+
 function shapeProduct(p: any) {
   return { ...p, images: safeParse(p.images), variants: safeParse(p.variants), sizes: safeParse(p.sizes) };
 }
@@ -728,12 +737,23 @@ export class SellersService {
    * deducted here. See common/money.
    */
   async getWallet(sellerId: string) {
+    return this.walletOn(this.prisma, sellerId);
+  }
+
+  /**
+   * The wallet figures, computed against a given client.
+   *
+   * Takes the client as an argument so `requestPayout` can recompute the same
+   * numbers inside its transaction. Two copies of this arithmetic is how a
+   * balance starts disagreeing with itself, so there is only ever one.
+   */
+  private async walletOn(db: PrismaClientLike, sellerId: string) {
     const [orders, payouts] = await Promise.all([
-      this.prisma.order.findMany({
+      db.order.findMany({
         where: { sellerId },
         select: { status: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
       }),
-      this.prisma.payout.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } }),
+      db.payout.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } }),
     ]);
 
     const pending = sellerReceivableOf(orders.filter((o) => ['Paid', 'Accepted', 'Shipped'].includes(o.status)));
@@ -762,27 +782,58 @@ export class SellersService {
   /**
    * Raise a payout request for everything currently available.
    *
-   * A seller with one request already open cannot raise another: `available`
-   * is computed from delivered orders minus payouts already *paid*, so an
-   * open request is not yet deducted, and a second click would ask for the
-   * same money twice. Returning the existing request makes a double submit
-   * harmless rather than expensive.
+   * This used to refuse outright if any request was already open, on the
+   * stated grounds that `available` did not deduct open requests and a second
+   * click would ask for the same money twice. That has not been true since
+   * `walletOn` started subtracting `requested` as well as `settled` — so the
+   * guard was blocking a legitimate and ordinary case: an order is delivered
+   * and requested, another is delivered the next day, and the seller cannot
+   * touch it until an admin gets round to the first request. It reported
+   * "already requested" while the newly available money sat there.
+   *
+   * The row lock is what makes dropping it safe. The real hazard was never a
+   * second considered click but two arriving together: both read the same
+   * `available`, both create a request for it, and the seller has asked for
+   * the same rupees twice. Locking the seller row serialises them, so the
+   * second recomputes after the first has committed and finds nothing left.
    */
   async requestPayout(sellerId: string) {
-    const open = await this.prisma.payout.findFirst({
-      where: { sellerId, status: 'requested' },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (open) {
-      return { ok: true, payout: open, alreadyRequested: true,
-        message: 'You already have a payout request being processed.' };
-    }
+    return this.prisma.$transaction(async (tx) => {
+      // Held only for the few milliseconds this transaction runs. Nothing
+      // else in the app takes this lock, so it contends with nothing but
+      // another payout request for the same seller — which is the point.
+      await tx.$queryRaw`SELECT id FROM "Seller" WHERE id = ${sellerId} FOR UPDATE`;
 
-    const { available } = await this.getWallet(sellerId);
-    if (available <= 0) return { ok: false, message: 'No funds available yet' };
-    const payout = await this.prisma.payout.create({
-      data: { sellerId, amount: available, status: 'requested' },
+      const { available, requested } = await this.walletOn(tx, sellerId);
+
+      if (available <= 0) {
+        // Distinguish the two reasons there is nothing to request: everything
+        // is already in flight, or nothing has been delivered yet. The old
+        // single "No funds available yet" was wrong in the first case and the
+        // seller had no way to tell which they were looking at.
+        return requested > 0
+          ? { ok: false, reason: 'all-requested' as const,
+              message: `Your whole available balance (${requested}) is already awaiting approval.` }
+          : { ok: false, reason: 'no-funds' as const,
+              message: 'No funds available yet — money is released once an order is delivered.' };
+      }
+
+      const payout = await tx.payout.create({
+        data: { sellerId, amount: available, status: 'requested' },
+      });
+      return { ok: true as const, payout, amount: available };
+    }, {
+      /*
+       * Prisma's 5s default is too tight for this database. The lock, two
+       * reads and the insert are four round trips to a Neon compute in
+       * us-east-2, ~300ms each from India, and a cold compute spends about
+       * 2.6s waking up on the first one — so a seller unlucky enough to be
+       * the first request after an idle period could trip the default and see
+       * a failure that was pure latency. Contention is only ever between two
+       * payout requests from the same seller, so a longer hold costs nothing.
+       */
+      timeout: 20_000,
+      maxWait: 10_000,
     });
-    return { ok: true, payout };
   }
 }

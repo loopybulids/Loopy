@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
@@ -54,6 +54,25 @@ const display = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'Loopy — Turn Instagram DMs & WhatsApp chats into orders',
   description: 'Convert conversations into sales with instant checkout links, automated order management and shipping workflows — all from one dashboard.',
+};
+
+/*
+ * Declared explicitly rather than relying on the framework default, because
+ * two of these matter on a phone and neither is the default:
+ *
+ *  - `maximumScale` is deliberately absent. Locking zoom is the usual way to
+ *    make a layout "look right" on mobile, and it takes pinch-zoom away from
+ *    anyone who needs it. The layout has to work without that crutch.
+ *  - `themeColor` paints the browser chrome, so the address bar matches the
+ *    page instead of sitting on it as a grey band.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0E2A47' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -2,7 +2,7 @@
 import {
   motion, useInView, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform,
 } from 'framer-motion';
-import { useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, Heart, MessageDots, Share, Verified } from '@/components/icons';
 
 /**
@@ -150,6 +150,10 @@ function Parcel({ spin }: { spin: boolean }) {
   );
 }
 
+/** The stage is authored at this size and scaled to fit its container. */
+const STAGE_W = 540;
+const STAGE_H = 452;
+
 export default function ShopScene() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
@@ -191,163 +195,207 @@ export default function ShopScene() {
   const spring = (delay: number) =>
     calm ? { duration: 0 } : { type: 'spring' as const, stiffness: 120, damping: 15, mass: 0.8, delay };
 
+  /*
+   * The stage is authored at a fixed 540x452 because every piece is absolutely
+   * positioned inside a perspective scene — percentages cannot place things in
+   * 3D and keep the depths consistent. So rather than reflowing it, the whole
+   * stage is scaled to whatever width it is given.
+   *
+   * That yields one composition at every size: a phone gets the same scene as
+   * a desktop, just smaller, instead of a broken version of it. Without this
+   * the scene overflowed a 390px screen by about 150px.
+   */
+  const box = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(1);
+
+  /*
+   * Measured before the browser paints, not after. `fit` starts at 1, so with
+   * a plain effect a phone would paint the stage at full 452px height for one
+   * frame and then snap to ~286px once measured — a visible lurch in the
+   * hero, and exactly the kind of shift that scores as layout instability.
+   * `useLayoutEffect` runs between render and paint, so the first frame the
+   * user sees is already the right size. Falls back on the server, where
+   * there is no layout to read and the hook would only warn.
+   */
+  const useMeasure = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+  useMeasure(() => {
+    const measure = () => {
+      const w = box.current?.clientWidth ?? STAGE_W;
+      setFit(Math.min(1, w / STAGE_W));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (box.current) ro.observe(box.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div ref={ref} className="relative mx-auto w-full max-w-[560px]">
-      <div
-        className="relative mx-auto h-[452px] w-full max-w-[540px]"
-        style={{ perspective: '1500px', perspectiveOrigin: '50% 42%' }}
-        onPointerMove={onMove}
-        onPointerLeave={() => { mx.set(0); my.set(0); }}
-      >
-        <motion.div
-          className="absolute inset-0"
-          style={
-            calm
-              ? { transformStyle: 'preserve-3d', transform: 'rotateX(12deg) rotateZ(-6deg)' }
-              : { transformStyle: 'preserve-3d', rotateX, rotateZ, y: lift }
-          }
+      {/* Measured box: hands the scene its available width and collapses to
+          the scaled height, so nothing below is pushed away. */}
+      <div ref={box} className="w-full" style={{ height: STAGE_H * fit }}>
+        <div
+          className="relative"
+          style={{
+            width: STAGE_W,
+            height: STAGE_H,
+            transform: `scale(${fit})`,
+            transformOrigin: 'top left',
+            perspective: '1500px',
+            perspectiveOrigin: '50% 42%',
+          }}
+          onPointerMove={onMove}
+          onPointerLeave={() => { mx.set(0); my.set(0); }}
         >
-          {/* ── the DM, on a phone ── */}
           <motion.div
-            className="absolute left-0 top-0 w-[262px]"
-            style={{ transformStyle: 'preserve-3d', z: 0 }}
-            initial={{ opacity: 0, x: -70, y: 30, rotate: -8 }}
-            animate={inView ? { opacity: 1, x: 0, y: 0, rotate: 0 } : {}}
-            transition={spring(0.1)}
+            className="absolute inset-0"
+            style={
+              calm
+                ? { transformStyle: 'preserve-3d', transform: 'rotateX(12deg) rotateZ(-6deg)' }
+                : { transformStyle: 'preserve-3d', rotateX, rotateZ, y: lift }
+            }
           >
-            <div
-              className="rounded-[24px] border border-white/80 bg-white p-3"
-              style={{ boxShadow: '0 26px 48px -26px rgba(14,42,71,0.45), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+            {/* ── the DM, on a phone ── */}
+            <motion.div
+              className="absolute left-0 top-0 w-[262px]"
+              style={{ transformStyle: 'preserve-3d', z: 0 }}
+              initial={{ opacity: 0, x: -70, y: 30, rotate: -8 }}
+              animate={inView ? { opacity: 1, x: 0, y: 0, rotate: 0 } : {}}
+              transition={spring(0.1)}
             >
-              {/* the handle bar */}
-              <div className="flex items-center gap-2 px-1 pb-2">
-                <span className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-[#F9A8D4] via-[#FB7185] to-[#FBBF24]" />
-                <div className="min-w-0 flex-1 leading-tight">
-                  <div className="flex items-center gap-1 text-[12.5px] font-bold text-navy">
-                    @vintagefinds.in <Verified size={11} className="text-green-600" />
+              <div
+                className="rounded-[24px] border border-white/80 bg-white p-3"
+                style={{ boxShadow: '0 26px 48px -26px rgba(14,42,71,0.45), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+              >
+                {/* the handle bar */}
+                <div className="flex items-center gap-2 px-1 pb-2">
+                  <span className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-[#F9A8D4] via-[#FB7185] to-[#FBBF24]" />
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <div className="flex items-center gap-1 text-[12.5px] font-bold text-navy">
+                      @vintagefinds.in <Verified size={11} className="text-green-600" />
+                    </div>
+                    <div className="text-[10px] text-faint">Active now</div>
                   </div>
-                  <div className="text-[10px] text-faint">Active now</div>
+                </div>
+
+                {/* the conversation */}
+                <div className="space-y-1.5">
+                  <motion.div
+                    className="max-w-[82%] rounded-[15px] rounded-bl-[5px] bg-paper px-3 py-2 text-[12px] leading-snug text-navy"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={inView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ delay: calm ? 0 : 0.55, duration: 0.35 }}
+                  >
+                    Is the denim jacket still available? 😍
+                  </motion.div>
+
+                  <motion.div
+                    className="ml-auto max-w-[88%] rounded-[15px] rounded-br-[5px] bg-green-600 px-3 py-2 text-[12px] leading-snug text-white"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={inView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ delay: calm ? 0 : 0.85, duration: 0.35 }}
+                  >
+                    Yes! Tap to pay — it&apos;s reserved for you
+                    <span className="mt-2 block truncate rounded-lg bg-white/20 px-2 py-1 font-num text-[10.5px] tracking-tight">
+                      loopy.shop/vintagefinds
+                    </span>
+                  </motion.div>
                 </div>
               </div>
+            </motion.div>
 
-              {/* the conversation */}
-              <div className="space-y-1.5">
-                <motion.div
-                  className="max-w-[82%] rounded-[15px] rounded-bl-[5px] bg-paper px-3 py-2 text-[12px] leading-snug text-navy"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={inView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ delay: calm ? 0 : 0.55, duration: 0.35 }}
-                >
-                  Is the denim jacket still available? 😍
-                </motion.div>
-
-                <motion.div
-                  className="ml-auto max-w-[88%] rounded-[15px] rounded-br-[5px] bg-green-600 px-3 py-2 text-[12px] leading-snug text-white"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={inView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ delay: calm ? 0 : 0.85, duration: 0.35 }}
-                >
-                  Yes! Tap to pay — it&apos;s reserved for you
-                  <span className="mt-2 block truncate rounded-lg bg-white/20 px-2 py-1 font-num text-[10.5px] tracking-tight">
-                    loopy.shop/vintagefinds
-                  </span>
-                </motion.div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* ── the listing, as the Instagram post it really is ── */}
-          <motion.div
-            className="absolute left-[292px] top-[74px] w-[210px]"
-            style={{ transformStyle: 'preserve-3d', z: 60, ...(calm ? {} : { x: partX }) }}
-            initial={{ opacity: 0, x: 60, y: 54, rotate: 9 }}
-            animate={inView ? { opacity: 1, y: 0, rotate: 0 } : {}}
-            transition={spring(0.32)}
-          >
-            <div
-              className="overflow-hidden rounded-2xl border border-white/80 bg-white"
-              style={{ boxShadow: '0 26px 48px -26px rgba(14,42,71,0.45), inset 0 1px 0 rgba(255,255,255,0.9)' }}
-            >
-              {/* post header — gradient ring avatar, handle, the three dots */}
-              <div className="flex items-center gap-2 px-2.5 py-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FBBF24] via-[#FB7185] to-[#A855F7] p-[1.5px]">
-                  <span className="grid h-full w-full place-items-center rounded-full bg-white text-[9px] font-bold text-navy">V</span>
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-navy">vintagefinds.in</span>
-                <span className="flex shrink-0 gap-[2px]">
-                  {[0, 1, 2].map((i) => <span key={i} className="h-[3px] w-[3px] rounded-full bg-navy/45" />)}
-                </span>
-              </div>
-
-              {/* the photo — square, as Instagram crops it */}
-              <div className="relative aspect-square bg-gradient-to-br from-green-soft via-white to-paper">
-                <span className="absolute inset-0 grid place-items-center">
-                  <span className="block h-[62%] w-[56%]"><Jacket /></span>
-                </span>
-                <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[9.5px] font-bold text-green-600 shadow-sm">
-                  1 left
-                </span>
-                {/* the Loopy part: a real price on a real post */}
-                <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2 py-1 shadow-sm backdrop-blur">
-                  <span className="font-num text-[11.5px] font-semibold tabular-nums text-navy">₹1,299</span>
-                  <span className="rounded-full bg-green-600 px-1.5 py-[2px] text-[8.5px] font-bold text-white">Tap to buy</span>
-                </span>
-              </div>
-
-              {/* the action row */}
-              <div className="flex items-center gap-2.5 px-2.5 pt-2">
-                <motion.span
-                  className="text-[#FB3958]"
-                  animate={calm ? {} : { scale: [1, 1.25, 1] }}
-                  transition={{ duration: 0.9, delay: 1.5, repeat: Infinity, repeatDelay: 4.5 }}
-                >
-                  <Heart size={14} />
-                </motion.span>
-                <span className="text-navy/70"><MessageDots size={14} /></span>
-                <span className="text-navy/70"><Share size={13} /></span>
-                <svg viewBox="0 0 24 24" className="ml-auto h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" className="text-navy/70" />
-                </svg>
-              </div>
-
-              {/* likes + caption */}
-              <div className="px-2.5 pb-2.5 pt-1.5">
-                <div className="font-num text-[10px] font-semibold text-navy">1,284 likes</div>
-                <p className="mt-0.5 text-[10px] leading-snug text-navy/75">
-                  <span className="font-bold text-navy">vintagefinds.in</span>{' '}
-                  Vintage denim jacket, size M — DM to order 🛍️
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* ── the parcel going out ── */}
-          <motion.div
-            className="absolute left-[58px] top-[296px]"
-            style={{ transformStyle: 'preserve-3d', z: 110, ...(calm ? {} : { y: partY }) }}
-            initial={{ opacity: 0, y: 70, scale: 0.8 }}
-            animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={spring(0.56)}
-          >
-            <Parcel spin={!calm} />
-
-            {/* the shipped confirmation, riding alongside */}
-            {/* Directly under the parcel. Beside it, the chip ran into the
-                Instagram post — which is much taller than the plain card it
-                replaced. */}
+            {/* ── the listing, as the Instagram post it really is ── */}
             <motion.div
-              className="absolute left-[-4px] top-[114px] whitespace-nowrap rounded-full border border-green/25 bg-white px-3 py-1.5 text-[11px] font-bold text-green-600 shadow-sm"
-              initial={{ opacity: 0, y: -8 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: calm ? 0 : 1.15, duration: 0.4 }}
+              className="absolute left-[292px] top-[74px] w-[210px]"
+              style={{ transformStyle: 'preserve-3d', z: 60, ...(calm ? {} : { x: partX }) }}
+              initial={{ opacity: 0, x: 60, y: 54, rotate: 9 }}
+              animate={inView ? { opacity: 1, y: 0, rotate: 0 } : {}}
+              transition={spring(0.32)}
             >
-              <span className="inline-flex items-center gap-1.5"><Check size={11} /> Shipped · paid out</span>
+              <div
+                className="overflow-hidden rounded-2xl border border-white/80 bg-white"
+                style={{ boxShadow: '0 26px 48px -26px rgba(14,42,71,0.45), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+              >
+                {/* post header — gradient ring avatar, handle, the three dots */}
+                <div className="flex items-center gap-2 px-2.5 py-2">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#FBBF24] via-[#FB7185] to-[#A855F7] p-[1.5px]">
+                    <span className="grid h-full w-full place-items-center rounded-full bg-white text-[9px] font-bold text-navy">V</span>
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-navy">vintagefinds.in</span>
+                  <span className="flex shrink-0 gap-[2px]">
+                    {[0, 1, 2].map((i) => <span key={i} className="h-[3px] w-[3px] rounded-full bg-navy/45" />)}
+                  </span>
+                </div>
+
+                {/* the photo — square, as Instagram crops it */}
+                <div className="relative aspect-square bg-gradient-to-br from-green-soft via-white to-paper">
+                  <span className="absolute inset-0 grid place-items-center">
+                    <span className="block h-[62%] w-[56%]"><Jacket /></span>
+                  </span>
+                  <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[9.5px] font-bold text-green-600 shadow-sm">
+                    1 left
+                  </span>
+                  {/* the Loopy part: a real price on a real post */}
+                  <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2 py-1 shadow-sm backdrop-blur">
+                    <span className="font-num text-[11.5px] font-semibold tabular-nums text-navy">₹1,299</span>
+                    <span className="rounded-full bg-green-600 px-1.5 py-[2px] text-[8.5px] font-bold text-white">Tap to buy</span>
+                  </span>
+                </div>
+
+                {/* the action row */}
+                <div className="flex items-center gap-2.5 px-2.5 pt-2">
+                  <motion.span
+                    className="text-[#FB3958]"
+                    animate={calm ? {} : { scale: [1, 1.25, 1] }}
+                    transition={{ duration: 0.9, delay: 1.5, repeat: Infinity, repeatDelay: 4.5 }}
+                  >
+                    <Heart size={14} />
+                  </motion.span>
+                  <span className="text-navy/70"><MessageDots size={14} /></span>
+                  <span className="text-navy/70"><Share size={13} /></span>
+                  <svg viewBox="0 0 24 24" className="ml-auto h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" className="text-navy/70" />
+                  </svg>
+                </div>
+
+                {/* likes + caption */}
+                <div className="px-2.5 pb-2.5 pt-1.5">
+                  <div className="font-num text-[10px] font-semibold text-navy">1,284 likes</div>
+                  <p className="mt-0.5 text-[10px] leading-snug text-navy/75">
+                    <span className="font-bold text-navy">vintagefinds.in</span>{' '}
+                    Vintage denim jacket, size M — DM to order 🛍️
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ── the parcel going out ── */}
+            <motion.div
+              className="absolute left-[58px] top-[296px]"
+              style={{ transformStyle: 'preserve-3d', z: 110, ...(calm ? {} : { y: partY }) }}
+              initial={{ opacity: 0, y: 70, scale: 0.8 }}
+              animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+              transition={spring(0.56)}
+            >
+              <Parcel spin={!calm} />
+
+              {/* the shipped confirmation, riding alongside */}
+              {/* Directly under the parcel. Beside it, the chip ran into the
+                  Instagram post — which is much taller than the plain card it
+                  replaced. */}
+              <motion.div
+                className="absolute left-[-4px] top-[114px] whitespace-nowrap rounded-full border border-green/25 bg-white px-3 py-1.5 text-[11px] font-bold text-green-600 shadow-sm"
+                initial={{ opacity: 0, y: -8 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: calm ? 0 : 1.15, duration: 0.4 }}
+              >
+                <span className="inline-flex items-center gap-1.5"><Check size={11} /> Shipped · paid out</span>
+              </motion.div>
             </motion.div>
           </motion.div>
-
-        </motion.div>
+        </div>
       </div>
-
     </div>
   );
 }

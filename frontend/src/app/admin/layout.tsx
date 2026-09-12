@@ -67,20 +67,32 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* top bar */}
-      <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-hair bg-white px-5 lg:pl-[16.5rem]">
-        <Link href="/admin/search" className="flex flex-1 items-center gap-2 rounded-lg border border-hair bg-cool px-3.5 py-2 text-[13px] text-pale transition-colors hover:border-accent/40">
-          <Icon name="search" size={16} /> Search orders, sellers, customers, payments…
-          <kbd className="ml-auto hidden rounded border border-hair bg-white px-1.5 py-0.5 text-[10px] font-bold text-dim sm:block">⌘K</kbd>
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-hair bg-white px-4 sm:gap-3 sm:px-5 lg:pl-[16.5rem]">
+        {/* The sidebar carries the wordmark, and it is hidden below lg — so on a
+            phone the mark moves here rather than disappearing. */}
+        <Link href="/admin" className="shrink-0 lg:hidden"><Logo height={20} /></Link>
+
+        <Link href="/admin/search" className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-hair bg-cool px-3 py-2 text-[13px] text-pale transition-colors hover:border-accent/40 sm:px-3.5">
+          <Icon name="search" size={16} />
+          {/* Two lengths for one label: the full prompt has room on a desktop,
+              and on a phone it would push the avatar off the edge. */}
+          <span className="truncate sm:hidden">Search</span>
+          <span className="hidden truncate sm:inline">Search orders, sellers, customers, payments…</span>
+          <kbd className="ml-auto hidden shrink-0 rounded border border-hair bg-white px-1.5 py-0.5 text-[10px] font-bold text-dim lg:block">⌘K</kbd>
         </Link>
-        <span className="grid h-9 w-9 place-items-center rounded-xl border border-hair bg-white text-slate"><Icon name="bell" size={16} /></span>
-        <span className="flex items-center gap-2 rounded-xl border border-hair bg-white py-1.5 pl-1.5 pr-3">
+
+        <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl border border-hair bg-white text-slate sm:grid"><Icon name="bell" size={16} /></span>
+        <span className="flex shrink-0 items-center gap-2 rounded-xl border border-hair bg-white py-1.5 pl-1.5 pr-1.5 sm:pr-3">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-hair bg-cool text-[10.5px] font-bold text-dim">SA</span>
           <span className="hidden text-left leading-tight sm:block"><span className="block text-[12.5px] font-bold text-slate">Super Admin</span><span className="block text-[10px] text-pale">admin@loopy.in</span></span>
         </span>
       </header>
 
       {/* mobile nav */}
-      <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-b border-hair bg-white px-3 py-2 lg:hidden">
+      {/* Mobile nav: a scrolling strip, since nine destinations will not fit.
+          `scrollbar-none` keeps it clean; the fade at the right edge is what
+          tells you there is more to the right. */}
+      <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-b border-hair bg-white px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
         {NAV.map((n) => (
           <Link key={n.href} href={n.href} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${active(n.href) ? 'bg-slate text-white' : 'text-dim hover:text-slate'}`}>
             <Icon name={n.icon} size={14} /> {n.label}

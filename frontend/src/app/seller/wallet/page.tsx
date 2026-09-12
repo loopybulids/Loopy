@@ -42,12 +42,12 @@ export default function Earnings() {
               <div aria-hidden className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-green-500/15 blur-2xl" />
               <div className="relative">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-[#8A98AD]">Current Balance</div>
-                <div className="mt-1 font-display text-[40px] font-bold tabular-nums tracking-tight text-white">{rupees(w.available + w.pending)}</div>
+                <div className="mt-1 font-display text-[32px] font-bold tabular-nums tracking-tight text-white sm:text-[40px]">{rupees(w.available + w.pending)}</div>
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="text-[11px] text-[#8A98AD]">Ready for Payout</div><div className="font-display text-[18px] font-bold text-green-500">{rupees(w.available)}</div></div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="text-[11px] text-[#8A98AD]">Pending Escrow</div><div className="font-display text-[18px] font-bold text-white">{rupees(w.pending)}</div></div>
                 </div>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button onClick={payout} className="s-btn text-[13px]"><Wallet size={15} /> Withdraw to UPI</button>
                   <button className="s-btn-ghost text-[13px]">Payout Methods</button>
                 </div>

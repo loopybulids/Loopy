@@ -47,21 +47,23 @@ export default function CustomerProfile() {
 
       <Card className="overflow-hidden">
         <div className="border-b border-hair px-4 py-3"><SectionTitle>Order History</SectionTitle></div>
-        <table className="w-full min-w-[600px] text-left text-[13px]">
-          <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Order</th><th className="py-3 font-bold">Seller</th><th className="py-3 font-bold">Item</th><th className="py-3 font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold"></th></tr></thead>
-          <tbody className="divide-y divide-hair">
-            {d.orders.map((o: any) => (
-              <tr key={o.id} className="hover:bg-cool/60">
-                <td className="px-4 py-3 font-bold text-slate">#{o.id.slice(-6).toUpperCase()}</td>
-                <td className="py-3 text-slate">{o.seller || '—'}</td>
-                <td className="py-3 text-slate">{o.item || '—'}</td>
-                <td className="py-3 font-bold text-slate">{money(o.total)}</td>
-                <td className="py-3">{statusChip(o.status)}</td>
-                <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-accent hover:underline">View →</Link></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] text-left text-[13px]">
+            <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Order</th><th className="py-3 font-bold">Seller</th><th className="py-3 font-bold">Item</th><th className="py-3 font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold"></th></tr></thead>
+            <tbody className="divide-y divide-hair">
+              {d.orders.map((o: any) => (
+                <tr key={o.id} className="hover:bg-cool/60">
+                  <td className="px-4 py-3 font-bold text-slate">#{o.id.slice(-6).toUpperCase()}</td>
+                  <td className="py-3 text-slate">{o.seller || '—'}</td>
+                  <td className="py-3 text-slate">{o.item || '—'}</td>
+                  <td className="py-3 font-bold text-slate">{money(o.total)}</td>
+                  <td className="py-3">{statusChip(o.status)}</td>
+                  <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-accent hover:underline">View →</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );

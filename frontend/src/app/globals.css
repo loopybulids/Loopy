@@ -5,7 +5,14 @@
 :root { color-scheme: light; }
 
 * { -webkit-font-smoothing: antialiased; }
-body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
+/*
+ * `clip`, not `hidden`. Both contain a page that is accidentally too wide, but
+ * `overflow-x: hidden` makes the body a scroll container, and a sticky element
+ * then sticks to a scrollport that never scrolls — which would quietly break
+ * the admin header and its nav strip. `clip` does the containing without
+ * creating that scroll container.
+ */
+body { background: #f6f5f0; color: #0e2a47; overflow-x: clip; }
 
 ::selection { background: #86efac; color: #0e2a47; }
 
@@ -136,6 +143,67 @@ body { background: #f6f5f0; color: #0e2a47; overflow-x: hidden; }
 }
 
 html { scroll-behavior: smooth; }
+
+/* ─────────────────────────── touch + small screens ───────────────────────────
+ *
+ * Three fixes that apply everywhere, so no page has to remember them.
+ *
+ * 1. iOS Safari zooms the whole page when you focus a field whose text is
+ *    under 16px, and then leaves you zoomed in. Almost every field here is
+ *    13–15px by design, so on a phone they are bumped to 16px: the layout is
+ *    unchanged above 640px, and on a phone a form stops fighting the user.
+ *    `font-size` only — padding and borders stay as authored.
+ *
+ * 2. iOS also inflates text of its own accord when the phone is rotated to
+ *    landscape. `text-size-adjust` turns that off so a rotation changes the
+ *    column width and nothing else.
+ *
+ * 3. Tap targets. A 28px chip is comfortable with a cursor and a coin-toss
+ *    with a thumb, so on real touch devices interactive elements get a 40px
+ *    minimum. Scoped to `hover: none` and `pointer: coarse` — a touchscreen
+ *    laptop keeps the tighter desktop metrics.
+ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /*
+   * Only controls that size themselves by padding. The `h-` guard skips
+   * anything given an explicit height — the round colour swatches are
+   * `h-7 w-7`, and a min-height would stretch them into ovals while leaving
+   * the width alone. Deliberately sized things are left exactly as authored.
+   */
+  button:not([class*='h-']),
+  a[role='button']:not([class*='h-']),
+  [type='button']:not([class*='h-']),
+  [type='submit']:not([class*='h-']) {
+    min-height: 40px;
+  }
+
+  /* Tidy the grey flash Android draws over anything tapped. */
+  a,
+  button {
+    -webkit-tap-highlight-color: rgba(14, 42, 71, 0.06);
+  }
+}
+
+/* Horizontal scrollers (wide tables, nav strips) should feel native and not
+ * show a scrollbar gutter on a phone, where there is no room for one. */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
 
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .animate-slideRight { animation: slideInRight .28s cubic-bezier(.22, 1, .36, 1); }

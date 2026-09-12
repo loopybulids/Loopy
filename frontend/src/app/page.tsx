@@ -58,7 +58,24 @@ const FAQS = [
 
 export default function Landing() {
   return (
-    <main className="relative min-h-screen bg-white text-navy">
+    /*
+     * `overflow-x-clip` is load-bearing, not tidiness.
+     *
+     * The hero scene is a fixed 540px stage shrunk with `transform: scale()`,
+     * and a transform changes what is painted, not what is occupied — the
+     * element still takes its full 540px of layout. On a 390px phone that made
+     * the document 564px wide: every section laid itself out at 390px and the
+     * extra 174px showed the cream `body` background as a band down the right
+     * side of the page.
+     *
+     * Clipping here rather than on the scene itself is deliberate. `main` is
+     * viewport-width, so the overflow is absorbed with nothing visible lost,
+     * while the scene keeps the ~30px its rotation bleeds past the stage edge —
+     * clipping at the scene's own box would shave that off. `clip` rather than
+     * `hidden` because `hidden` would make this a scroll container and break
+     * `position: sticky` for anything inside it.
+     */
+    <main className="relative min-h-screen overflow-x-clip bg-white text-navy">
       <RedirectAuthed />
       <LoopyIntro />
 
@@ -100,7 +117,7 @@ export default function Landing() {
       </header>
 
       {/* ───── hero — copy left, diagram right ───── */}
-      <section className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-2 lg:gap-8">
+      <section className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-14 pt-10 sm:px-8 sm:pb-20 sm:pt-20 lg:grid-cols-2 lg:gap-8">
         <div className="text-center lg:text-left">
         <Reveal y={12}>
           <span className="inline-flex items-center gap-2 rounded-full border border-green/15 bg-white/70 px-3.5 py-1.5 text-[12px] font-semibold text-green-600 backdrop-blur">
@@ -161,9 +178,9 @@ export default function Landing() {
       </section>
 
       {/* ───── stats ───── */}
-      <section className="mx-auto max-w-4xl px-6 py-24 sm:px-8">
+      <section className="mx-auto max-w-4xl px-6 py-16 sm:px-8 sm:py-24">
         <Reveal>
-          <div className="grid grid-cols-2 gap-y-10 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-y-8 sm:grid-cols-4 sm:gap-y-10">
             {[
               { to: 500, suffix: '+', l: 'Orders processed' },
               { to: 125, suffix: '', l: 'Active sellers' },
@@ -184,7 +201,7 @@ export default function Landing() {
       </section>
 
       {/* ───── how it works ───── */}
-      <section id="how" className="mx-auto max-w-5xl scroll-mt-24 px-6 pb-28 sm:px-8">
+      <section id="how" className="mx-auto max-w-5xl scroll-mt-24 px-6 pb-16 sm:px-8 sm:pb-28">
         <Reveal>
           <div className="text-center">
             <SectionLabel>How it works</SectionLabel>
@@ -211,7 +228,7 @@ export default function Landing() {
             </div>
           </Reveal>
 
-          <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" gap={0.07}>
+          <Stagger className="mt-10 grid sm:mt-14 gap-5 sm:grid-cols-2 lg:grid-cols-3" gap={0.07}>
             {SOLUTIONS.map((s) => (
               <StaggerItem key={s.t}>
                 <div className="group h-full rounded-2xl border border-line bg-white p-6 transition-all hover:-translate-y-1 hover:border-green/30 hover:shadow-[0_20px_44px_-28px_rgba(14,42,71,0.28)]">
@@ -228,7 +245,7 @@ export default function Landing() {
       </section>
 
       {/* ───── testimonials ───── */}
-      <section className="mx-auto max-w-6xl px-6 py-28 sm:px-8">
+      <section className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-28">
         <Reveal>
           <div className="text-center">
             <SectionLabel>Sellers who closed the loop</SectionLabel>
@@ -238,7 +255,7 @@ export default function Landing() {
           </div>
         </Reveal>
 
-        <Stagger className="mt-14 grid gap-5 md:grid-cols-3" gap={0.1}>
+        <Stagger className="mt-10 grid sm:mt-14 gap-5 md:grid-cols-3" gap={0.1}>
           {TESTIMONIALS.map((t) => (
             <StaggerItem key={t.name}>
               <div className="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
@@ -263,7 +280,7 @@ export default function Landing() {
       </section>
 
       {/* ───── faq ───── */}
-      <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-6 pb-28 sm:px-8">
+      <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-6 pb-16 sm:px-8 sm:pb-28">
         <Reveal>
           <div className="text-center">
             <SectionLabel>Questions</SectionLabel>
@@ -280,7 +297,7 @@ export default function Landing() {
       </section>
 
       {/* ───── closing CTA — a soft green panel, not a dark band ───── */}
-      <section className="mx-auto max-w-5xl px-6 pb-28 sm:px-8">
+      <section className="mx-auto max-w-5xl px-6 pb-16 sm:px-8 sm:pb-28">
         <Reveal>
           <div className="rounded-[28px] bg-green-soft px-8 py-16 text-center">
             <h2 className="mx-auto max-w-lg font-display text-[32px] font-bold leading-tight tracking-[-0.025em] sm:text-[40px]">
@@ -309,7 +326,7 @@ export default function Landing() {
 
       {/* ───── footer ───── */}
       <footer className="border-t border-line">
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-10 sm:px-8 sm:py-14 md:grid-cols-[1.5fr_1fr_1fr]">
           <div>
             <Logo height={28} />
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-muted">

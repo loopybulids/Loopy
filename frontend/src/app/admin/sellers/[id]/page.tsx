@@ -76,59 +76,65 @@ export default function SellerProfile() {
 
       {tab === 'products' && (
         <Card className="overflow-hidden">
-          <table className="w-full min-w-[600px] text-left text-[13px]">
-            <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Product</th><th className="py-3 font-bold">Price</th><th className="py-3 font-bold">Stock</th><th className="py-3 font-bold">Status</th></tr></thead>
-            <tbody className="divide-y divide-hair">
-              {d.products.map((p: any) => (
-                <tr key={p.id} className="hover:bg-cool/60">
-                  <td className="px-4 py-3"><div className="flex items-center gap-2.5"><span className="h-9 w-9 overflow-hidden rounded-lg bg-cool">{p.image ? <img src={p.image} alt="" className="h-full w-full object-cover" /> : null}</span><span className="font-semibold text-slate">{p.title}</span></div></td>
-                  <td className="py-3 font-bold text-slate">{money(p.price)}</td>
-                  <td className="py-3 text-slate">{p.quantity}</td>
-                  <td className="py-3">{p.isActive ? <Chip tone="green">Active</Chip> : <Chip tone="gray">Hidden</Chip>}</td>
-                </tr>
-              ))}
-              {!d.products.length && <tr><td colSpan={4} className="px-4 py-8 text-center text-dim">No products.</td></tr>}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] text-left text-[13px]">
+              <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Product</th><th className="py-3 font-bold">Price</th><th className="py-3 font-bold">Stock</th><th className="py-3 font-bold">Status</th></tr></thead>
+              <tbody className="divide-y divide-hair">
+                {d.products.map((p: any) => (
+                  <tr key={p.id} className="hover:bg-cool/60">
+                    <td className="px-4 py-3"><div className="flex items-center gap-2.5"><span className="h-9 w-9 overflow-hidden rounded-lg bg-cool">{p.image ? <img src={p.image} alt="" className="h-full w-full object-cover" /> : null}</span><span className="font-semibold text-slate">{p.title}</span></div></td>
+                    <td className="py-3 font-bold text-slate">{money(p.price)}</td>
+                    <td className="py-3 text-slate">{p.quantity}</td>
+                    <td className="py-3">{p.isActive ? <Chip tone="green">Active</Chip> : <Chip tone="gray">Hidden</Chip>}</td>
+                  </tr>
+                ))}
+                {!d.products.length && <tr><td colSpan={4} className="px-4 py-8 text-center text-dim">No products.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
 
       {tab === 'orders' && (
         <Card className="overflow-hidden">
-          <table className="w-full min-w-[600px] text-left text-[13px]">
-            <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Order</th><th className="py-3 font-bold">Customer</th><th className="py-3 font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold"></th></tr></thead>
-            <tbody className="divide-y divide-hair">
-              {d.orders.map((o: any) => (
-                <tr key={o.id} className="hover:bg-cool/60">
-                  <td className="px-4 py-3 font-bold text-slate">#{o.id.slice(-6).toUpperCase()}</td>
-                  <td className="py-3 text-slate">{o.buyer || 'Customer'}</td>
-                  <td className="py-3 font-bold text-slate">{money(o.total)}</td>
-                  <td className="py-3">{statusChip(o.status)}</td>
-                  <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-accent hover:underline">View →</Link></td>
-                </tr>
-              ))}
-              {!d.orders.length && <tr><td colSpan={5} className="px-4 py-8 text-center text-dim">No orders.</td></tr>}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] text-left text-[13px]">
+              <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Order</th><th className="py-3 font-bold">Customer</th><th className="py-3 font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold"></th></tr></thead>
+              <tbody className="divide-y divide-hair">
+                {d.orders.map((o: any) => (
+                  <tr key={o.id} className="hover:bg-cool/60">
+                    <td className="px-4 py-3 font-bold text-slate">#{o.id.slice(-6).toUpperCase()}</td>
+                    <td className="py-3 text-slate">{o.buyer || 'Customer'}</td>
+                    <td className="py-3 font-bold text-slate">{money(o.total)}</td>
+                    <td className="py-3">{statusChip(o.status)}</td>
+                    <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-accent hover:underline">View →</Link></td>
+                  </tr>
+                ))}
+                {!d.orders.length && <tr><td colSpan={5} className="px-4 py-8 text-center text-dim">No orders.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
 
       {tab === 'payouts' && (
         <Card className="overflow-hidden">
-          <table className="w-full min-w-[400px] text-left text-[13px]">
-            <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Payout</th><th className="py-3 font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold">Date</th></tr></thead>
-            <tbody className="divide-y divide-hair">
-              {d.payouts.map((p: any) => (
-                <tr key={p.id} className="hover:bg-cool/60">
-                  <td className="px-4 py-3 font-mono text-[12px] text-dim">{p.id.slice(-8)}</td>
-                  <td className="py-3 font-bold text-slate">{money(p.amount)}</td>
-                  <td className="py-3">{statusChip(p.status)}</td>
-                  <td className="py-3 text-[12px] text-dim">{new Date(p.createdAt).toLocaleDateString('en-IN')}</td>
-                </tr>
-              ))}
-              {!d.payouts.length && <tr><td colSpan={4} className="px-4 py-8 text-center text-dim">No payouts.</td></tr>}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[400px] text-left text-[13px]">
+              <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Payout</th><th className="py-3 font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold">Date</th></tr></thead>
+              <tbody className="divide-y divide-hair">
+                {d.payouts.map((p: any) => (
+                  <tr key={p.id} className="hover:bg-cool/60">
+                    <td className="px-4 py-3 font-mono text-[12px] text-dim">{p.id.slice(-8)}</td>
+                    <td className="py-3 font-bold text-slate">{money(p.amount)}</td>
+                    <td className="py-3">{statusChip(p.status)}</td>
+                    <td className="py-3 text-[12px] text-dim">{new Date(p.createdAt).toLocaleDateString('en-IN')}</td>
+                  </tr>
+                ))}
+                {!d.payouts.length && <tr><td colSpan={4} className="px-4 py-8 text-center text-dim">No payouts.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
     </div>

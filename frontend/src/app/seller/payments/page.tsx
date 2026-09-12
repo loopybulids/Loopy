@@ -8,6 +8,8 @@ import { Wallet, Check } from '@/components/icons';
 export default function Payments() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  // Success, a refusal the seller needs to read, or a genuine error.
+  const [msgTone, setMsgTone] = useState<'ok' | 'note' | 'bad'>('ok');
   const [pd, setPd] = useState({ payoutEmail: '', payoutMethod: 'upi', payoutName: '', payoutUpi: '', payoutAccount: '', payoutPhone: '' });
   const [savingPd, setSavingPd] = useState(false);
   const [savedPd, setSavedPd] = useState(false);
@@ -41,11 +43,33 @@ export default function Payments() {
     catch { /* ignore */ } finally { setSavingPd(false); }
   };
 
+  /*
+   * The endpoint answers 200 whether or not it raised a request — "nothing
+   * available" and "it is all already in flight" are states, not failures.
+   * This used to announce "Payout requested" on every 200 without reading the
+   * body, so a click that created nothing still reported success and the
+   * seller was left watching a balance that never moved.
+   *
+   * The message is set after the reload, so the button and the text change in
+   * the same frame. Setting it first meant the card read "Payout requested"
+   * while the button still said "Requesting…", which looked like a hang.
+   */
   const payout = async () => {
-    setBusy(true); setMsg('');
-    try { await api.requestPayout(); setMsg('Payout requested — it’ll settle to your bank shortly.'); await load(); }
-    catch (e: any) { setMsg(e?.message || 'Could not request payout.'); }
-    finally { setBusy(false); }
+    setBusy(true); setMsg(''); setMsgTone('ok');
+    try {
+      const r = await api.requestPayout();
+      await load();
+      if (r?.ok) {
+        setMsg(`Payout of ${money(r.amount ?? 0)} requested — Loopy will review it and it settles to your bank once approved.`);
+        setMsgTone('ok');
+      } else {
+        setMsg(r?.message || 'Could not request payout.');
+        setMsgTone('note');
+      }
+    } catch (e: any) {
+      setMsg(e?.message || 'Could not request payout.');
+      setMsgTone('bad');
+    } finally { setBusy(false); }
   };
 
   const txns = orders.filter((o) => ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'].includes(o.status));
@@ -121,10 +145,28 @@ export default function Payments() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.6fr]">
         <Panel title="Withdraw">
           <p className="text-[13px] leading-relaxed text-muted">Move your available balance to your linked bank account. Funds held in escrow release automatically on delivery.</p>
+          {/* Naming the amount is the difference between a button you trust and
+              one you press to find out what it does. */}
           <button onClick={payout} disabled={busy || !(wallet?.available > 0)} className="btn-green mt-5 w-full justify-center disabled:opacity-50">
-            {busy ? 'Requesting…' : 'Request payout'}
+            {busy ? 'Requesting…' : wallet?.available > 0 ? `Request ${money(wallet.available)} payout` : 'Request payout'}
           </button>
-          {msg && <p className="mt-3 text-[12.5px] font-semibold text-green-600">{msg}</p>}
+
+          {/* Why the button is dead, rather than leaving it to be guessed. */}
+          {!(wallet?.available > 0) && (
+            <p className="mt-2 text-[12px] text-faint">
+              {wallet?.requested > 0
+                ? 'Your available balance is already awaiting approval.'
+                : wallet?.pending > 0
+                  ? 'Nothing to withdraw yet — funds release when your orders are delivered.'
+                  : 'Nothing to withdraw yet.'}
+            </p>
+          )}
+
+          {msg && (
+            <p className={`mt-3 text-[12.5px] font-semibold ${
+              msgTone === 'ok' ? 'text-green-600' : msgTone === 'bad' ? 'text-rose' : 'text-navy/70'
+            }`}>{msg}</p>
+          )}
         </Panel>
 
         <Panel title="Transactions">

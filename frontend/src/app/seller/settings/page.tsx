@@ -161,7 +161,7 @@ export default function Settings() {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-paper px-4 py-3">
-            <span className="font-mono text-[14px] text-navy">{shopUrl}</span>
+            <span className="break-all font-mono text-[13px] text-navy sm:text-[14px]">{shopUrl}</span>
             <div className="ml-auto flex items-center gap-3 text-[13px] font-bold text-navy/70">
               {profile?.username && <a href={storeUrl(username, '?preview=1')} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-navy"><Share size={14} /> Preview</a>}
               <button onClick={copyUrl} className="hover:text-navy">{copied ? 'Copied!' : 'Copy'}</button>

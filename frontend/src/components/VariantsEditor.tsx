@@ -76,7 +76,7 @@ function ColorPicker({ value, onPick }: { value?: string; onPick: (hex: string, 
       </button>
 
       {open && (
-        <div className="absolute left-0 top-11 z-50 w-[212px] rounded-xl border border-line bg-white p-2.5 shadow-lift">
+        <div className="absolute left-0 top-11 z-50 w-[232px] max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-white p-2.5 shadow-lift">
           <div className="grid grid-cols-8 gap-1.5">
             {PALETTE.map((c) => (
               <button
@@ -84,7 +84,7 @@ function ColorPicker({ value, onPick }: { value?: string; onPick: (hex: string, 
                 type="button"
                 title={c.name}
                 onClick={() => { onPick(c.hex, c.name); setOpen(false); }}
-                className="grid h-[22px] w-[22px] place-items-center rounded-full ring-1 ring-black/10 transition-transform hover:scale-110"
+                className="grid aspect-square w-full place-items-center rounded-full ring-1 ring-black/10 transition-transform hover:scale-110"
                 style={{ background: c.hex }}
               >
                 {value?.toLowerCase() === c.hex.toLowerCase() && (

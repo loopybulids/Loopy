@@ -67,19 +67,31 @@ export default function CartPage() {
           <>
             <div className="space-y-3">
               {cart.map((i) => (
-                <div key={i.productId + (i.size || '')} className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+                /*
+                 * Two shapes for one row. On a phone the thumbnail, the stepper
+                 * and "Remove" take ~270px between them, which left the product
+                 * title about 80px — truncated to nothing on the one page where
+                 * the shopper needs to see what they are buying. So below `sm`
+                 * the controls drop to their own line under the title, and from
+                 * `sm` up the original single row returns.
+                 */
+                <div key={i.productId + (i.size || '')} className="flex flex-wrap items-center gap-x-3 gap-y-3 rounded-xl border border-line bg-white p-3 sm:flex-nowrap">
                   <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-green-soft">{i.image && <img src={i.image} alt="" className="h-full w-full object-cover" />}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-display text-[14px] font-bold text-navy">{i.title}</div>
+                    <div className="font-display text-[14px] font-bold text-navy sm:truncate">{i.title}</div>
                     {i.size && <div className="text-[12px] text-muted">Size: {i.size}</div>}
                     <div className="text-[13px] font-bold text-navy">{rupees(i.price)}</div>
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg border border-line px-2 py-1">
-                    <button onClick={() => updateQty(username, i.productId, i.size, i.qty - 1)} className="px-1.5 text-muted">−</button>
-                    <span className="w-5 text-center text-[13px] font-bold">{i.qty}</span>
-                    <button onClick={() => updateQty(username, i.productId, i.size, i.qty + 1)} className="px-1.5 text-muted">+</button>
+                  {/* Full width on its own line, so the two groups sit at the
+                      outer edges instead of bunching in the middle. */}
+                  <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
+                    <div className="flex items-center gap-2 rounded-lg border border-line px-2 py-1">
+                      <button aria-label="Decrease quantity" onClick={() => updateQty(username, i.productId, i.size, i.qty - 1)} className="px-2 text-muted">−</button>
+                      <span className="w-5 text-center text-[13px] font-bold">{i.qty}</span>
+                      <button aria-label="Increase quantity" onClick={() => updateQty(username, i.productId, i.size, i.qty + 1)} className="px-2 text-muted">+</button>
+                    </div>
+                    <button onClick={() => updateQty(username, i.productId, i.size, 0)} className="px-1 text-[12px] font-semibold text-rose">Remove</button>
                   </div>
-                  <button onClick={() => updateQty(username, i.productId, i.size, 0)} className="px-1 text-[12px] font-semibold text-rose">Remove</button>
                 </div>
               ))}
             </div>
