@@ -5,7 +5,7 @@ import { motion, Reveal, Stagger, StaggerItem, WordReveal, CountUp, Magnetic } f
 import RedirectAuthed from '@/components/RedirectAuthed';
 import Logo from '@/components/Logo';
 import LoopyIntro from '@/components/LoopyIntro';
-import HeroDiagram from '@/components/HeroDiagram';
+import ShopScene from '@/components/ShopScene';
 import LoopyFlow from '@/components/LoopyFlow';
 import { ArrowRight, Bolt, Plus, Share, ShieldLock, Star, Store, Truck } from '@/components/icons';
 
@@ -22,10 +22,10 @@ import { ArrowRight, Bolt, Plus, Share, ShieldLock, Star, Store, Truck } from '@
    than beside it, so the page opens with one clear line of
    reading instead of two columns competing for the first glance.
 
-   Two things do move, and both earn it: <HeroDiagram> assembles
-   three glass planes of the flow, opening them out as you scroll
-   and leaning toward the pointer, and <LoopyFlow> in "How it
-   works" walks the four stages on a loop. Everything else is
+   Two things do move, and both earn it: <ShopScene> stages the
+   actual job — an Instagram DM, the garment being sold, and the
+   parcel going out — in 3D that opens up as you scroll, and
+   <LoopyFlow> in "How it works" walks the four stages on a loop. Everything else is
    scroll-triggered once — Reveal on entry, Stagger down lists,
    WordReveal on the headline, CountUp on figures — so whitespace
    stays the thing doing the work.
@@ -100,7 +100,7 @@ export default function Landing() {
       </header>
 
       {/* ───── hero — copy left, diagram right ───── */}
-      <section className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1.12fr_0.88fr] lg:gap-6">
+      <section className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-2 lg:gap-8">
         <div className="text-center lg:text-left">
         <Reveal y={12}>
           <span className="inline-flex items-center gap-2 rounded-full border border-green/15 bg-white/70 px-3.5 py-1.5 text-[12px] font-semibold text-green-600 backdrop-blur">
@@ -118,10 +118,11 @@ export default function Landing() {
           made you read to the end before knowing what this is; this says it
           in four words. `whitespace-nowrap` from lg up, where the column is
           wide enough to hold it. The size steps down at lg on purpose: the
-          column is ~524px there, and 44px would overflow a nowrap line, so it
-          only grows to 44px at xl where there is room.
+          columns are even now so the visual gets half the hero, which caps
+          the headline at 38px — 44px would overflow a nowrap line in a 532px
+          column.
         */}
-        <h1 className="mt-7 font-display text-[34px] font-bold leading-[1.06] tracking-[-0.035em] sm:text-[38px] lg:whitespace-nowrap xl:text-[44px]">
+        <h1 className="mt-7 font-display text-[34px] font-bold leading-[1.06] tracking-[-0.035em] sm:text-[38px] lg:whitespace-nowrap">
           <WordReveal text="Turn DMs into" />{' '}
           <span className="text-green-600"><WordReveal text="paid orders" delay={0.18} /></span>
         </h1>
@@ -155,8 +156,8 @@ export default function Landing() {
         </Reveal>
       </div>
 
-        {/* The visual: three glass planes that assemble into the flow. */}
-        <HeroDiagram />
+        {/* The visual: a DM becomes a product becomes a parcel. */}
+        <ShopScene />
       </section>
 
       {/* ───── stats ───── */}
