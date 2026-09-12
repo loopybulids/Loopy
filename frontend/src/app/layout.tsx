@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Plus_Jakarta_Sans } from 'next/font/google';
+import { IBM_Plex_Mono, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
 // Single family for the whole app — geometric, dashboard-style sans matching the
@@ -27,6 +27,30 @@ const mono = IBM_Plex_Mono({
   variable: '--font-num',
 });
 
+/**
+ * Headlines have their own voice.
+ *
+ * `font-display` used to point at Plus Jakarta Sans — the same face as the
+ * body — so "display" was a label with no effect: every heading was the UI
+ * font at a larger size.
+ *
+ * Space Grotesk is the opposite choice to that: a single-storey 'a', squared
+ * bowls and flat terminals, so a heading is recognisably a different typeface
+ * rather than a size change. (Bricolage Grotesque was tried first and
+ * rejected for exactly that reason — too close to Plus Jakarta to read as a
+ * change at all.) Plus Jakarta still carries every piece of body and UI copy,
+ * where its neutrality is the point.
+ */
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  // 700 is the family's heaviest real weight. Headings use font-bold rather
+  // than font-extrabold so the browser never has to synthesise 800 — faux
+  // bold smears the outlines badly at hero sizes.
+  weight: ['500', '600', '700'],
+  display: 'swap',
+  variable: '--font-display',
+});
+
 export const metadata: Metadata = {
   title: 'Loopy — Turn Instagram DMs & WhatsApp chats into orders',
   description: 'Convert conversations into sales with instant checkout links, automated order management and shipping workflows — all from one dashboard.',
@@ -34,7 +58,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${mono.variable}`}>
+    <html lang="en" className={`${jakarta.variable} ${display.variable} ${mono.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

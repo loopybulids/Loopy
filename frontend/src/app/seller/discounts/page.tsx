@@ -108,7 +108,7 @@ export default function Discounts() {
 
                       {/* discount */}
                       <td className="px-3 py-4">
-                        <span className="font-display text-[15px] font-extrabold tabular-nums text-navy">
+                        <span className="font-display text-[15px] font-bold tabular-nums text-navy">
                           {c.type === 'percent' ? `${c.value}%` : inr(c.value)}
                         </span>
                         {c.type === 'percent' && c.maxDiscount != null && (
@@ -204,7 +204,7 @@ function CouponModal({ f, setF, onClose, onSaved }: { f: Form; setF: (u: Form) =
       <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
       <div className="animate-slideRight relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-[20px] font-extrabold text-navy">{editing ? 'Edit Coupon' : 'New Coupon'}</h2>
+          <h2 className="font-display text-[20px] font-bold text-navy">{editing ? 'Edit Coupon' : 'New Coupon'}</h2>
           <button onClick={onClose} className="text-muted hover:text-navy">✕</button>
         </div>
 

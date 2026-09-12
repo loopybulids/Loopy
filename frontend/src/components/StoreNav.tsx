@@ -34,7 +34,7 @@ export default function StoreNav({ protect = true }: { protect?: boolean }) {
   return (
     <header className="sticky top-0 z-50">
       <nav className={`flex h-[68px] items-center gap-6 px-5 transition-all sm:px-10 ${scrolled ? 'glass-panel border-b border-white/40 shadow-card' : 'bg-paper'}`}>
-        <Link href="/" className="flex items-center gap-2 font-display text-[24px] font-extrabold tracking-tight text-navy">
+        <Link href="/" className="flex items-center gap-2 font-display text-[24px] font-bold tracking-tight text-navy">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy text-green-mint"><Loop size={18} /></span> Loopy
         </Link>
         <div className="hidden items-center gap-6 md:flex">
@@ -60,7 +60,7 @@ export default function StoreNav({ protect = true }: { protect?: boolean }) {
 
           {mounted && role === 'buyer' ? (
             <div className="relative">
-              <button onClick={() => setMenu((v) => !v)} className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-green-mint to-green-600 font-display text-[15px] font-extrabold text-white shadow-card">
+              <button onClick={() => setMenu((v) => !v)} className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-green-mint to-green-600 font-display text-[15px] font-bold text-white shadow-card">
                 {initial}
               </button>
               {menu && (

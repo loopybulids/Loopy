@@ -20,7 +20,7 @@ export default function SupportCenter() {
 
   return (
     <div className="space-y-5">
-      <div><h1 className="font-display text-[26px] font-extrabold text-slate">Support & Dispute Center</h1><p className="text-[14px] text-dim">Resolve customer disputes and release or refund payments.</p></div>
+      <div><h1 className="font-display text-[26px] font-bold text-slate">Support & Dispute Center</h1><p className="text-[14px] text-dim">Resolve customer disputes and release or refund payments.</p></div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Open Tickets" value={open} icon="headset" accent={open ? 'amber' : 'green'} />

@@ -60,10 +60,10 @@ export default function SellerProfile() {
         </div>
         <div className="flex items-center gap-4 p-5">
           <span className="-mt-12 grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-green-mint to-green-600 text-white ring-4 ring-white">
-            {p.logoUrl ? <img src={p.logoUrl} alt="" className="h-full w-full object-cover" /> : <span className="font-display text-[22px] font-extrabold">{(p.storeName || 'S').charAt(0).toUpperCase()}</span>}
+            {p.logoUrl ? <img src={p.logoUrl} alt="" className="h-full w-full object-cover" /> : <span className="font-display text-[22px] font-bold">{(p.storeName || 'S').charAt(0).toUpperCase()}</span>}
           </span>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 font-display text-[19px] font-extrabold text-navy">{p.storeName || 'Your Store'} <Verified size={16} className="text-green-600" /></div>
+            <div className="flex items-center gap-1.5 font-display text-[19px] font-bold text-navy">{p.storeName || 'Your Store'} <Verified size={16} className="text-green-600" /></div>
             {p.tagline && <div className="truncate text-[13px] text-navy/80">{p.tagline}</div>}
             <div className="text-[12.5px] text-muted">{[p.category, p.city, p.establishedYear && `Since ${p.establishedYear}`].filter(Boolean).join(' · ') || '—'} · ★ {stats.rating}/5 ({stats.ratingCount})</div>
           </div>

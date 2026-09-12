@@ -50,7 +50,7 @@ export default function AdminReviews() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[26px] font-extrabold text-slate">Reviews</h1>
+          <h1 className="font-display text-[26px] font-bold text-slate">Reviews</h1>
           <p className="text-[14px] text-dim">Every review customers have written, including ones sellers have hidden.</p>
         </div>
         <button onClick={() => load(filter)} className="rounded-lg bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-600">Refresh</button>

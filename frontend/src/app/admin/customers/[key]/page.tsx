@@ -25,7 +25,7 @@ export default function CustomerProfile() {
         <div className="flex flex-wrap items-center gap-4">
           <span className="grid h-16 w-16 place-items-center rounded-2xl bg-slate text-xl font-extrabold text-accent">{(d.name || '?').slice(0, 2).toUpperCase()}</span>
           <div className="flex-1">
-            <div className="flex items-center gap-2"><h1 className="font-display text-[24px] font-extrabold text-slate">{d.name}</h1><Chip tone={vipTone}>{s.vip} member</Chip></div>
+            <div className="flex items-center gap-2"><h1 className="font-display text-[24px] font-bold text-slate">{d.name}</h1><Chip tone={vipTone}>{s.vip} member</Chip></div>
             <p className="text-[13px] text-dim">{d.phone || '—'} · since {new Date(s.firstOrder).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</p>
             <p className="text-[12px] text-dim">{d.address || 'No address on file'}</p>
           </div>

@@ -128,7 +128,7 @@ export default function CheckoutPage() {
         <div className="mx-auto max-w-lg animate-riseIn">
           <div className="text-center">
             <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-600 text-white"><Check size={30} /></span>
-            <h1 className="mt-4 font-display text-[26px] font-extrabold text-navy">Order placed!</h1>
+            <h1 className="mt-4 font-display text-[26px] font-bold text-navy">Order placed!</h1>
             <p className="mt-1 text-[13px] text-muted">The seller has been notified and will ship your order soon.</p>
           </div>
           <div className="mt-6 rounded-2xl border border-line bg-white p-5 text-left shadow-card">
@@ -147,7 +147,7 @@ export default function CheckoutPage() {
     <main className="min-h-screen bg-paper">
       <StoreAccountBar username={username} />
       <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
-        <h1 className="font-display text-[24px] font-extrabold text-navy">Checkout</h1>
+        <h1 className="font-display text-[24px] font-bold text-navy">Checkout</h1>
 
         {!signedIn ? (
           <div className="mt-8 rounded-2xl border border-dashed border-line bg-white py-16 text-center">
@@ -164,7 +164,7 @@ export default function CheckoutPage() {
             {/* address */}
             <div className="space-y-4">
               <div className="rounded-2xl border border-line bg-white p-5">
-                <h2 className="font-display text-[15px] font-extrabold text-navy">Delivery address</h2>
+                <h2 className="font-display text-[15px] font-bold text-navy">Delivery address</h2>
                 {addresses.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {addresses.map((a) => (
@@ -194,7 +194,7 @@ export default function CheckoutPage() {
 
             {/* summary */}
             <div className="rounded-2xl border border-line bg-white p-5">
-              <h2 className="font-display text-[15px] font-extrabold text-navy">
+              <h2 className="font-display text-[15px] font-bold text-navy">
                 Order summary <span className="text-[12px] font-semibold text-muted">· {itemCount} item{itemCount === 1 ? '' : 's'}</span>
               </h2>
               <div className="mt-3 space-y-3">
@@ -280,7 +280,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between border-t border-line pt-2 text-[15px]">
                   <span className="font-semibold text-navy">Total</span>
-                  <span className="font-display font-extrabold text-green-600">
+                  <span className="font-display font-bold text-green-600">
                     {total == null ? '…' : rupees(total)}
                   </span>
                 </div>

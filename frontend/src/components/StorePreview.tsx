@@ -104,9 +104,9 @@ export default function StorePreview({
               ? <img src={c.header.logoUrl} alt={storeName} className="h-9 w-9 rounded-xl object-cover shadow-card" onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }} />
               : null}
             {!c.header.logoUrl && (
-              <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card" style={{ background: accent }}>{(storeName || 'S').charAt(0).toUpperCase()}</span>
+              <span className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-bold text-white shadow-card" style={{ background: accent }}>{(storeName || 'S').charAt(0).toUpperCase()}</span>
             )}
-            <span className="font-display text-[21px] font-extrabold tracking-tight text-navy">{storeName}</span>
+            <span className="font-display text-[21px] font-bold tracking-tight text-navy">{storeName}</span>
           </Link>
 
           {/* nav with animated underline */}
@@ -148,7 +148,7 @@ export default function StorePreview({
             {c.hero.eyebrow && (
               <p className="text-[14px] font-bold" style={hasHeroMedia ? { color: '#fff' } : { color: accent }}>✨ {c.hero.eyebrow} ✨</p>
             )}
-            <h1 className={`mt-3 font-display text-[40px] font-extrabold leading-tight sm:text-[56px] ${hasHeroMedia ? 'drop-shadow' : ''}`}>{c.hero.headline}</h1>
+            <h1 className={`mt-3 font-display text-[40px] font-bold leading-tight sm:text-[56px] ${hasHeroMedia ? 'drop-shadow' : ''}`}>{c.hero.headline}</h1>
             {c.hero.subtext && <p className={`mx-auto mt-3 max-w-md text-[15px] ${hasHeroMedia ? 'text-white/85' : 'text-muted'}`}>{c.hero.subtext}</p>}
             {c.hero.ctaLabel && (
               <a href="#products" className="mt-6 inline-block rounded-lg px-6 py-3 text-[15px] font-bold text-white shadow-card transition hover:opacity-90" style={{ background: accent }}>
@@ -173,7 +173,7 @@ export default function StorePreview({
       {/* product tabs + grid */}
       {!page && c.productTabs.enabled && (
         <section id="products" className="px-5 py-12 sm:px-8">
-          <h2 className="text-center font-display text-[30px] font-extrabold">{c.productTabs.heading}</h2>
+          <h2 className="text-center font-display text-[30px] font-bold">{c.productTabs.heading}</h2>
           {c.productTabs.sub && <p className="mt-1 text-center text-[14px] text-muted">{c.productTabs.sub}</p>}
           <div className="no-sb mt-6 flex justify-start gap-2 overflow-x-auto px-1 sm:flex-wrap sm:justify-center">
             {c.productTabs.tabs.map((t) => (
@@ -219,7 +219,7 @@ export default function StorePreview({
         <section className="px-5 py-12 sm:px-8">
           <div className="mx-auto max-w-6xl">
             {c.collections.heading && (
-              <h2 className="font-display text-[24px] font-extrabold">{c.collections.heading}</h2>
+              <h2 className="font-display text-[24px] font-bold">{c.collections.heading}</h2>
             )}
 
             <div className="mt-6 space-y-9">
@@ -236,7 +236,7 @@ export default function StorePreview({
                   <div key={col.id || col.slug}>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <div>
-                        <h3 className="font-display text-[18px] font-extrabold">{col.title}</h3>
+                        <h3 className="font-display text-[18px] font-bold">{col.title}</h3>
                         {col.description && (
                           <p className="mt-0.5 text-[13px] text-muted">{col.description}</p>
                         )}
@@ -272,7 +272,7 @@ export default function StorePreview({
         <section className="bg-white px-5 py-12 sm:px-8">
           <div className="mx-auto max-w-5xl">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="font-display text-[24px] font-extrabold">What buyers say</h2>
+              <h2 className="font-display text-[24px] font-bold">What buyers say</h2>
               <span className="text-[13px] text-muted">
                 {(() => {
                   const avg = Math.round((reviews.reduce((a, r) => a + r.rating, 0) / reviews.length) * 10) / 10;
@@ -315,7 +315,7 @@ export default function StorePreview({
       {/* contact */}
       {!page && c.contact.enabled && (c.contact.email || c.contact.phone || c.contact.address) && (
         <section id="contact" className="px-5 py-12 text-center sm:px-8">
-          <h2 className="font-display text-[24px] font-extrabold">Get in touch</h2>
+          <h2 className="font-display text-[24px] font-bold">Get in touch</h2>
           <div className="mt-3 space-y-1 text-[14px] text-muted">
             {c.contact.email && <div>{c.contact.email}</div>}
             {c.contact.phone && <div>{c.contact.phone}</div>}
@@ -347,7 +347,7 @@ function PageBody({ page, accent }: { page: StorePage; accent: string }) {
     <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8">
       {page.blocks.length === 0 && <p className="py-8 text-center text-[13px] text-faint">This page is empty — add some content blocks.</p>}
       {page.blocks.map((b) => {
-        if (b.type === 'heading') return <h2 key={b.id} className="mt-8 font-display text-[28px] font-extrabold leading-tight first:mt-0">{b.text}</h2>;
+        if (b.type === 'heading') return <h2 key={b.id} className="mt-8 font-display text-[28px] font-bold leading-tight first:mt-0">{b.text}</h2>;
         if (b.type === 'text') return <p key={b.id} className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted">{b.text}</p>;
         if (b.type === 'image') return b.url ? (
           isVideo(b.url)
@@ -384,7 +384,7 @@ function ProductCard({ p, username, accent }: { p: any; username?: string; accen
       <div className="p-3">
         <div className="truncate font-display text-[14px] font-bold">{p.title || p.name}</div>
         <div className="mt-1 leading-tight">
-          <div className="font-display text-[15px] font-extrabold" style={{ color: accent }}>{rupees(p.price)}</div>
+          <div className="font-display text-[15px] font-bold" style={{ color: accent }}>{rupees(p.price)}</div>
           {p.mrp && p.mrp > p.price && <div className="text-[12px] text-faint line-through">{rupees(p.mrp)}</div>}
         </div>
         {p.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={p.sizes} compact /></div>}

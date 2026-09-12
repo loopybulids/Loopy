@@ -103,7 +103,7 @@ export default function AddProduct() {
         {/* live preview */}
         <div className="lg:sticky lg:top-24">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-[15px] font-extrabold text-navy">Live preview</h2>
+            <h2 className="font-display text-[15px] font-bold text-navy">Live preview</h2>
             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-green-600"><span className="h-2 w-2 animate-pulse rounded-full bg-green-500" /> Updating live</span>
           </div>
           <div className="card mx-auto max-w-[280px] overflow-hidden">
@@ -120,7 +120,7 @@ export default function AddProduct() {
                 <Heart size={18} className="text-faint" />
               </div>
               <div className="mt-1 flex items-center gap-2">
-                <span className="font-display text-[18px] font-extrabold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>
+                <span className="font-display text-[18px] font-bold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>
                 {f.mrp && Number(f.mrp) > Number(f.price || 0) && <span className="text-[13px] font-semibold text-faint line-through">{money(Number(f.mrp))}</span>}
               </div>
               {sizes.length > 0 && <div className="mt-2"><SizeStrip sizes={sizes} /></div>}

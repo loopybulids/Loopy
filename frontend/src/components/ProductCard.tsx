@@ -28,7 +28,7 @@ export default function ProductCard({ product, index = 0 }: { product: any; inde
             <div className="glass-card rounded-2xl p-3.5">
               <div className="truncate text-[13.5px] font-semibold text-navy">{product.title}</div>
               <div className="mt-1 leading-tight">
-                <div className="font-display text-[16px] font-extrabold text-navy">{rupees(product.price)}</div>
+                <div className="font-display text-[16px] font-bold text-navy">{rupees(product.price)}</div>
                 {product.mrp && product.mrp > product.price && <div className="text-[12px] text-faint line-through">{rupees(product.mrp)}</div>}
               </div>
               {product.sizes?.length > 0 && <div className="mt-2"><SizeStrip sizes={product.sizes} compact /></div>}

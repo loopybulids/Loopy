@@ -186,7 +186,7 @@ export default function CheckoutLinks() {
               <span className="text-[13px] font-semibold text-navy/80">
                 Order total <span className="text-faint">· {itemCount} item{itemCount === 1 ? '' : 's'}</span>
               </span>
-              <span className="font-display text-[20px] font-extrabold text-green-600">{money(total)}</span>
+              <span className="font-display text-[20px] font-bold text-green-600">{money(total)}</span>
             </div>
           </Panel>
 

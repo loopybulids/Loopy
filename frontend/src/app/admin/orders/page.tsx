@@ -18,7 +18,7 @@ export default function OrdersCenter() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-[26px] font-extrabold text-slate">Orders Control Center</h1>
+        <h1 className="font-display text-[26px] font-bold text-slate">Orders Control Center</h1>
         <p className="text-[14px] text-dim">Every order across all sellers — search, filter and investigate.</p>
       </div>
 

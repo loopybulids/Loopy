@@ -25,7 +25,7 @@ export default function GlobalSearch() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-[25px] font-extrabold tracking-[-0.02em] text-slate sm:text-[28px]">Search</h1>
+        <h1 className="font-display text-[25px] font-bold tracking-[-0.02em] text-slate sm:text-[28px]">Search</h1>
         <p className="text-[13.5px] text-dim">Orders, sellers, customers, phone numbers, payment IDs and tracking numbers.</p>
       </div>
 

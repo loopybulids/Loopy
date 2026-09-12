@@ -59,7 +59,7 @@ export default function AccountShell({ username, title, children, requireAuth = 
             <Back size={13} /> Back to {username}
           </Link>
 
-          <h1 className="mt-2 font-display text-[27px] font-extrabold tracking-tight text-navy">My Account</h1>
+          <h1 className="mt-2 font-display text-[27px] font-bold tracking-tight text-navy">My Account</h1>
           <p className="mt-0.5 text-[13.5px] text-muted">
             {firstName ? `Hi ${firstName}, manage your orders and details below.` : 'Manage your orders and details below.'}
           </p>
@@ -89,12 +89,12 @@ export default function AccountShell({ username, title, children, requireAuth = 
       </div>
 
       <div className="mx-auto max-w-4xl px-5 py-7 sm:px-8">
-        {title && <h2 className="mb-4 font-display text-[19px] font-extrabold text-navy">{title}</h2>}
+        {title && <h2 className="mb-4 font-display text-[19px] font-bold text-navy">{title}</h2>}
 
         {!ready ? null : requireAuth && !cust ? (
           <div className="rounded-2xl border border-line bg-white p-8 text-center shadow-card">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-green-soft text-green-600"><ShieldLock size={26} /></span>
-            <h3 className="mt-4 font-display text-[18px] font-extrabold text-navy">Sign in to continue</h3>
+            <h3 className="mt-4 font-display text-[18px] font-bold text-navy">Sign in to continue</h3>
             <p className="mx-auto mt-1.5 max-w-sm text-[13.5px] text-muted">
               Sign in to track orders, save favourites and manage your delivery addresses for this store.
             </p>

@@ -15,7 +15,7 @@ export default function AnalyticsCenter() {
 
   return (
     <div className="space-y-5">
-      <div><h1 className="font-display text-[26px] font-extrabold text-slate">Business Intelligence</h1><p className="text-[14px] text-dim">Trends, funnel, retention and a 7-day forecast.</p></div>
+      <div><h1 className="font-display text-[26px] font-bold text-slate">Business Intelligence</h1><p className="text-[14px] text-dim">Trends, funnel, retention and a 7-day forecast.</p></div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Customer LTV" value={money(k.clv)} icon="rupee" accent="green" />

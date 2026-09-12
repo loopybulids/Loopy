@@ -188,7 +188,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           {/* The only place the page name appears. The greeting used to sit
               under it on every screen, which said nothing and often read
               "Welcome back, seller" when no name was loaded yet. */}
-          <h1 className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-navy">
+          <h1 className="font-display text-[19px] font-bold tracking-[-0.01em] text-navy">
             {active?.label || 'Dashboard'}
           </h1>
           <div className="ml-auto flex items-center gap-2">

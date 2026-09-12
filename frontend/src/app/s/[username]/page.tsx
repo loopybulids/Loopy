@@ -18,7 +18,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
       <main className="grid min-h-screen place-items-center bg-paper px-6 text-center">
         <div>
           <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-green-soft text-3xl">🚀</div>
-          <h1 className="font-display text-[26px] font-extrabold text-navy">{store.storeName} is launching soon</h1>
+          <h1 className="font-display text-[26px] font-bold text-navy">{store.storeName} is launching soon</h1>
           <p className="mt-2 text-muted">This store isn’t open for orders just yet. Check back shortly!</p>
         </div>
       </main>

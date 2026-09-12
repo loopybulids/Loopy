@@ -134,7 +134,7 @@ export default function Collections() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display text-[15px] font-extrabold text-navy">{c.title}</span>
+                      <span className="font-display text-[15px] font-bold text-navy">{c.title}</span>
                       <span className={c.published ? 'chip-green' : 'chip-navy'}>{c.published ? 'Live' : 'Hidden'}</span>
                       <span className="font-mono text-[11px] text-faint">/c/{c.slug}</span>
                     </div>

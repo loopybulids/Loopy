@@ -56,7 +56,7 @@ export default function CommandCenter() {
       {/* header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[25px] font-extrabold tracking-[-0.02em] text-slate sm:text-[28px]">Overview</h1>
+          <h1 className="font-display text-[25px] font-bold tracking-[-0.02em] text-slate sm:text-[28px]">Overview</h1>
           <p className="text-[13.5px] text-dim">Across every seller on Loopy.</p>
         </div>
         <div className="flex items-center gap-2">

@@ -268,7 +268,7 @@ export default function StoreEditor() {
                     return (
                       <button key={t.key} onClick={() => applyTemplate(t)} className={`w-full rounded-xl border p-3 text-left transition ${on ? 'border-violet-500 ring-2 ring-violet-200' : 'border-line hover:border-navy/30'}`}>
                         <div className="mb-2 grid h-14 place-items-center rounded-lg text-2xl" style={{ background: `linear-gradient(135deg, ${t.accent}20, ${t.accent}06)` }}>{t.emoji}</div>
-                        <div className="flex items-center justify-between"><span className="font-display text-[14px] font-extrabold text-navy">{t.label}</span>{on && <Check size={15} className="text-violet-600" />}</div>
+                        <div className="flex items-center justify-between"><span className="font-display text-[14px] font-bold text-navy">{t.label}</span>{on && <Check size={15} className="text-violet-600" />}</div>
                         <p className="mt-0.5 text-[11.5px] leading-snug text-muted">{t.desc}</p>
                       </button>
                     );
@@ -403,7 +403,7 @@ function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }
   const label = SECTION_ORDER.find((s) => s.key === active)?.label;
   return (
     <div>
-      <h2 className="mb-4 font-display text-[15px] font-extrabold text-navy">{label}</h2>
+      <h2 className="mb-4 font-display text-[15px] font-bold text-navy">{label}</h2>
 
       {active === 'announcement' && (
         <Text label="Announcement text" value={config.announcement.text} onChange={(v) => set('announcement', 'text', v)} />

@@ -156,7 +156,7 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
         {/* header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-white px-5 py-4">
           <div>
-            <h2 className="font-display text-[17px] font-extrabold text-navy">Manage product</h2>
+            <h2 className="font-display text-[17px] font-bold text-navy">Manage product</h2>
             <p className="text-[12px] text-faint">Edit details, stock, images and visibility.</p>
           </div>
           <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-paper" aria-label="Close">✕</button>
@@ -214,7 +214,7 @@ function ManageDrawer({ product, onClose, onSaved }: { product: any; onClose: ()
               </div>
               <div className="p-3.5">
                 <div className="flex items-start justify-between"><div className="font-display text-[15px] font-bold text-navy">{f.title || 'Product Title'}</div><Heart size={17} className="text-faint" /></div>
-                <div className="mt-1 flex items-center gap-2"><span className="font-display text-[17px] font-extrabold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>{f.mrp && Number(f.mrp) > Number(f.price || 0) && <span className="text-[12px] font-semibold text-faint line-through">{money(Number(f.mrp))}</span>}</div>
+                <div className="mt-1 flex items-center gap-2"><span className="font-display text-[17px] font-bold text-navy">{f.price ? money(Number(f.price)) : '₹0'}</span>{f.mrp && Number(f.mrp) > Number(f.price || 0) && <span className="text-[12px] font-semibold text-faint line-through">{money(Number(f.mrp))}</span>}</div>
                 {variants.filter((v) => v.label.trim()).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{variants.filter((v) => v.label.trim()).map((v, i) => <span key={i} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-semibold text-navy">{v.label}</span>)}</div>}
               </div>
             </div>

@@ -22,7 +22,7 @@ export default function SellersCenter() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-[26px] font-extrabold text-slate">Seller Operations Center</h1>
+        <h1 className="font-display text-[26px] font-bold text-slate">Seller Operations Center</h1>
         <p className="text-[14px] text-dim">Every seller, their performance and verification — in one place.</p>
       </div>
 

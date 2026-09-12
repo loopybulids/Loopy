@@ -92,7 +92,7 @@ export default function SellerAuth() {
 
         <div className="glass-card rounded-3xl p-8">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-green-600 shadow-card"><Store size={22} /></span>
-          <h1 className="mt-5 font-display text-[28px] font-extrabold leading-tight text-navy">
+          <h1 className="mt-5 font-display text-[28px] font-bold leading-tight text-navy">
             {mode === 'login' ? 'Welcome back' : 'Open your store'}
           </h1>
           <p className="mt-1.5 text-[14px] text-muted">

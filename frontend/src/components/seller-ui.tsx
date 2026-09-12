@@ -55,7 +55,7 @@ export function Panel({ title, action, children, className = '' }: { title?: str
     <div className={`card p-6 ${className}`}>
       {(title || action) && (
         <div className="mb-5 flex items-center justify-between">
-          {title && <h2 className="font-display text-[16px] font-extrabold text-navy">{title}</h2>}
+          {title && <h2 className="font-display text-[16px] font-bold text-navy">{title}</h2>}
           {action}
         </div>
       )}
@@ -212,7 +212,7 @@ export function SettingsSection({
           </span>
         )}
         <div>
-          <h2 className="font-display text-[14px] font-extrabold text-navy">{title}</h2>
+          <h2 className="font-display text-[14px] font-bold text-navy">{title}</h2>
           {sub && <p className="text-[12px] text-muted">{sub}</p>}
         </div>
       </div>

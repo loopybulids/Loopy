@@ -72,7 +72,7 @@ export default function Payouts() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[26px] font-extrabold text-slate">Payout Requests</h1>
+          <h1 className="font-display text-[26px] font-bold text-slate">Payout Requests</h1>
           <p className="text-[14px] text-dim">Sellers waiting to be paid. Approving records that you have made the transfer.</p>
         </div>
         <button onClick={load} className="rounded-lg bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-600">Refresh</button>
@@ -106,7 +106,7 @@ export default function Payouts() {
                   {/* who + where */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display text-[15px] font-extrabold text-slate">
+                      <span className="font-display text-[15px] font-bold text-slate">
                         {p.seller?.storeName || 'Unknown store'}
                       </span>
                       {p.seller?.username && <span className="font-mono text-[11.5px] text-pale">@{p.seller.username}</span>}

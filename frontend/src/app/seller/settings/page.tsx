@@ -210,7 +210,7 @@ export default function Settings() {
 
       {/* danger zone */}
       <div className="rounded-2xl border border-rose/40 bg-rose-soft/40 p-6">
-        <h3 className="font-display text-[15px] font-extrabold text-rose">Danger Zone</h3>
+        <h3 className="font-display text-[15px] font-bold text-rose">Danger Zone</h3>
         <div className="mt-4 flex flex-wrap gap-3">
           <button className="btn-ghost">Unpublish Store</button>
           <button onClick={deleteStore} className="btn inline-flex items-center justify-center rounded-full bg-rose px-5 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.02]">Delete Store</button>

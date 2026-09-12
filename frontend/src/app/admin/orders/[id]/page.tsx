@@ -81,7 +81,7 @@ This cannot be undone. Continue?`
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-[26px] font-extrabold text-slate">Order #{d.id.slice(-6).toUpperCase()}</h1>
+            <h1 className="font-display text-[26px] font-bold text-slate">Order #{d.id.slice(-6).toUpperCase()}</h1>
             {statusChip(d.status)}
           </div>
           <p className="text-[13px] text-dim">Placed {new Date(d.createdAt).toLocaleString('en-IN')}</p>

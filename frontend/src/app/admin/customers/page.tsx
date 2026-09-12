@@ -19,7 +19,7 @@ export default function CustomersCenter() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-[26px] font-extrabold text-slate">Customer Operations Center</h1>
+        <h1 className="font-display text-[26px] font-bold text-slate">Customer Operations Center</h1>
         <p className="text-[14px] text-dim">Every buyer, their value and behaviour across all sellers.</p>
       </div>
 

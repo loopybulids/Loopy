@@ -23,9 +23,9 @@ import { ArrowRight, Bolt, Plus, Share, ShieldLock, Star, Store, Truck } from '@
    reading instead of two columns competing for the first glance.
 
    Two things do move, and both earn it: <HeroDiagram> assembles
-   the three planes of the flow once on entry, and <LoopyFlow> in
-   "How it works" runs the four stages on a loop, because the
-   product's name is the shape of its process. Everything else is
+   three glass planes of the flow, opening them out as you scroll
+   and leaning toward the pointer, and <LoopyFlow> in "How it
+   works" walks the four stages on a loop. Everything else is
    scroll-triggered once — Reveal on entry, Stagger down lists,
    WordReveal on the headline, CountUp on figures — so whitespace
    stays the thing doing the work.
@@ -100,7 +100,7 @@ export default function Landing() {
       </header>
 
       {/* ───── hero — copy left, diagram right ───── */}
-      <section className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1fr_1.05fr] lg:gap-6">
+      <section className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1.12fr_0.88fr] lg:gap-6">
         <div className="text-center lg:text-left">
         <Reveal y={12}>
           <span className="inline-flex items-center gap-2 rounded-full border border-green/15 bg-white/70 px-3.5 py-1.5 text-[12px] font-semibold text-green-600 backdrop-blur">
@@ -112,17 +112,24 @@ export default function Landing() {
           </span>
         </Reveal>
 
-        <h1 className="mt-7 font-display text-[40px] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[54px]">
-          <WordReveal text="Your thrift store," />
-          <br />
-          {/* One word carries the colour. Everything else is navy. */}
-          <span className="text-green-600"><WordReveal text="protected end-to-end" delay={0.22} /></span>
+        {/*
+          One line, and it states the product rather than describing it.
+          "Your thrift store, protected end-to-end" needed three lines and
+          made you read to the end before knowing what this is; this says it
+          in four words. `whitespace-nowrap` from lg up, where the column is
+          wide enough to hold it. The size steps down at lg on purpose: the
+          column is ~524px there, and 44px would overflow a nowrap line, so it
+          only grows to 44px at xl where there is room.
+        */}
+        <h1 className="mt-7 font-display text-[34px] font-bold leading-[1.06] tracking-[-0.035em] sm:text-[38px] lg:whitespace-nowrap xl:text-[44px]">
+          <WordReveal text="Turn DMs into" />{' '}
+          <span className="text-green-600"><WordReveal text="paid orders" delay={0.18} /></span>
         </h1>
 
         <Reveal delay={0.4} y={14}>
-          <p className="mx-auto mt-6 max-w-lg text-[16.5px] leading-relaxed text-muted lg:mx-0">
-            Turn Instagram DMs into a real storefront with payments held until delivery.
-            No ghosting, no chasing screenshots, no payment anxiety.
+          <p className="mx-auto mt-5 max-w-[30rem] text-[16.5px] leading-relaxed text-muted lg:mx-0">
+            A real storefront for your Instagram shop, with payments held safely
+            until the order is delivered.
           </p>
         </Reveal>
 
@@ -148,7 +155,7 @@ export default function Landing() {
         </Reveal>
       </div>
 
-        {/* The visual: three planes that assemble into the flow. */}
+        {/* The visual: three glass planes that assemble into the flow. */}
         <HeroDiagram />
       </section>
 
@@ -180,7 +187,7 @@ export default function Landing() {
         <Reveal>
           <div className="text-center">
             <SectionLabel>How it works</SectionLabel>
-            <h2 className="mx-auto mt-4 max-w-xl font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+            <h2 className="mx-auto mt-4 max-w-xl font-display text-[32px] font-bold leading-tight tracking-[-0.025em] sm:text-[42px]">
               Three steps from a chat to money in your account
             </h2>
           </div>
@@ -197,7 +204,7 @@ export default function Landing() {
           <Reveal>
             <div className="text-center">
               <SectionLabel>Everything in one place</SectionLabel>
-              <h2 className="mx-auto mt-4 max-w-lg font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+              <h2 className="mx-auto mt-4 max-w-lg font-display text-[32px] font-bold leading-tight tracking-[-0.025em] sm:text-[42px]">
                 The whole business, not just the chat
               </h2>
             </div>
@@ -210,7 +217,7 @@ export default function Landing() {
                   <span className="grid h-11 w-11 place-items-center rounded-xl bg-green-soft text-green-600 transition-transform group-hover:scale-105">
                     {s.icon}
                   </span>
-                  <h3 className="mt-4 font-display text-[16px] font-extrabold">{s.t}</h3>
+                  <h3 className="mt-4 font-display text-[16px] font-bold">{s.t}</h3>
                   <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{s.d}</p>
                 </div>
               </StaggerItem>
@@ -224,7 +231,7 @@ export default function Landing() {
         <Reveal>
           <div className="text-center">
             <SectionLabel>Sellers who closed the loop</SectionLabel>
-            <h2 className="mx-auto mt-4 max-w-lg font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+            <h2 className="mx-auto mt-4 max-w-lg font-display text-[32px] font-bold leading-tight tracking-[-0.025em] sm:text-[42px]">
               Built with the people using it
             </h2>
           </div>
@@ -259,7 +266,7 @@ export default function Landing() {
         <Reveal>
           <div className="text-center">
             <SectionLabel>Questions</SectionLabel>
-            <h2 className="mt-4 font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[42px]">
+            <h2 className="mt-4 font-display text-[32px] font-bold leading-tight tracking-[-0.025em] sm:text-[42px]">
               Everything you might ask
             </h2>
           </div>
@@ -275,7 +282,7 @@ export default function Landing() {
       <section className="mx-auto max-w-5xl px-6 pb-28 sm:px-8">
         <Reveal>
           <div className="rounded-[28px] bg-green-soft px-8 py-16 text-center">
-            <h2 className="mx-auto max-w-lg font-display text-[32px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[40px]">
+            <h2 className="mx-auto max-w-lg font-display text-[32px] font-bold leading-tight tracking-[-0.025em] sm:text-[40px]">
               Start turning chats into <span className="text-green-600">checkouts</span>
             </h2>
             <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-navy/70">

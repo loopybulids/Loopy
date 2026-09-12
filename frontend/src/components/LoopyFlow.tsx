@@ -112,7 +112,7 @@ export default function LoopyFlow() {
                   </span>
                 </div>
 
-                <h3 className="mt-3.5 font-display text-[16px] font-extrabold text-navy">{s.t}</h3>
+                <h3 className="mt-3.5 font-display text-[16px] font-bold text-navy">{s.t}</h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{s.d}</p>
                 <p className="mt-2.5 text-[11px] text-faint">{s.note}</p>
               </motion.div>

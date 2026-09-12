@@ -32,7 +32,7 @@ export default function NotificationsBell() {
       </button>
       {open && (
         <div className="absolute right-0 top-11 z-40 w-80 overflow-hidden rounded-2xl border border-line bg-white shadow-lift">
-          <div className="border-b border-line px-4 py-3 font-display text-[14px] font-extrabold text-navy">Notifications</div>
+          <div className="border-b border-line px-4 py-3 font-display text-[14px] font-bold text-navy">Notifications</div>
           <div className="max-h-96 overflow-y-auto">
             {data.items.length === 0 ? (
               <p className="px-4 py-8 text-center text-[13px] text-faint">No notifications yet.</p>

@@ -94,9 +94,9 @@ export default function ProductPage() {
 
           {/* info */}
           <div>
-            <h1 className="font-display text-[26px] font-extrabold leading-tight text-navy">{p.title}</h1>
+            <h1 className="font-display text-[26px] font-bold leading-tight text-navy">{p.title}</h1>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="font-display text-[26px] font-extrabold text-navy">{rupees(p.price)}</span>
+              <span className="font-display text-[26px] font-bold text-navy">{rupees(p.price)}</span>
               {p.mrp && p.mrp > p.price && <><span className="text-[15px] text-faint line-through">{rupees(p.mrp)}</span><span className="chip-green">{Math.round((1 - p.price / p.mrp) * 100)}% OFF</span></>}
             </div>
             {p.brand && <div className="mt-1 text-[13px] text-muted">{p.brand}</div>}
@@ -165,7 +165,7 @@ export default function ProductPage() {
         {/* full-width product details — keeps the page full on mobile & desktop */}
         <div className="mt-8 grid gap-4 lg:grid-cols-3">
           <div className="rounded-2xl border border-line bg-white p-6 lg:col-span-2">
-            <h2 className="font-display text-[16px] font-extrabold text-navy">Product details</h2>
+            <h2 className="font-display text-[16px] font-bold text-navy">Product details</h2>
             <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-navy/80">
               {p.description?.trim() ? p.description : 'No description provided for this product.'}
             </p>
@@ -180,7 +180,7 @@ export default function ProductPage() {
             )}
           </div>
           <div className="rounded-2xl border border-line bg-white p-6">
-            <h3 className="font-display text-[15px] font-extrabold text-navy">Why buy here</h3>
+            <h3 className="font-display text-[15px] font-bold text-navy">Why buy here</h3>
             <ul className="mt-3 space-y-3 text-[13px] text-navy/80">
               <li className="flex items-start gap-2.5"><ShieldLock size={16} className="mt-0.5 shrink-0 text-green-600" /> Payment held in Loopy escrow until you confirm delivery.</li>
               <li className="flex items-start gap-2.5"><Truck size={16} className="mt-0.5 shrink-0 text-green-600" /> Tracked shipping on every order.</li>

@@ -38,7 +38,7 @@ export default function Customers() {
                   <tr key={i}>
                     <td className="py-3">
                       <div className="flex items-center gap-3">
-                        <span className="grid h-9 w-9 place-items-center rounded-full bg-green-soft font-display text-[13px] font-extrabold text-green-600">{c.name.charAt(0).toUpperCase()}</span>
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-green-soft font-display text-[13px] font-bold text-green-600">{c.name.charAt(0).toUpperCase()}</span>
                         <span className="font-display font-bold text-navy">{c.name}</span>
                       </div>
                     </td>

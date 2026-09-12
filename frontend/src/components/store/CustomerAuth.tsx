@@ -74,7 +74,7 @@ export default function CustomerAuth({ username, storeName, onClose, onAuthed }:
 
         {codeSent ? (
           <>
-            <h2 className="font-display text-[22px] font-extrabold text-navy">Check your email</h2>
+            <h2 className="font-display text-[22px] font-bold text-navy">Check your email</h2>
             <p className="mt-1 text-[13px] text-muted">
               We sent a 6-digit code to <b className="text-navy">{form.email}</b>. It expires in 10 minutes.
             </p>
@@ -101,7 +101,7 @@ export default function CustomerAuth({ username, storeName, onClose, onAuthed }:
           </>
         ) : (
         <>
-        <h2 className="font-display text-[22px] font-extrabold text-navy">
+        <h2 className="font-display text-[22px] font-bold text-navy">
           {mode === 'login' ? 'Sign in' : 'Create account'}{storeName ? ` · ${storeName}` : ''}
         </h2>
         <p className="mt-1 text-[13px] text-muted">Save favourites, check out faster and track your orders.</p>

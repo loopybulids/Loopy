@@ -88,7 +88,7 @@ export default function AddressesPage() {
 
           {adding && (
             <div className="mt-4 rounded-2xl border border-line bg-white p-5 shadow-card">
-              <h3 className="font-display text-[15px] font-extrabold text-navy">New address</h3>
+              <h3 className="font-display text-[15px] font-bold text-navy">New address</h3>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <input className="c-input" placeholder="Full name" value={addr.name} onChange={(e) => set('name', e.target.value)} />
                 <input className="c-input" placeholder="Phone" value={addr.phone} onChange={(e) => set('phone', e.target.value)} />

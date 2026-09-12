@@ -29,7 +29,7 @@ export default function Earnings() {
         <div className="seller-grid pointer-events-none absolute inset-0" />
         <div className="relative mx-auto max-w-6xl px-5 py-8 sm:px-8">
           <div className="flex flex-wrap items-start justify-between gap-3 animate-riseIn">
-            <div><h1 className="font-display text-[28px] font-extrabold tracking-tight text-white">Earnings</h1><p className="text-[14px] s-muted">Sales revenue and secure payouts.</p></div>
+            <div><h1 className="font-display text-[28px] font-bold tracking-tight text-white">Earnings</h1><p className="text-[14px] s-muted">Sales revenue and secure payouts.</p></div>
             <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/[0.06] px-4 py-2.5">
               <span className="grid h-9 w-9 place-items-center rounded-full ring-2 ring-green-500/60 text-[11px] font-extrabold text-green-500">98</span>
               <div><div className="flex items-center gap-1 text-[12px] font-bold text-green-500"><ShieldLock size={12} /> ELITE TRUST</div><div className="text-[10.5px] text-[#8A98AD]">Instant payouts enabled</div></div>
@@ -42,10 +42,10 @@ export default function Earnings() {
               <div aria-hidden className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-green-500/15 blur-2xl" />
               <div className="relative">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-[#8A98AD]">Current Balance</div>
-                <div className="mt-1 font-display text-[40px] font-extrabold tabular-nums tracking-tight text-white">{rupees(w.available + w.pending)}</div>
+                <div className="mt-1 font-display text-[40px] font-bold tabular-nums tracking-tight text-white">{rupees(w.available + w.pending)}</div>
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="text-[11px] text-[#8A98AD]">Ready for Payout</div><div className="font-display text-[18px] font-extrabold text-green-500">{rupees(w.available)}</div></div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="text-[11px] text-[#8A98AD]">Pending Escrow</div><div className="font-display text-[18px] font-extrabold text-white">{rupees(w.pending)}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="text-[11px] text-[#8A98AD]">Ready for Payout</div><div className="font-display text-[18px] font-bold text-green-500">{rupees(w.available)}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="text-[11px] text-[#8A98AD]">Pending Escrow</div><div className="font-display text-[18px] font-bold text-white">{rupees(w.pending)}</div></div>
                 </div>
                 <div className="mt-4 flex gap-2">
                   <button onClick={payout} className="s-btn text-[13px]"><Wallet size={15} /> Withdraw to UPI</button>
@@ -63,7 +63,7 @@ export default function Earnings() {
                 <div className="mt-3 flex items-center justify-between text-[12px]"><span className="text-[#8A98AD]">Active Escrows</span><span className="font-bold text-white">{orders.filter((o) => ['Paid', 'Accepted', 'Shipped'].includes(o.status)).length} Orders</span></div>
                 <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full w-2/3 rounded-full bg-green-500" /></div>
               </div>
-              <div className="rounded-xl border border-amber/30 bg-amber/[0.08] p-4"><div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber"><Clock size={13} /> Next Payout Cycle</div><div className="font-display text-[18px] font-extrabold text-white">Tomorrow, 10:00 AM</div></div>
+              <div className="rounded-xl border border-amber/30 bg-amber/[0.08] p-4"><div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber"><Clock size={13} /> Next Payout Cycle</div><div className="font-display text-[18px] font-bold text-white">Tomorrow, 10:00 AM</div></div>
             </div>
           </div>
 

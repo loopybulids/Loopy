@@ -31,12 +31,12 @@ export default function SellerProfile() {
         <div className="flex flex-wrap items-center gap-4">
           <span className="grid h-16 w-16 place-items-center rounded-2xl bg-slate text-xl font-extrabold text-white">{(d.storeName || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2"><h1 className="font-display text-[24px] font-extrabold text-slate">{d.storeName}</h1>{statusChip(d.kycStatus)}</div>
+            <div className="flex items-center gap-2"><h1 className="font-display text-[24px] font-bold text-slate">{d.storeName}</h1>{statusChip(d.kycStatus)}</div>
             <p className="text-[13px] text-dim">@{d.username} · {d.city || '—'} · joined {new Date(d.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</p>
             <p className="text-[12px] text-dim">{d.email || '—'} · {d.phone || '—'}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2"><span className="font-display text-[28px] font-extrabold text-slate">{s.score}</span><Chip tone={scoreTone as any}>Health</Chip></div>
+            <div className="flex items-center gap-2"><span className="font-display text-[28px] font-bold text-slate">{s.score}</span><Chip tone={scoreTone as any}>Health</Chip></div>
             <div className="text-[12px] text-dim">{(d.rating || 0).toFixed(1)} ★ ({d.ratingCount})</div>
           </div>
         </div>

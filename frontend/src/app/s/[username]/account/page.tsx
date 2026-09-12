@@ -80,7 +80,7 @@ export default function AccountProfilePage() {
           </div>
 
           <div className="rounded-2xl border border-line bg-white p-5 shadow-card">
-            <h3 className="font-display text-[14px] font-extrabold text-navy">Account</h3>
+            <h3 className="font-display text-[14px] font-bold text-navy">Account</h3>
             <dl className="mt-3 space-y-2.5 text-[13px]">
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Store</dt>

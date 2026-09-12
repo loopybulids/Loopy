@@ -60,7 +60,7 @@ export default function FinanceCenter() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="font-display text-[26px] font-extrabold text-slate">Finance Center</h1><p className="text-[14px] text-dim">Revenue, commission, payouts, taxes and settlements.</p></div>
+        <div><h1 className="font-display text-[26px] font-bold text-slate">Finance Center</h1><p className="text-[14px] text-dim">Revenue, commission, payouts, taxes and settlements.</p></div>
         <button onClick={exportCsv} className="rounded-lg bg-accent px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-600">Export settlements (CSV)</button>
       </div>
 

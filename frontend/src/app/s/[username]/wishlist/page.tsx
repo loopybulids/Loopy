@@ -45,7 +45,7 @@ export default function WishlistPage() {
               </Link>
               <div className="p-3">
                 <Link href={`/s/${username}/product/${p.id}`} className="block truncate font-display text-[14px] font-bold text-navy hover:text-green-600">{p.title}</Link>
-                <div className="mt-0.5 font-display text-[15px] font-extrabold text-navy">{rupees(p.price)}</div>
+                <div className="mt-0.5 font-display text-[15px] font-bold text-navy">{rupees(p.price)}</div>
                 <button onClick={() => remove(p.id)} className="mt-2 text-[12px] font-semibold text-rose hover:underline">Remove</button>
               </div>
             </div>

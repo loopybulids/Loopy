@@ -27,7 +27,7 @@ export default function SellerProducts() {
         <div className="relative mx-auto max-w-5xl px-5 py-8 sm:px-8">
           <div className="flex items-center justify-between animate-riseIn">
             <div>
-              <h1 className="font-display text-[26px] font-extrabold tracking-tight text-white">Products</h1>
+              <h1 className="font-display text-[26px] font-bold tracking-tight text-white">Products</h1>
               <p className="text-[14px] s-muted">Your live catalogue.</p>
             </div>
             <Link href="/seller/list" className="s-btn !px-4 !py-2.5 text-[13px]"><Plus size={15} /> List Item</Link>
@@ -42,7 +42,7 @@ export default function SellerProducts() {
                       <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-green-500/90 px-1.5 py-0.5 text-[8.5px] font-bold uppercase text-[#07140A]"><Shield size={10} /> Protected</span>
                       {p.quantity < 1 && <span className="absolute inset-0 grid place-items-center bg-[#0A1828]/70 text-[10px] font-bold uppercase tracking-widest text-white">Sold</span>}
                     </div>
-                    <div className="p-3"><div className="text-[13px] font-bold text-white">{p.title}</div><div className="mt-0.5 flex items-center justify-between text-xs"><span className="font-display font-extrabold text-white">{rupees(p.price)}</span><span className="text-[#8A98AD]">{p.quantity} in stock</span></div></div>
+                    <div className="p-3"><div className="text-[13px] font-bold text-white">{p.title}</div><div className="mt-0.5 flex items-center justify-between text-xs"><span className="font-display font-bold text-white">{rupees(p.price)}</span><span className="text-[#8A98AD]">{p.quantity} in stock</span></div></div>
                   </div>
                 ))}
               </div>}

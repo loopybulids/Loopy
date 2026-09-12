@@ -43,13 +43,13 @@ export default function StoreAccountBar({ username, storeName, accent }: {
           />
         ) : (
           <span
-            className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-extrabold text-white shadow-card"
+            className="grid h-9 w-9 place-items-center rounded-xl font-display text-[16px] font-bold text-white shadow-card"
             style={{ background: tint }}
           >
             {initial}
           </span>
         )}
-        <span className="font-display text-[21px] font-extrabold tracking-tight text-navy">{name}</span>
+        <span className="font-display text-[21px] font-bold tracking-tight text-navy">{name}</span>
       </Link>
 
       <nav className="ml-auto hidden items-center gap-4 text-[13px] font-semibold text-muted sm:flex">

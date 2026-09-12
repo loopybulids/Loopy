@@ -22,7 +22,7 @@ export const LEGAL_NAV = [
 export function Clause({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="mt-6">
-      <h3 className="font-display text-[15px] font-extrabold text-navy">{n}. {title}</h3>
+      <h3 className="font-display text-[15px] font-bold text-navy">{n}. {title}</h3>
       <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{children}</p>
     </div>
   );
@@ -67,7 +67,7 @@ function Blocks({ blocks }: { blocks: { kind: 'p' | 'li'; text: string }[] }) {
 export function Policy({ section }: { section: LegalSection }) {
   return (
     <section id={section.id} className="mt-10 scroll-mt-24 border-t border-line pt-8 first:mt-6 first:border-0 first:pt-0">
-      <h2 className="font-display text-[20px] font-extrabold tracking-tight text-navy">
+      <h2 className="font-display text-[20px] font-bold tracking-tight text-navy">
         <span className="text-faint">{section.n}.</span> {section.title}
       </h2>
 
@@ -106,7 +106,7 @@ export function LegalShell({
       </header>
 
       <article className="mx-auto max-w-3xl px-5 py-12 sm:px-8">
-        <h1 className="font-display text-[34px] font-extrabold tracking-tight sm:text-[42px]">{title}</h1>
+        <h1 className="font-display text-[34px] font-bold tracking-tight sm:text-[42px]">{title}</h1>
         {sub && <p className="mt-2 text-[15px] leading-relaxed text-muted">{sub}</p>}
 
         {/* Provenance: who this covers, how to reach us, and whether it is in force. */}

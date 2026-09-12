@@ -19,7 +19,7 @@ export default function SellerKyc() {
           <div className="animate-riseIn">
             <div className="flex gap-1.5"><span className="h-1.5 flex-1 rounded-full bg-green-500" /><span className="h-1.5 flex-1 rounded-full bg-green-500" /><span className="h-1.5 flex-1 rounded-full bg-white/10" /></div>
             <div className="mt-2 text-xs s-muted">Step 2 of 3 · KYC verification</div>
-            <h1 className="mt-3 font-display text-[22px] font-extrabold tracking-tight text-white">Verify your store</h1>
+            <h1 className="mt-3 font-display text-[22px] font-bold tracking-tight text-white">Verify your store</h1>
           </div>
 
           <div className="s-card mt-4 space-y-3 p-5">

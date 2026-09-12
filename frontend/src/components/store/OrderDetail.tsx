@@ -111,7 +111,7 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="font-display text-[15px] font-extrabold text-navy">Order {orderRef(order.id)}</div>
+          <div className="font-display text-[15px] font-bold text-navy">Order {orderRef(order.id)}</div>
           {when && (
             <div className="text-[12px] text-faint">
               {when.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -193,7 +193,7 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
         {fee > 0 && <Row label="Platform fee" value={rupees(fee)} />}
         <div className="mt-1 flex justify-between border-t border-line pt-2 text-[15px]">
           <span className="font-semibold text-navy">Total</span>
-          <span className="font-display font-extrabold text-green-600">{rupees(order?.totalAmount ?? 0)}</span>
+          <span className="font-display font-bold text-green-600">{rupees(order?.totalAmount ?? 0)}</span>
         </div>
         <div className="flex items-center justify-between pt-0.5 text-[13px]">
           <span className="text-muted">Payment</span>

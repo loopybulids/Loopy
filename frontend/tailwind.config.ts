@@ -45,7 +45,8 @@ const config: Config = {
         // One typeface across body and headings — matches the reference design's
         // dashboard typography. Weight, not family, sets hierarchy.
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        // Headings. A different voice from the body face on purpose.
+        display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
         // Figures. Fixed-width digits so money lines up down a column.
         num: ['var(--font-num)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },

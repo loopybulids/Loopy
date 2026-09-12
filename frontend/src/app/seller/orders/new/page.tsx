@@ -69,7 +69,7 @@ export default function ManualOrder() {
         <button onClick={addLine} className="btn-ghost mt-3 py-2 text-[13px]"><Plus size={14} /> Add item</button>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-green-soft px-4 py-3">
           <span className="text-[13px] font-semibold text-navy/80">Items total</span>
-          <span className="font-display text-[18px] font-extrabold text-green-600">{money(itemsTotal)}</span>
+          <span className="font-display text-[18px] font-bold text-green-600">{money(itemsTotal)}</span>
         </div>
       </Panel>
 

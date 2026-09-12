@@ -185,12 +185,12 @@ function Onboarding({ ob }: { ob: any }) {
     <div className="card overflow-hidden p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-[17px] font-extrabold text-navy">Complete your store setup</h2>
+          <h2 className="font-display text-[17px] font-bold text-navy">Complete your store setup</h2>
           <p className="text-[13px] text-muted">Finish these steps to launch your brand.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="h-2 w-40 overflow-hidden rounded-full bg-paper"><div className="h-full rounded-full bg-green-600 transition-all" style={{ width: `${pct}%` }} /></div>
-          <span className="font-display text-[13px] font-extrabold text-navy">{ob.done} of {ob.total}</span>
+          <span className="font-display text-[13px] font-bold text-navy">{ob.done} of {ob.total}</span>
         </div>
       </div>
       <div className="mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -218,7 +218,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
   return (
     <div className="flex items-center justify-between">
       <span className="text-[13px] text-muted">{label}</span>
-      <span className={`font-display font-extrabold ${strong ? 'text-[19px] text-green-600' : 'text-[15px] text-navy'}`}>{value}</span>
+      <span className={`font-display font-bold ${strong ? 'text-[19px] text-green-600' : 'text-[15px] text-navy'}`}>{value}</span>
     </div>
   );
 }

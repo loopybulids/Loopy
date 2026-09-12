@@ -59,7 +59,7 @@ export default function SellerDashboard() {
         <div className="relative mx-auto max-w-6xl px-5 py-8 sm:px-8">
           <div className="flex flex-wrap items-end justify-between gap-3 animate-riseIn">
             <div>
-              <h1 className="font-display text-[28px] font-extrabold tracking-tight text-white">Seller Dashboard</h1>
+              <h1 className="font-display text-[28px] font-bold tracking-tight text-white">Seller Dashboard</h1>
               <p className="text-[14px] s-muted">Operations console — inventory, drops, and integrity score.</p>
             </div>
             <Link href="/seller/list" className="s-btn"><Plus size={16} /> Batch List Items</Link>
@@ -106,7 +106,7 @@ export default function SellerDashboard() {
               <div className="flex items-center justify-between"><h2 className="font-display text-[16px] font-bold text-white">The Drop Zone</h2><Clock size={18} className="text-green-500" /></div>
               <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="text-[10.5px] font-bold uppercase tracking-wide text-[#8A98AD]">Next drop in</div>
-                <div className="mt-1 font-display text-[30px] font-extrabold tabular-nums tracking-tight text-green-500">{countdown}</div>
+                <div className="mt-1 font-display text-[30px] font-bold tabular-nums tracking-tight text-green-500">{countdown}</div>
                 <div className="text-[11px] text-[#8A98AD]">Sunday 7 PM</div>
               </div>
               <div className="mt-4 text-[10.5px] font-bold uppercase tracking-wide text-[#8A98AD]">Batch queue</div>
@@ -140,7 +140,7 @@ export default function SellerDashboard() {
 }
 
 function Stat({ k, v, sub, subClass }: { k: string; v: string; sub: string; subClass: string }) {
-  return <div className="s-card p-5"><div className="text-[12px] font-semibold text-[#8A98AD]">{k}</div><div className="mt-1 font-display text-[30px] font-extrabold tracking-tight text-white">{v}</div><div className={`mt-0.5 text-[11px] font-bold ${subClass}`}>{sub}</div></div>;
+  return <div className="s-card p-5"><div className="text-[12px] font-semibold text-[#8A98AD]">{k}</div><div className="mt-1 font-display text-[30px] font-bold tracking-tight text-white">{v}</div><div className={`mt-0.5 text-[11px] font-bold ${subClass}`}>{sub}</div></div>;
 }
 function Health({ label, value, pct, note }: { label: string; value: string; pct: number; note: string }) {
   return (
