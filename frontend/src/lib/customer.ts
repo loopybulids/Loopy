@@ -91,6 +91,14 @@ export const custApi = {
   addresses: (u: string) => custReq(u, '/customer/addresses'),
   addAddress: (u: string, body: any) => custReq(u, '/customer/addresses', { method: 'POST', body: JSON.stringify(body) }),
   checkout: (u: string, body: any) => custReq(u, '/customer/checkout', { method: 'POST', body: JSON.stringify(body) }),
+  /** Open (or re-open) the UPI payment for an unpaid order. Returns `{ checkoutUrl, … }`. */
+  pay: (u: string, id: string, returnUrl: string) =>
+    custReq(u, `/orders/${id}/pay`, { method: 'POST', body: JSON.stringify({ returnUrl }) }),
+  /**
+   * Has this order been paid? The server asks the gateway — the answer is never
+   * taken from the redirect back, which anyone could type into an address bar.
+   */
+  verifyPayment: (u: string, id: string) => custReq(u, `/orders/${id}/verify-payment`, { method: 'POST' }),
 
   /**
    * Rate a delivered order — 1-5 stars plus an optional comment.

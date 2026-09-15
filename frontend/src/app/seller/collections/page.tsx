@@ -6,6 +6,36 @@ import { PageHead, Panel, Empty, StatStrip } from '@/components/seller-ui';
 import { Plus, Tag, Check, Store } from '@/components/icons';
 
 /**
+ * The first image of a product, whichever shape it arrived in.
+ *
+ * The picker used `String(p.images).split(',')[0]`. `images` is an array of
+ * data URIs, and every data URI contains a comma — `data:image/png;base64,…`
+ * — so the split handed <img> the part before it and every thumbnail broke.
+ * Never split an image value on commas; take an element of the array.
+ */
+function firstImage(p: any): string {
+  const v = p?.image ?? p?.images;
+  if (Array.isArray(v)) return v.find((x) => typeof x === 'string' && x) || '';
+  if (typeof v !== 'string' || !v) return '';
+  if (v.trim().startsWith('[')) {
+    try {
+      const arr = JSON.parse(v);
+      return Array.isArray(arr) ? arr.find((x) => typeof x === 'string' && x) || '' : '';
+    } catch {
+      return '';
+    }
+  }
+  return v;
+}
+
+/** A thumbnail that falls back to a placeholder instead of the broken-image icon. */
+function Thumb({ src, size }: { src: string; size: number }) {
+  const [bad, setBad] = useState(false);
+  if (!src || bad) return <span className="grid h-full w-full place-items-center text-faint"><Store size={size} /></span>;
+  return <img src={src} alt="" onError={() => setBad(true)} className="h-full w-full object-cover" />;
+}
+
+/**
  * Collections — seller-curated groups of their own products.
  *
  * A storefront that can only say "All products" has no way to merchandise.
@@ -161,9 +191,7 @@ export default function Collections() {
                     {c.products.map((p: any) => (
                       <div key={p.id} className="w-[104px] shrink-0">
                         <div className="aspect-square overflow-hidden rounded-lg bg-paper ring-1 ring-line">
-                          {p.image
-                            ? <img src={p.image} alt="" className="h-full w-full object-cover" />
-                            : <div className="grid h-full place-items-center text-faint"><Store size={18} /></div>}
+                          <Thumb src={firstImage(p)} size={18} />
                         </div>
                         <div className="mt-1 truncate text-[11.5px] font-semibold text-navy">{p.title}</div>
                         <div className="font-num text-[11px] text-faint">{rupees(p.price)}</div>
@@ -286,9 +314,7 @@ function Editor({
                   }`}
                 >
                   <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-paper ring-1 ring-line">
-                    {p.images
-                      ? <img src={String(p.images).split(',')[0]} alt="" className="h-full w-full object-cover" />
-                      : <span className="grid h-full place-items-center text-faint"><Store size={16} /></span>}
+                    <Thumb src={firstImage(p)} size={16} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-semibold text-navy">{p.title}</span>

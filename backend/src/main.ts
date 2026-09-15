@@ -14,8 +14,14 @@ async function bootstrap() {
 
   // Allow larger JSON bodies — product/store media is sent as base64 data-URLs.
   // (Default Express limit is 100kb.) Note: on Vercel the platform caps at ~4.5MB.
-  app.use(json({ limit: '25mb' }));
-  app.use(urlencoded({ extended: true, limit: '25mb' }));
+  // Payment webhooks are signed over the exact bytes sent, so those routes keep
+  // a copy of the raw body. Only those: the rest of the API accepts 25MB image
+  // uploads, and a second copy of every one of them would double the memory.
+  const keepRawBody = (req: any, _res: any, buf: Buffer) => {
+    if (req.url?.includes('/payments/')) req.rawBody = buf;
+  };
+  app.use(json({ limit: '25mb', verify: keepRawBody }));
+  app.use(urlencoded({ extended: true, limit: '25mb', verify: keepRawBody }));
 
   /**
    * Log every request: method, path, status, duration.

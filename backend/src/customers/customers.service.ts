@@ -6,6 +6,7 @@ import { verifyGoogleIdToken } from '../auth/google-verify';
 import { sendMail, verificationEmail } from '../mail/mailer';
 import { computeAmounts } from '../common/money';
 import { describeCoupon, discountFor, normalizeCode } from '../common/coupons';
+import { PaymentsService } from '../payments/payments.service';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -15,7 +16,7 @@ function shape(p: any) { return { ...p, images: parse(p.images), variants: parse
 
 @Injectable()
 export class CustomersService {
-  constructor(private prisma: PrismaService, private jwt: JwtService) {}
+  constructor(private prisma: PrismaService, private jwt: JwtService, private payments: PaymentsService) {}
 
   private commissionPct = Number(process.env.COMMISSION_PERCENT || 5);
   private shippingFlat = Number(process.env.SHIPPING_FLAT || 60);
@@ -305,6 +306,9 @@ export class CustomersService {
     const { customerId, sellerId } = this.assertCustomer(user);
     if (!dto.items?.length) throw new BadRequestException('Your cart is empty');
     const ids = [...new Set(dto.items.map((i: any) => i.productId))];
+    // Free stock still held by abandoned unpaid orders for these products
+    // before checking availability — see PaymentsService.releaseAbandoned.
+    await this.payments.releaseAbandoned(ids as string[]);
     const products = await this.prisma.product.findMany({ where: { id: { in: ids as string[] }, sellerId } });
     if (products.length !== ids.length) throw new BadRequestException('An item is unavailable');
 
@@ -350,7 +354,18 @@ export class CustomersService {
     // the seller's queue (status 'Paid' = confirmed) so they can accept & ship; cash
     // is collected on delivery.
     const method = dto.paymentMethod === 'online' ? 'online' : 'cod';
-    const paymentId = method === 'online' ? `online:${dto.onlineMethod || 'upi'}` : 'cod';
+    // Online orders are created unpaid and become Paid only when the gateway
+    // confirms the money (PaymentsService.settle). Until now they were created
+    // as Paid with nothing collected, so every "online" order counted toward
+    // seller balances and payouts without anyone having paid.
+    //
+    // With no gateway configured, checkout refuses rather than falling back to
+    // that: an order marked Paid that nobody paid for is worse than no order.
+    if (method === 'online' && !this.payments.enabled) {
+      throw new BadRequestException('Online payments aren’t available right now. Please try again shortly.');
+    }
+    // FamGateway takes UPI only, whatever the client asked for.
+    const paymentId = method === 'online' ? 'online:upi' : 'cod';
 
     // Only the order + stock decrement need to be atomic. The seller
     // notification is fired after the commit so a slow insert can't roll back a
@@ -364,7 +379,8 @@ export class CustomersService {
         const created = await tx.order.create({
           data: {
             sellerId, customerId, buyerName: customer?.name || dto.name || 'Customer', buyerPhone: customer?.phone || dto.phone || null,
-            address, itemsAmount, commissionAmount, shippingCharge, totalAmount, status: 'Paid',
+            address, itemsAmount, commissionAmount, shippingCharge, totalAmount,
+            status: method === 'online' ? 'PendingPayment' : 'Paid',
             discountAmount: amounts.discount,
             couponCode: coupon ? coupon.code : null,
             paymentId,
@@ -400,6 +416,21 @@ export class CustomersService {
       },
       { timeout: 20000, maxWait: 15000 },
     );
+
+    if (method === 'online') {
+      // The seller is told once the payment lands (PaymentsService.settle), not
+      // now — an order someone abandons at the UPI page is not a sale.
+      //
+      // If the gateway can't open a session the order is still returned, unpaid
+      // and holding its stock, so the buyer can retry from the checkout page
+      // instead of losing their cart to a transient gateway error.
+      try {
+        const payment = await this.payments.startPayment(order.id, user, dto.returnUrl);
+        return { ...order, payment };
+      } catch (e: any) {
+        return { ...order, payment: null, paymentError: e?.message || 'We could not start the payment.' };
+      }
+    }
 
     await this.prisma.notification.create({
       data: {

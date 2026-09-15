@@ -246,3 +246,48 @@ export function SettingsRow({
 }
 
 export const money = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
+
+/**
+ * A buyer, as a round avatar with their initials.
+ *
+ * The order rows used to lead with a shopping-bag glyph, identical on every
+ * row, which read as a delete button and told you nothing. Initials make each
+ * row recognisable at a glance — the same customer ordering twice looks the
+ * same twice — and the tint is derived from the name, so it is stable across
+ * visits without storing anything. With no name there is nothing to abbreviate,
+ * so a plain person glyph stands in.
+ */
+const AVATAR_TINTS: [string, string][] = [
+  ['#E3F6EC', '#15784A'],
+  ['#E6EEF8', '#2F5B8A'],
+  ['#FBF1DE', '#8A6116'],
+  ['#FBE9E7', '#9C4A3F'],
+  ['#EEEAF8', '#5B4A91'],
+  ['#E2F3F2', '#1F6E6A'],
+];
+
+export function BuyerAvatar({ name, size = 36 }: { name?: string | null; size?: number }) {
+  const clean = String(name || '').trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  // Array.from, not [0]: a name can start with an emoji or a multi-byte letter.
+  const initials = words.slice(0, 2).map((w) => Array.from(w)[0] || '').join('').toUpperCase();
+
+  let hash = 0;
+  for (const ch of clean.toLowerCase()) hash = (hash * 31 + ch.codePointAt(0)!) >>> 0;
+  const [bg, fg] = AVATAR_TINTS[hash % AVATAR_TINTS.length];
+
+  return (
+    <span
+      aria-hidden
+      className="grid shrink-0 place-items-center rounded-full font-display font-bold"
+      style={{ width: size, height: size, background: bg, color: fg, fontSize: Math.round(size * 0.36) }}
+    >
+      {initials || (
+        <svg width={size * 0.46} height={size * 0.46} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+      )}
+    </span>
+  );
+}

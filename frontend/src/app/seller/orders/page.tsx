@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
-import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
+import { BuyerAvatar, PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import OrderDetail, { paymentState, statusLabel, statusChip } from '@/components/store/OrderDetail';
-import { Bag, Share, Plus } from '@/components/icons';
+import { Share, Plus } from '@/components/icons';
 
 /**
  * Buyer cancellations and seller rejections both store status='Cancelled', so
@@ -107,11 +107,12 @@ export default function Orders() {
                     onClick={() => setExpanded(open ? null : o.id)}
                     className="flex w-full items-center gap-3 py-3.5 text-left transition-colors hover:bg-paper/60"
                   >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-green-soft text-green-600"><Bag size={16} /></span>
+                    <BuyerAvatar name={o.customer?.name || o.buyerName || o.buyer?.name} />
                     <div className="min-w-0 flex-1">
-                      <div className="font-display text-[14px] font-bold text-navy">#{String(o.id).slice(-6).toUpperCase()}</div>
+                      {/* Who first — that is how a seller remembers an order. The id is for lookups. */}
+                      <div className="truncate font-display text-[14px] font-bold text-navy">{o.customer?.name || o.buyerName || o.buyer?.name || 'Customer'}</div>
                       <div className="truncate text-[12px] text-faint">
-                        {o.customer?.name || o.buyerName || o.buyer?.name || 'Customer'}{o.buyerPhone || o.customer?.phone ? ` · ${o.buyerPhone || o.customer.phone}` : ''} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '—'}
+                        <span className="font-num">#{String(o.id).slice(-6).toUpperCase()}</span>{o.buyerPhone || o.customer?.phone ? ` · ${o.buyerPhone || o.customer.phone}` : ''} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '—'}
                       </div>
                     </div>
                     <span

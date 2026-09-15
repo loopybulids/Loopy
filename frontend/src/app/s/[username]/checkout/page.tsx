@@ -22,9 +22,14 @@ export default function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [placed, setPlaced] = useState<any>(null);
+  // After returning from the gateway: confirming, or why it didn't go through.
+  const [payState, setPayState] = useState<null | {
+    orderId: string;
+    status: 'checking' | 'pending' | 'expired' | 'mismatch' | 'late' | 'cancelled' | 'error';
+    message?: string;
+  }>(null);
   const [shipping, setShipping] = useState<any>(null);
   const [feePct, setFeePct] = useState<number | null>(null);
-  const [onlineOpt, setOnlineOpt] = useState<'upi' | 'card' | 'netbanking'>('upi');
   const [code, setCode] = useState('');
   const [coupon, setCoupon] = useState<any>(null);
   const [couponErr, setCouponErr] = useState('');
@@ -98,6 +103,72 @@ export default function CheckoutPage() {
     return () => { alive = false; };
   }, [subtotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /*
+   * Back from the gateway with ?paid=<order id>.
+   *
+   * The redirect proves nothing — it is just a URL — so the order is shown as
+   * placed only once the server has confirmed the payment with FamGateway. A
+   * UPI payment can take a few seconds to register, so this polls for about
+   * two and a half minutes before handing over to "My orders".
+   */
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('paid');
+    if (!id) return;
+    let stop = false;
+    let tries = 0;
+    setPayState({ orderId: id, status: 'checking' });
+
+    const tick = async () => {
+      if (stop) return;
+      tries += 1;
+      try {
+        const r = await custApi.verifyPayment(username, id);
+        if (stop) return;
+        if (r?.status === 'paid') {
+          clearCart(username);
+          window.history.replaceState(null, '', window.location.pathname);
+          setPayState(null);
+          setPlaced(r.order);
+          return;
+        }
+        if (r?.status === 'mismatch' || r?.status === 'late' || r?.status === 'cancelled') {
+          setPayState({ orderId: id, status: r.status });
+          return;
+        }
+        // A session can read "expired" for a moment before a payment made at
+        // the last second registers, so give it a few checks before saying so.
+        if (r?.status === 'expired' && tries >= 8) {
+          setPayState({ orderId: id, status: 'expired' });
+          return;
+        }
+        setPayState({ orderId: id, status: 'pending' });
+      } catch (e: any) {
+        if (stop) return;
+        if (tries >= 4) {
+          setPayState({ orderId: id, status: 'error', message: e?.message || 'We could not check your payment.' });
+          return;
+        }
+      }
+      if (tries < 38) setTimeout(tick, 4000);
+      else setPayState({ orderId: id, status: 'pending', message: 'Still waiting for the payment to show up.' });
+    };
+
+    tick();
+    return () => { stop = true; };
+  }, [username]);
+
+  const returnUrl = () => `${window.location.origin}${window.location.pathname}`;
+
+  const retryPayment = async (orderId: string) => {
+    setPayState({ orderId, status: 'checking' });
+    try {
+      const session = await custApi.pay(username, orderId, returnUrl());
+      window.location.assign(session.checkoutUrl);
+    } catch (e: any) {
+      setPayState({ orderId, status: 'error', message: e?.message || 'We could not start the payment.' });
+    }
+  };
+
   const place = async () => {
     setErr('');
     if (!cart.length) return setErr('Your cart is empty.');
@@ -113,10 +184,22 @@ export default function CheckoutPage() {
         addressId,
         items: cart.map((i) => ({ productId: i.productId, quantity: i.qty, size: i.size })),
         paymentMethod: 'online',
-        onlineMethod: onlineOpt,
+        onlineMethod: 'upi',
         // Only the code travels — the server prices it itself.
         couponCode: coupon?.code || undefined,
+        // Where the gateway sends the buyer after paying; the server adds ?paid=<order id>.
+        returnUrl: returnUrl(),
       });
+      if (order?.payment?.checkoutUrl) {
+        // The cart is kept until the payment is confirmed on the way back, so
+        // abandoning the UPI page doesn't also throw away what they picked.
+        window.location.assign(order.payment.checkoutUrl);
+        return;
+      }
+      if (order?.status === 'PendingPayment') {
+        setPayState({ orderId: order.id, status: 'error', message: order.paymentError || 'We could not start the payment. Your order is saved — try again.' });
+        return;
+      }
       clearCart(username);
       setPlaced(order);
     } catch (e: any) { setErr(e?.message || 'Could not place order.'); } finally { setBusy(false); }
@@ -128,7 +211,7 @@ export default function CheckoutPage() {
         <div className="mx-auto max-w-lg animate-riseIn">
           <div className="text-center">
             <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-600 text-white"><Check size={30} /></span>
-            <h1 className="mt-4 font-display text-[26px] font-bold text-navy">Order placed!</h1>
+            <h1 className="mt-4 font-display text-[26px] font-bold text-navy">Payment received</h1>
             <p className="mt-1 text-[13px] text-muted">The seller has been notified and will ship your order soon.</p>
           </div>
           <div className="mt-6 rounded-2xl border border-line bg-white p-5 text-left shadow-card">
@@ -138,6 +221,44 @@ export default function CheckoutPage() {
             <Link href={`/s/${username}/orders`} className="btn-ghost">Track this order</Link>
             <Link href={`/s/${username}`} className="btn-green">Continue shopping</Link>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (payState) {
+    const { status, orderId } = payState;
+    const waiting = status === 'checking' || status === 'pending';
+    const heading = waiting ? 'Confirming your payment…'
+      : status === 'expired' ? 'Payment not completed'
+      : status === 'mismatch' ? 'The amount didn’t match'
+      : status === 'late' ? 'Payment received late'
+      : status === 'cancelled' ? 'This order was cancelled'
+      : 'Payment needs attention';
+    const detail = waiting ? (payState.message || 'This usually takes a few seconds after you pay in your UPI app. Keep this page open.')
+      : status === 'expired' ? 'The payment window closed before a payment arrived. You have not been charged, and your order is saved — you can try again.'
+      : status === 'mismatch' ? 'A payment arrived, but not for the full amount. Please don’t pay again — contact the store with the UPI reference from your app.'
+      : status === 'late' ? 'Your payment arrived after the order had timed out, so the items were released. You will be refunded in full — please contact the store if you have questions.'
+      : status === 'cancelled' ? 'The payment wasn’t completed in time, so the order was cancelled. You have not been charged — please place it again.'
+      : payState.message || 'Something went wrong while checking your payment.';
+
+    return (
+      <main className="min-h-screen bg-paper px-5 py-10">
+        <div className="mx-auto max-w-md animate-riseIn rounded-2xl border border-line bg-white p-6 text-center shadow-card">
+          <span className={`mx-auto grid h-14 w-14 place-items-center rounded-full ${waiting ? 'bg-green-soft text-green-600' : 'bg-amber-soft text-amber'}`}>
+            {waiting
+              ? <span className="h-6 w-6 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+              : <ShieldLock size={24} />}
+          </span>
+          <h1 className="mt-4 font-display text-[21px] font-bold text-navy">{heading}</h1>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{detail}</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+            {(status === 'expired' || status === 'error') && (
+              <button onClick={() => retryPayment(orderId)} className="btn-green">Try the payment again</button>
+            )}
+            <Link href={`/s/${username}/orders`} className="btn-ghost">My orders</Link>
+          </div>
+          <p className="mt-4 font-num text-[11px] text-faint">Order #{orderId.slice(-6).toUpperCase()}</p>
         </div>
       </main>
     );
@@ -289,34 +410,18 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* payment method — online only */}
+              {/* payment method — UPI is the only method the gateway takes, so
+                  offering Card or Netbanking would be a choice that did nothing */}
               <div className="mt-4 border-t border-line pt-3">
                 <div className="text-[12px] font-bold uppercase tracking-wide text-faint">Payment method</div>
                 <div className="mt-2 rounded-xl border border-green bg-green-soft/40 p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-[13px] font-semibold text-navy">
-                    <span>Pay online</span>
-                    <span className="text-[11px] font-normal text-muted">UPI · Cards · Netbanking</span>
+                    <span>UPI</span>
+                    <span className="text-[11px] font-normal text-muted">GPay · PhonePe · Paytm · any UPI app</span>
                   </div>
-                  {/* Equal thirds while all three fit; "Netbanking" is the long
-                      one, so basis-0 + a floor lets it drop to its own row in a
-                      narrow column instead of spilling out of the card. */}
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {(['upi', 'card', 'netbanking'] as const).map((o) => (
-                      <button
-                        key={o}
-                        type="button"
-                        onClick={() => setOnlineOpt(o)}
-                        aria-pressed={onlineOpt === o}
-                        className={`min-w-[76px] flex-1 basis-0 whitespace-nowrap rounded-lg border px-2 py-2 text-center text-[12px] font-semibold transition-colors ${
-                          onlineOpt === o
-                            ? 'border-green bg-white text-green'
-                            : 'border-line bg-white text-navy hover:border-green/40'
-                        }`}
-                      >
-                        {o === 'upi' ? 'UPI' : o === 'card' ? 'Card' : 'Netbanking'}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="mt-1.5 text-[11.5px] leading-snug text-muted">
+                    You’ll pay on a secure page with your UPI app or a QR code, then come straight back here.
+                  </p>
                 </div>
               </div>
 
@@ -327,7 +432,7 @@ export default function CheckoutPage() {
                 </p>
               )}
               <button onClick={place} disabled={busy || belowMin || total == null} className="btn-green mt-4 w-full justify-center disabled:opacity-60">
-                {busy ? 'Placing…' : total == null ? 'Loading…' : `Pay ${rupees(total)} online`}
+                {busy ? 'Starting payment…' : total == null ? 'Loading…' : `Pay ${rupees(total)} by UPI`}
               </button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-faint"><ShieldLock size={12} /> Loopy-protected payment</p>
             </div>

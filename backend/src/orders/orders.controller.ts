@@ -3,10 +3,11 @@ import { OrdersService } from './orders.service';
 import { CheckoutDto } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SellerGuard } from '../auth/seller.guard';
+import { PaymentsService } from '../payments/payments.service';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(private orders: OrdersService) {}
+  constructor(private orders: OrdersService, private payments: PaymentsService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('checkout')
@@ -21,11 +22,18 @@ export class OrdersController {
     return this.orders.createManual(req.user.sellerId, dto);
   }
 
-  // Stubbed payment confirmation (stands in for the Razorpay webhook).
+  /**
+   * Confirm an order's payment.
+   *
+   * This used to mark any PendingPayment order Paid on request, with no money
+   * involved — harmless while payments were a stub, and a free-goods button
+   * the moment they became real. It now asks the gateway, like verify-payment.
+   */
   @UseGuards(JwtAuthGuard)
   @Post(':id/confirm')
-  confirm(@Param('id') id: string, @Req() req: any) {
-    return this.orders.confirmPayment(id, req.user);
+  async confirm(@Param('id') id: string, @Req() req: any) {
+    const { order } = await this.payments.settle(id, { user: req.user, source: 'return' });
+    return order;
   }
 
   @UseGuards(JwtAuthGuard)

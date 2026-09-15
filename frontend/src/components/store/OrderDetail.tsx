@@ -23,6 +23,12 @@ const DELIVERED = ['Delivered', 'Completed'];
  * sync with the order's status.
  */
 export function paymentState(order: any): { label: string; paid: boolean; short: string } {
+  // Created, waiting on the gateway. Nothing has been collected, whatever the
+  // payment method says — otherwise an unpaid online order read "Paid online".
+  if (order?.status === 'PendingPayment') {
+    return { label: 'Awaiting payment', paid: false, short: 'Unpaid' };
+  }
+
   const p = String(order?.paymentId || '');
   const delivered = DELIVERED.includes(order?.status);
 
@@ -74,7 +80,8 @@ const STATUS_LABEL: Record<string, string> = {
  * the buyer pulling out vs the seller declining.
  */
 export function statusLabel(status?: string, cancelledBy?: string | null) {
-  if (status === 'Cancelled') return cancelledBy === 'buyer' ? 'Cancelled' : 'Rejected';
+  // 'system' is a payment that was never completed — the seller did not reject it.
+  if (status === 'Cancelled') return cancelledBy === 'buyer' || cancelledBy === 'system' ? 'Cancelled' : 'Rejected';
   return STATUS_LABEL[String(status || '')] || status || '—';
 }
 
@@ -200,7 +207,7 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
           <span className="flex items-center gap-2">
             <span className="font-semibold text-navy">{pay.label}</span>
             <span className={pay.paid ? 'chip-green' : 'chip-amber'}>
-              {pay.paid ? 'Paid' : 'Due on delivery'}
+              {pay.paid ? 'Paid' : order?.status === 'PendingPayment' ? 'Not paid' : 'Due on delivery'}
             </span>
           </span>
         </div>
