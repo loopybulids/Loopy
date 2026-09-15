@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -7,14 +7,46 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class AdminController {
   constructor(private admin: AdminService) {}
 
+  // `from` / `to` are IST days (YYYY-MM-DD), or from=all — see common/date-range.
   @Get('command')
-  command(@Req() req: any) {
-    return this.admin.command(req.user);
+  command(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.admin.command(req.user, from, to);
+  }
+
+  @Get('notifications')
+  notifications(@Req() req: any) {
+    return this.admin.notifications(req.user);
+  }
+
+  /**
+   * A CSV file for a period: orders | summary | payouts | sellers. Sent as a
+   * file rather than JSON so it opens straight into a spreadsheet; every call
+   * is audit-logged in the service.
+   */
+  @Get('export/:dataset')
+  async exportData(
+    @Req() req: any,
+    @Param('dataset') dataset: string,
+    @Res({ passthrough: true }) res: { setHeader(name: string, value: string): void },
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const out = await this.admin.exportData(req.user, dataset, from, to);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    return out.csv;
   }
 
   @Get('orders')
-  orders(@Req() req: any, @Query('q') q?: string, @Query('status') status?: string) {
-    return this.admin.orders(req.user, q, status);
+  orders(
+    @Req() req: any,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.admin.orders(req.user, q, status, from, to);
   }
 
   @Get('orders/:id')
@@ -101,13 +133,13 @@ export class AdminController {
   }
 
   @Get('finance')
-  finance(@Req() req: any) {
-    return this.admin.finance(req.user);
+  finance(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.admin.finance(req.user, from, to);
   }
 
   @Get('analytics')
-  analytics(@Req() req: any) {
-    return this.admin.analytics(req.user);
+  analytics(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.admin.analytics(req.user, from, to);
   }
 
   @Get('sellers/:id/detail')

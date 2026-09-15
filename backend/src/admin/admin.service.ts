@@ -1,7 +1,10 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { amountsOf, gmvOf, platformFeeOf, reconcile, sellerReceivableOf } from '../common/money';
+import { amountsOf, discountOf, gmvOf, platformFeeOf, reconcile, sellerReceivableOf } from '../common/money';
+import { toCsv } from '../common/csv';
+import { groupByBucket, inRange, istDateTime, parseRange, previousRange, rangeSlug, seriesOver } from '../common/date-range';
+import type { DateRange } from '../common/date-range';
 import {
   assertNotStale, canRefundMoveTo, MONEY_ACTIONS, ORDER_TRANSITIONS, requireVersion,
 } from '../common/money-actions';
@@ -15,12 +18,51 @@ const ACTIVE = ['Paid', 'Accepted', 'Shipped', 'Disputed'];
 // A stable key that identifies a customer across orders.
 const custKey = (o: any) => o.buyerId || o.buyerPhone || o.buyerName || 'guest';
 
+/** Percentage change, or null when there is nothing to compare against. */
+const pctChange = (cur: number, prev: number): number | null => (prev ? Math.round(((cur - prev) / prev) * 100) : null);
+
+const EXPORTS = ['orders', 'summary', 'payouts', 'sellers'] as const;
+
+/** How a stored `paymentId` reads in a spreadsheet. */
+function paymentLabel(paymentId: string | null) {
+  const p = String(paymentId || '');
+  if (p === 'cod') return 'Cash on delivery';
+  if (p.startsWith('online')) {
+    const m = p.split(':')[1];
+    return m ? `Online · ${m.toUpperCase()}` : 'Online';
+  }
+  return p;
+}
+
+type Notice = {
+  id: string;
+  kind: 'payout' | 'dispute' | 'refund' | 'kyc' | 'review' | 'order';
+  tone: 'alert' | 'warn' | 'info';
+  title: string;
+  body: string;
+  href: string;
+  at: Date;
+  important: boolean;
+};
+
 @Injectable()
 export class AdminService {
   constructor(private prisma: PrismaService, private jwt: JwtService) {}
 
   private assertAdmin(user: any) {
     if (!user || user.role !== 'admin') throw new ForbiddenException('Admins only');
+  }
+
+  /**
+   * Resolve the requested period (see common/date-range). Only "All time"
+   * touches the database — to find the first order — so every other range
+   * costs no query.
+   */
+  private async rangeFor(from: string | undefined, to: string | undefined, defaultDays: number): Promise<DateRange> {
+    const earliest = from === 'all'
+      ? (await this.prisma.order.findFirst({ orderBy: { createdAt: 'asc' }, select: { createdAt: true } }))?.createdAt
+      : null;
+    return parseRange(from, to, { defaultDays, earliest });
   }
 
   // Issue a seller session token so an admin can enter any seller's console.
@@ -36,43 +78,48 @@ export class AdminService {
     };
   }
 
-  // Build a day-by-day series for the last `days` days from a list of dated rows.
-  private series(rows: { createdAt: Date }[], days: number, value: (r: any) => number) {
-    const out: { date: string; label: string; value: number }[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const next = new Date(d);
-      next.setDate(d.getDate() + 1);
-      const v = rows
-        .filter((r) => r.createdAt >= d && r.createdAt < next)
-        .reduce((s, r) => s + value(r), 0);
-      out.push({
-        date: d.toISOString().slice(0, 10),
-        label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-        value: v,
-      });
-    }
-    return out;
-  }
-
   // ─────────────────────────────────────────────────────────────
   // SCREEN 1 — Executive Command Center
   // ─────────────────────────────────────────────────────────────
-  async command(user: any) {
+  /**
+   * The overview, for a period.
+   *
+   * Two kinds of figure share this screen and must not be confused. Flow
+   * figures — GMV, revenue, orders, customers, the charts and the top lists —
+   * describe what happened in the period, and are compared with the period
+   * just before it. State figures — open disputes, refunds owed, pending KYC,
+   * seller count — describe now. A date range has no bearing on them: a
+   * dispute opened last month and still unresolved is today's problem, so it
+   * is never filtered out of view.
+   *
+   * Before this took a range, every headline figure was all-time while the
+   * header showed today's date, which read as "today's GMV" and was not.
+   */
+  async command(user: any, from?: string, to?: string) {
     this.assertAdmin(user);
-    const [sellers, orders, productCount, disputes, payouts, items] = await Promise.all([
+    const range = await this.rangeFor(from, to, 30);
+    // "All time" has no period before it to compare with.
+    const prev = from === 'all' ? null : previousRange(range);
+    const span = { gte: (prev ?? range).start, lt: range.end };
+
+    const [sellers, spanOrders, productCount, disputes, payouts, items] = await Promise.all([
       this.prisma.seller.findMany({ select: { id: true, kycStatus: true } }),
+      // This period and the one before it in one query, split below.
       this.prisma.order.findMany({
+        where: { createdAt: span },
         select: { id: true, sellerId: true, status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true },
       }),
       this.prisma.product.count(),
-      this.prisma.dispute.findMany({ select: { status: true, orderId: true } }),
+      this.prisma.dispute.findMany({ select: { status: true, orderId: true, createdAt: true } }),
       this.prisma.payout.findMany({ select: { amount: true, status: true } }),
-      this.prisma.orderItem.findMany({ select: { productId: true, title: true, unitPrice: true, quantity: true, order: { select: { status: true, sellerId: true } }, product: { select: { category: true } } } }),
+      this.prisma.orderItem.findMany({
+        where: { order: { createdAt: { gte: range.start, lt: range.end } } },
+        select: { productId: true, title: true, unitPrice: true, quantity: true, order: { select: { status: true, sellerId: true } }, product: { select: { category: true } } },
+      }),
     ]);
+
+    const orders = spanOrders.filter((o) => inRange(o.createdAt, range));
+    const prevOrders = prev ? spanOrders.filter((o) => inRange(o.createdAt, prev)) : [];
 
     const paid = orders.filter((o) => PAID.includes(o.status));
     // All three come from common/money so the dashboard can never disagree with
@@ -84,7 +131,12 @@ export class AdminService {
     const refunded = orders.filter((o) => o.status === 'Refunded');
     const refundCost = refunded.reduce((s, o) => s + o.totalAmount, 0);
     const openDisputeOrderIds = new Set(disputes.filter((d) => d.status === 'open').map((d) => d.orderId));
-    const pendingRefunds = orders.filter((o) => openDisputeOrderIds.has(o.id)).reduce((s, o) => s + o.totalAmount, 0);
+    // State, not flow: every open dispute's order counts, whenever it was placed.
+    const disputedOrders = openDisputeOrderIds.size
+      ? await this.prisma.order.findMany({ where: { id: { in: [...openDisputeOrderIds] } }, select: { totalAmount: true } })
+      : [];
+    const pendingRefunds = gmvOf(disputedOrders);
+    const periodDisputes = disputes.filter((x) => inRange(x.createdAt, range)).length;
 
     const grossProfit = commission;
     const netProfit = commission - refundCost;
@@ -121,6 +173,18 @@ export class AdminService {
       id: o.id, status: o.status, amount: o.totalAmount, buyer: o.buyerName || 'Customer', at: o.createdAt,
     }));
 
+    const prevPaid = prevOrders.filter((o) => PAID.includes(o.status));
+    const previous = prev
+      ? {
+          from: prev.fromKey,
+          to: prev.toKey,
+          gmv: gmvOf(prevPaid),
+          revenue: platformFeeOf(prevPaid),
+          orders: prevOrders.length,
+          customers: new Set(prevOrders.map(custKey)).size,
+        }
+      : null;
+
     // AI daily summary — computed heuristics, not ML
     const aiSummary = this.aiSummary({ gmv, commission, paid: paid.length, refunded: refunded.length, pendingRefunds, openDisputes: openDisputeOrderIds.size, topSeller: topSellers[0], sellers: sellers.length });
 
@@ -133,7 +197,7 @@ export class AdminService {
         processingOrders: cnt((o) => PROCESSING.includes(o.status)),
         deliveredOrders: cnt((o) => DELIVERED.includes(o.status)),
         cancelledOrders: cnt((o) => o.status === 'Cancelled'),
-        returnRequests: disputes.length,
+        returnRequests: periodDisputes,
         activeCustomers: customers,
         activeSellers: sellers.length,
         approvedSellers: sellers.filter((s) => s.kycStatus === 'approved').length,
@@ -145,28 +209,38 @@ export class AdminService {
         conversion: orders.length ? Math.round((paid.length / orders.length) * 1000) / 10 : 0,
       },
       charts: {
-        revenue: this.series(paid, 14, (o) => o.itemsAmount),
-        orders: this.series(orders, 14, () => 1),
-        profit: this.series(paid, 14, (o) => o.commissionAmount),
-        gmv: this.series(paid, 14, (o) => o.totalAmount),
+        revenue: seriesOver(paid, range, (o) => o.itemsAmount),
+        orders: seriesOver(orders, range, () => 1),
+        profit: seriesOver(paid, range, (o) => o.commissionAmount),
+        gmv: seriesOver(paid, range, (o) => o.totalAmount),
       },
       orderMix: {
         delivered: cnt((o) => DELIVERED.includes(o.status)),
         processing: cnt((o) => PROCESSING.includes(o.status)),
         pending: cnt((o) => o.status === 'PendingPayment' || o.status === 'Paid'),
         cancelled: cnt((o) => o.status === 'Cancelled'),
-        returned: disputes.length + refunded.length,
+        returned: periodDisputes + refunded.length,
       },
       topSellers, topProducts, topCategories,
       recent,
       aiSummary,
       health: this.systemHealth(),
+      range: { from: range.fromKey, to: range.toKey, days: range.days, bucket: range.bucket },
+      previous,
+      deltas: previous
+        ? {
+            gmv: pctChange(gmv, previous.gmv),
+            revenue: pctChange(commission, previous.revenue),
+            orders: pctChange(orders.length, previous.orders),
+            customers: pctChange(customers, previous.customers),
+          }
+        : {},
     };
   }
 
   private aiSummary(d: any) {
     const lines: { tone: 'good' | 'warn' | 'bad' | 'info'; text: string }[] = [];
-    lines.push({ tone: 'info', text: `Platform GMV stands at ₹${d.gmv.toLocaleString('en-IN')} across ${d.paid} paid orders.` });
+    lines.push({ tone: 'info', text: `GMV for the period: ₹${d.gmv.toLocaleString('en-IN')} across ${d.paid} paid orders.` });
     lines.push({ tone: 'good', text: `Marketplace commission earned: ₹${d.commission.toLocaleString('en-IN')}.` });
     if (d.topSeller) lines.push({ tone: 'good', text: `${d.topSeller.storeName || 'Top seller'} is leading with ₹${(d.topSeller.revenue || 0).toLocaleString('en-IN')} in sales.` });
     if (d.openDisputes > 0) lines.push({ tone: 'warn', text: `${d.openDisputes} dispute(s) open — ₹${d.pendingRefunds.toLocaleString('en-IN')} in refunds pending review.` });
@@ -191,9 +265,18 @@ export class AdminService {
   // ─────────────────────────────────────────────────────────────
   // SCREEN 5 — Orders Control Center
   // ─────────────────────────────────────────────────────────────
-  async orders(user: any, q?: string, status?: string) {
+  /**
+   * Orders, optionally for a period.
+   *
+   * A search ignores the period on purpose. An admin pasting an order ID or a
+   * phone number from a support email wants that order — not "no results in
+   * the last 30 days" because it was placed in June.
+   */
+  async orders(user: any, q?: string, status?: string, from?: string, to?: string) {
     this.assertAdmin(user);
+    const range = !q && (from || to) ? await this.rangeFor(from, to, 30) : null;
     const orders = await this.prisma.order.findMany({
+      where: range ? { createdAt: { gte: range.start, lt: range.end } } : undefined,
       orderBy: { createdAt: 'desc' },
       include: { seller: { select: { storeName: true, username: true } }, items: { select: { title: true, quantity: true } } },
     });
@@ -386,7 +469,7 @@ export class AdminService {
 
       await tx.auditLog.create({
         data: {
-          actorId: String(user.sub || user.id || 'unknown'),
+          actorId: String(user.userId || user.sub || user.id || 'unknown'),
           actorEmail: user.email || null,
           action: `order.${action}`,
           entity: 'order',
@@ -402,7 +485,7 @@ export class AdminService {
           data: {
             key,
             scope: `order:${action}`,
-            actorId: String(user.sub || user.id || 'unknown'),
+            actorId: String(user.userId || user.sub || user.id || 'unknown'),
             target: id,
             response: JSON.stringify({ id, status: after!.status, refundState: after!.refundState, version: after!.version }),
           },
@@ -481,17 +564,36 @@ export class AdminService {
   // ─────────────────────────────────────────────────────────────
   // SCREEN 7 — Finance Center
   // ─────────────────────────────────────────────────────────────
-  async finance(user: any) {
+  /**
+   * Finance for a period.
+   *
+   * Settlements are the one list that is not simply filtered. Decided payouts
+   * show for the period they were decided in, but a request still awaiting a
+   * decision always shows, however old — otherwise "Last 7 days" would hide a
+   * two-week-old withdrawal behind a date filter on the very screen where it
+   * has to be approved. "Payouts pending" is a queue for the same reason, and
+   * counts every open request.
+   */
+  async finance(user: any, from?: string, to?: string) {
     this.assertAdmin(user);
+    const range = await this.rangeFor(from, to, 30);
     const [orders, payouts] = await Promise.all([
-      this.prisma.order.findMany({ select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, createdAt: true } }),
+      this.prisma.order.findMany({
+        where: { createdAt: { gte: range.start, lt: range.end } },
+        select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, createdAt: true },
+      }),
       this.prisma.payout.findMany({ orderBy: { createdAt: 'desc' } }),
     ]);
+
+    const decidedIn = (p: { decidedAt: Date | null; createdAt: Date }) => inRange(p.decidedAt || p.createdAt, range);
+    const shown = payouts
+      .filter((p) => p.status === 'requested' || decidedIn(p))
+      .sort((a, b) => Number(b.status === 'requested') - Number(a.status === 'requested') || +b.createdAt - +a.createdAt);
 
     // Who each payout belongs to — an operator approving money needs the store
     // name and payout destination, not an 8-character id fragment.
     const sellers = await this.prisma.seller.findMany({
-      where: { id: { in: [...new Set(payouts.map((p) => p.sellerId))] } },
+      where: { id: { in: [...new Set(shown.map((p) => p.sellerId))] } },
       select: {
         id: true, storeName: true, username: true,
         payoutMethod: true, payoutUpi: true, payoutAccount: true, payoutName: true,
@@ -506,10 +608,11 @@ export class AdminService {
     const shipping = paid.reduce((s, o) => s + o.shippingCharge, 0);
     const refundCost = orders.filter((o) => o.status === 'Refunded').reduce((s, o) => s + o.totalAmount, 0);
     const gst = Math.round(commission * 0.18);
-    const payoutPaid = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+    const payoutPaid = payouts.filter((p) => p.status === 'paid' && decidedIn(p)).reduce((s, p) => s + p.amount, 0);
     const payoutPending = payouts.filter((p) => p.status === 'requested').reduce((s, p) => s + p.amount, 0);
 
     return {
+      range: { from: range.fromKey, to: range.toKey, days: range.days, bucket: range.bucket },
       summary: {
         gmv, revenue: commission, commission, sellerEarnings, shipping,
         refundCost, gst, netProfit: commission - refundCost,
@@ -520,9 +623,9 @@ export class AdminService {
       ledger: {
         ...ledger,
       },
-      cashflow: this.series(paid, 30, (o) => o.commissionAmount),
+      cashflow: seriesOver(paid, range, (o) => o.commissionAmount),
       // `version` travels to the UI and back on every decision — see payoutAction.
-      settlements: payouts.slice(0, 25).map((p) => ({
+      settlements: shown.slice(0, 100).map((p) => ({
         id: p.id, sellerId: p.sellerId, amount: p.amount, status: p.status,
         version: p.version, note: p.note, decidedBy: p.decidedBy, decidedAt: p.decidedAt,
         createdAt: p.createdAt,
@@ -579,7 +682,7 @@ export class AdminService {
 
       await tx.auditLog.create({
         data: {
-          actorId: String(user.sub || user.id || 'unknown'),
+          actorId: String(user.userId || user.sub || user.id || 'unknown'),
           actorEmail: user.email || null,
           action: `refund.${to}`,
           entity: 'order',
@@ -592,7 +695,7 @@ export class AdminService {
       await tx.idempotencyKey.create({
         data: {
           key, scope: `refund:${to}`,
-          actorId: String(user.sub || user.id || 'unknown'), target: id,
+          actorId: String(user.userId || user.sub || user.id || 'unknown'), target: id,
           response: JSON.stringify({ id, refundState: to, version: after!.version }),
         },
       });
@@ -883,11 +986,20 @@ export class AdminService {
   // ─────────────────────────────────────────────────────────────
   // SCREEN 8 — Business Intelligence / Analytics
   // ─────────────────────────────────────────────────────────────
-  async analytics(user: any) {
+  async analytics(user: any, from?: string, to?: string) {
     this.assertAdmin(user);
-    const [orders, items] = await Promise.all([
-      this.prisma.order.findMany({ select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true } }),
-      this.prisma.orderItem.findMany({ select: { quantity: true, unitPrice: true, title: true, order: { select: { status: true } }, product: { select: { category: true } } } }),
+    const range = await this.rangeFor(from, to, 30);
+    // The forecast looks forward from today, so it is always built from the
+    // last seven days — projecting next week from last March would be noise.
+    const lastWeek = parseRange(undefined, undefined, { defaultDays: 7 });
+    const period = { gte: range.start, lt: range.end };
+    const [orders, items, recentPaid] = await Promise.all([
+      this.prisma.order.findMany({ where: { createdAt: period }, select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true } }),
+      this.prisma.orderItem.findMany({ where: { order: { createdAt: period } }, select: { quantity: true, unitPrice: true, title: true, order: { select: { status: true } }, product: { select: { category: true } } } }),
+      this.prisma.order.findMany({
+        where: { createdAt: { gte: lastWeek.start, lt: lastWeek.end }, status: { in: PAID } },
+        select: { itemsAmount: true, createdAt: true },
+      }),
     ]);
     const paid = orders.filter((o) => PAID.includes(o.status));
 
@@ -910,6 +1022,7 @@ export class AdminService {
     });
 
     return {
+      range: { from: range.fromKey, to: range.toKey, days: range.days, bucket: range.bucket },
       kpis: {
         clv: totalCust ? Math.round(paid.reduce((s, o) => s + o.totalAmount, 0) / totalCust) : 0,
         repeatRate: totalCust ? Math.round((repeat / totalCust) * 100) : 0,
@@ -922,10 +1035,10 @@ export class AdminService {
         { stage: 'Delivered', value: delivered },
         { stage: 'Repeat Buyers', value: repeat },
       ],
-      revenueSeries: this.series(paid, 30, (o) => o.itemsAmount),
-      ordersSeries: this.series(orders, 30, () => 1),
+      revenueSeries: seriesOver(paid, range, (o) => o.itemsAmount),
+      ordersSeries: seriesOver(orders, range, () => 1),
       categories: [...catMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
-      forecast: this.forecast(this.series(paid, 30, (o) => o.itemsAmount)),
+      forecast: this.forecast(seriesOver(recentPaid, lastWeek, (o) => o.itemsAmount)),
     };
   }
 
@@ -986,7 +1099,7 @@ export class AdminService {
         disputes: disputes.length,
         customers: new Set(orders.map(custKey)).size,
       },
-      series: this.series(paid, 14, (o) => o.itemsAmount),
+      series: seriesOver(paid, parseRange(undefined, undefined, { defaultDays: 14 }), (o) => o.itemsAmount),
       products: products.slice(0, 12).map((p) => ({ id: p.id, title: p.title, price: p.price, quantity: p.quantity, isActive: p.isActive, image: this.firstImage(p.images) })),
       orders: orders.slice(0, 12).map((o) => ({ id: o.id, status: o.status, total: o.totalAmount, buyer: o.buyerName, createdAt: o.createdAt })),
       payouts: payouts.slice(0, 10),
@@ -1060,6 +1173,223 @@ export class AdminService {
     const seller = await this.prisma.seller.findUnique({ where: { id } });
     if (!seller) throw new NotFoundException('Seller not found');
     return this.prisma.seller.update({ where: { id }, data: { kycStatus: status } });
+  }
+
+  /**
+   * The bell.
+   *
+   * Derived from live state rather than stored. There is no admin
+   * notification table, and adding one would mean every event source has to
+   * remember to write to it — the first one that forgets is a payout request
+   * nobody hears about. The things an admin must act on are already facts in
+   * the data (a payout is `requested`, a dispute is `open`), so reading them
+   * directly means the bell cannot disagree with the screens it links to, and
+   * an item disappears the moment it is dealt with.
+   *
+   * Ids are stable, and the client marks them read. A refund's id carries its
+   * state, so one that moves from Required to Failed notifies again.
+   * `important` items count toward the badge; new orders are listed but not
+   * counted, or on a busy day the badge would mean nothing.
+   */
+  async notifications(user: any) {
+    this.assertAdmin(user);
+    const since = new Date(Date.now() - 7 * 86_400_000);
+
+    const [payouts, disputes, kyc, refunds, reviews, orders] = await Promise.all([
+      this.prisma.payout.findMany({ where: { status: 'requested' }, orderBy: { createdAt: 'desc' }, take: 50 }),
+      this.prisma.dispute.findMany({ where: { status: 'open' }, orderBy: { createdAt: 'desc' }, take: 50 }),
+      this.prisma.seller.findMany({
+        where: { kycStatus: 'pending' }, orderBy: { createdAt: 'desc' }, take: 50,
+        select: { id: true, storeName: true, username: true, city: true, createdAt: true },
+      }),
+      this.prisma.order.findMany({
+        where: { refundState: { in: ['Required', 'Failed'] } }, orderBy: { createdAt: 'desc' }, take: 50,
+        select: { id: true, sellerId: true, totalAmount: true, refundState: true, buyerName: true, createdAt: true },
+      }),
+      this.prisma.review.findMany({
+        where: { rating: { lte: 2 }, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: 20,
+        select: { id: true, sellerId: true, rating: true, comment: true, buyerName: true, createdAt: true },
+      }),
+      this.prisma.order.findMany({
+        where: { createdAt: { gte: since }, status: { in: PAID } }, orderBy: { createdAt: 'desc' }, take: 15,
+        select: { id: true, sellerId: true, totalAmount: true, buyerName: true, createdAt: true },
+      }),
+    ]);
+
+    const ids = [...new Set([...payouts, ...disputes, ...refunds, ...reviews, ...orders].map((x) => x.sellerId))];
+    const sellers = new Map(
+      (await this.prisma.seller.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, storeName: true, payoutMethod: true, payoutUpi: true, payoutAccount: true },
+      })).map((x) => [x.id, x]),
+    );
+    const store = (id: string) => sellers.get(id)?.storeName || 'Unknown store';
+    const ref = (id: string) => `#${id.slice(-6).toUpperCase()}`;
+    const inr = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
+    const clip = (t: string | null) => (t && t.length > 90 ? `${t.slice(0, 89)}…` : t || '');
+
+    const items: Notice[] = [
+      ...payouts.map((p): Notice => {
+        const sl = sellers.get(p.sellerId);
+        const dest = sl?.payoutMethod === 'bank' ? (sl.payoutAccount ? 'bank transfer' : 'no bank details')
+          : sl?.payoutUpi ? 'UPI' : 'no payout details';
+        return { id: `payout:${p.id}`, kind: 'payout', tone: 'warn', title: `${inr(p.amount)} payout requested`, body: `${store(p.sellerId)} · ${dest}`, href: '/admin/payouts', at: p.createdAt, important: true };
+      }),
+      ...disputes.map((d): Notice => ({
+        id: `dispute:${d.id}`, kind: 'dispute', tone: 'alert', title: `Dispute · ${d.issueType}`,
+        body: `${ref(d.orderId)} · ${d.buyerName || 'Customer'} vs ${store(d.sellerId)}`, href: `/admin/orders/${d.orderId}`, at: d.createdAt, important: true,
+      })),
+      ...refunds.map((o): Notice => ({
+        id: `refund:${o.id}:${o.refundState}`, kind: 'refund', tone: 'alert',
+        title: o.refundState === 'Failed' ? `Refund failed · ${inr(o.totalAmount)}` : `Refund owed · ${inr(o.totalAmount)}`,
+        body: `${ref(o.id)} · ${o.buyerName || 'Customer'} · ${store(o.sellerId)}`, href: `/admin/orders/${o.id}`, at: o.createdAt, important: true,
+      })),
+      ...kyc.map((sl): Notice => ({
+        id: `kyc:${sl.id}`, kind: 'kyc', tone: 'warn', title: 'Seller awaiting KYC review',
+        body: `${sl.storeName} · @${sl.username}${sl.city ? ` · ${sl.city}` : ''}`, href: `/admin/sellers/${sl.id}`, at: sl.createdAt, important: true,
+      })),
+      ...reviews.map((r): Notice => ({
+        id: `review:${r.id}`, kind: 'review', tone: 'warn', title: `${r.rating}★ review for ${store(r.sellerId)}`,
+        body: clip(r.comment) || `From ${r.buyerName || 'a customer'}`, href: '/admin/reviews', at: r.createdAt, important: true,
+      })),
+      ...orders.map((o): Notice => ({
+        id: `order:${o.id}`, kind: 'order', tone: 'info', title: `New order · ${inr(o.totalAmount)}`,
+        body: `${o.buyerName || 'Customer'} · ${store(o.sellerId)}`, href: `/admin/orders/${o.id}`, at: o.createdAt, important: false,
+      })),
+    ].sort((a, b) => +b.at - +a.at);
+
+    return {
+      items,
+      counts: { attention: items.filter((i) => i.important).length },
+      at: new Date(),
+    };
+  }
+
+  /**
+   * CSV exports for a period: orders, summary, payouts or sellers.
+   *
+   * Built on the server rather than from what a screen holds. A screen holds
+   * a page of rows — Finance showed the latest 25 settlements, and its export
+   * exported exactly those 25 — where an export is expected to be complete.
+   * Figures come from common/money, the functions the dashboard uses, so a
+   * spreadsheet total cannot disagree with the screen.
+   *
+   * Every export is audit-logged. These files carry customer phone numbers
+   * and sellers' bank and UPI details, and once downloaded they are beyond
+   * anything the app can protect; the least it can do is record who took
+   * which data for which period.
+   */
+  async exportData(user: any, dataset: string, from?: string, to?: string) {
+    this.assertAdmin(user);
+    if (!(EXPORTS as readonly string[]).includes(dataset)) {
+      throw new BadRequestException(`Unknown export "${dataset}". Choose one of: ${EXPORTS.join(', ')}.`);
+    }
+    const range = await this.rangeFor(from, to, 30);
+    const period = { gte: range.start, lt: range.end };
+    let headers: string[] = [];
+    let rows: unknown[][] = [];
+
+    if (dataset === 'orders') {
+      const orders = await this.prisma.order.findMany({
+        where: { createdAt: period },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true, createdAt: true, status: true, refundState: true, buyerName: true, buyerPhone: true,
+          itemsAmount: true, discountAmount: true, couponCode: true, shippingCharge: true, commissionAmount: true, totalAmount: true,
+          paymentId: true, courier: true, awbNumber: true,
+          seller: { select: { storeName: true, username: true } },
+          items: { select: { title: true, quantity: true } },
+        },
+      });
+      headers = ['Order ID', 'Placed (IST)', 'Status', 'Refund state', 'Seller', 'Seller handle', 'Buyer', 'Buyer phone', 'Items', 'Units', 'Items amount (₹)', 'Discount (₹)', 'Coupon', 'Shipping (₹)', 'Platform fee (₹)', 'Order total (₹)', 'Seller receivable (₹)', 'Payment', 'Courier', 'Tracking number'];
+      rows = orders.map((o) => [
+        o.id, istDateTime(o.createdAt), o.status, o.refundState, o.seller?.storeName, o.seller?.username, o.buyerName, o.buyerPhone,
+        o.items.map((i) => `${i.title} × ${i.quantity}`).join('; '),
+        o.items.reduce((n, i) => n + i.quantity, 0),
+        o.itemsAmount, o.discountAmount || 0, o.couponCode, o.shippingCharge, o.commissionAmount, o.totalAmount,
+        sellerReceivableOf([o]), paymentLabel(o.paymentId), o.courier, o.awbNumber,
+      ]);
+    } else if (dataset === 'summary') {
+      const orders = await this.prisma.order.findMany({
+        where: { createdAt: period },
+        select: { status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, buyerId: true, buyerName: true, buyerPhone: true, createdAt: true },
+      });
+      // One line per day or month, plus a total. The total's Customers is a
+      // distinct count over the whole range, not the column's sum — someone
+      // who ordered on three days is one customer.
+      const line = (label: string, os: typeof orders) => {
+        const paid = os.filter((o) => PAID.includes(o.status));
+        const refunded = os.filter((o) => o.status === 'Refunded');
+        return [
+          label, os.length, paid.length, os.filter((o) => o.status === 'Cancelled').length, refunded.length,
+          gmvOf(paid), discountOf(paid), paid.reduce((n, o) => n + o.shippingCharge, 0), platformFeeOf(paid), sellerReceivableOf(paid),
+          gmvOf(refunded), paid.length ? Math.round(gmvOf(paid) / paid.length) : 0, new Set(os.map(custKey)).size,
+        ];
+      };
+      headers = [range.bucket === 'day' ? 'Date' : 'Month', 'Orders placed', 'Paid orders', 'Cancelled', 'Refunded', 'GMV (₹)', 'Discounts (₹)', 'Shipping (₹)', 'Platform fee (₹)', 'Seller receivable (₹)', 'Refunded value (₹)', 'Avg order value (₹)', 'Customers'];
+      rows = groupByBucket(orders, range).map(({ bucket, rows: os }) => line(bucket.key, os));
+      rows.push(line('Total', orders));
+    } else if (dataset === 'payouts') {
+      const payouts = await this.prisma.payout.findMany({ where: { createdAt: period }, orderBy: { createdAt: 'asc' } });
+      const sellers = new Map(
+        (await this.prisma.seller.findMany({
+          where: { id: { in: [...new Set(payouts.map((p) => p.sellerId))] } },
+          select: { id: true, storeName: true, username: true, payoutMethod: true, payoutUpi: true, payoutAccount: true, payoutName: true },
+        })).map((x) => [x.id, x]),
+      );
+      // The destination is the seller's payout details as they are today. The
+      // app does not record what they were when a payout was made, and the
+      // header says so rather than implying otherwise.
+      headers = ['Payout ID', 'Requested (IST)', 'Seller', 'Seller handle', 'Amount (₹)', 'Status', 'Method', 'Destination (current)', 'Account holder (current)', 'Decided (IST)', 'Decided by', 'Reference / reason'];
+      rows = payouts.map((p) => {
+        const sl = sellers.get(p.sellerId);
+        return [
+          p.id, istDateTime(p.createdAt), sl?.storeName, sl?.username, p.amount, p.status,
+          sl?.payoutMethod === 'bank' ? 'Bank' : sl?.payoutMethod === 'upi' ? 'UPI' : '',
+          sl?.payoutMethod === 'bank' ? sl?.payoutAccount : sl?.payoutUpi, sl?.payoutName,
+          istDateTime(p.decidedAt), p.decidedBy, p.note,
+        ];
+      });
+    } else {
+      const [sellers, orders, products] = await Promise.all([
+        this.prisma.seller.findMany({
+          orderBy: { createdAt: 'asc' },
+          // Explicit select: the row also holds the storefront config and base64
+          // images, which have no place in a spreadsheet and would make this slow.
+          select: { id: true, storeName: true, username: true, city: true, kycStatus: true, published: true, rating: true, ratingCount: true, createdAt: true, user: { select: { email: true } } },
+        }),
+        this.prisma.order.findMany({
+          where: { createdAt: period },
+          select: { sellerId: true, status: true, totalAmount: true, itemsAmount: true, commissionAmount: true, shippingCharge: true, discountAmount: true, buyerId: true, buyerName: true, buyerPhone: true },
+        }),
+        this.prisma.product.groupBy({ by: ['sellerId'], _count: { _all: true } }),
+      ]);
+      const productCount = new Map(products.map((g) => [g.sellerId, g._count._all]));
+      headers = ['Seller ID', 'Store', 'Handle', 'Email', 'City', 'KYC', 'Published', 'Joined (IST)', 'Products', 'Orders in period', 'Paid orders', 'Delivered', 'GMV (₹)', 'Platform fee (₹)', 'Seller receivable (₹)', 'Customers', 'Rating', 'Ratings'];
+      rows = sellers.map((sl) => {
+        const so = orders.filter((o) => o.sellerId === sl.id);
+        const paid = so.filter((o) => PAID.includes(o.status));
+        return [
+          sl.id, sl.storeName, sl.username, sl.user?.email, sl.city, sl.kycStatus, sl.published, istDateTime(sl.createdAt),
+          productCount.get(sl.id) || 0, so.length, paid.length, so.filter((o) => DELIVERED.includes(o.status)).length,
+          gmvOf(paid), platformFeeOf(paid), sellerReceivableOf(paid), new Set(so.map(custKey)).size,
+          sl.rating, sl.ratingCount,
+        ];
+      });
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: String(user.userId || user.sub || user.id || 'unknown'),
+        actorEmail: user.email || null,
+        action: `export.${dataset}`,
+        entity: 'export',
+        entityId: rangeSlug(range),
+        after: JSON.stringify({ from: range.fromKey, to: range.toKey, rows: rows.length }),
+      },
+    });
+
+    return { filename: `loopy-${dataset}_${rangeSlug(range)}.csv`, csv: toCsv(headers, rows), rows: rows.length };
   }
 
   async disputes(user: any) {

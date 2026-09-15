@@ -6,6 +6,7 @@ import { Icon } from '@/components/admin/AdminKit';
 import Logo from '@/components/Logo';
 import { Loop } from '@/components/icons';
 import { clearApiDataCache } from '@/lib/use-api-data';
+import NotificationBell from '@/components/admin/NotificationBell';
 
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: 'grid' as const },
@@ -81,7 +82,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <kbd className="ml-auto hidden shrink-0 rounded border border-hair bg-white px-1.5 py-0.5 text-[10px] font-bold text-dim lg:block">⌘K</kbd>
         </Link>
 
-        <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl border border-hair bg-white text-slate sm:grid"><Icon name="bell" size={16} /></span>
+        <NotificationBell />
         <span className="flex shrink-0 items-center gap-2 rounded-xl border border-hair bg-white py-1.5 pl-1.5 pr-1.5 sm:pr-3">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-hair bg-cool text-[10.5px] font-bold text-dim">SA</span>
           <span className="hidden text-left leading-tight sm:block"><span className="block text-[12.5px] font-bold text-slate">Super Admin</span><span className="block text-[10px] text-pale">admin@loopy.in</span></span>

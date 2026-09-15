@@ -1,15 +1,27 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { AreaTrend, Card, money, SectionTitle, StatCard, statusChip } from '@/components/admin/AdminKit';
 import LedgerBanner from '@/components/admin/LedgerBanner';
+import ExportMenu from '@/components/admin/ExportMenu';
+import RangePicker from '@/components/admin/RangePicker';
+import { rangeDates, rangeLabel, rangeQuery, useAdminRange } from '@/lib/admin-range';
 
 export default function FinanceCenter() {
   const [d, setD] = useState<any>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState('');
-  const load = () => api.adminFinance().then(setD).catch((e) => setErr(e?.message || 'Failed'));
-  useEffect(() => { load(); }, []);
+  const [range, setRange] = useAdminRange();
+  const query = rangeQuery(range);
+  const latest = useRef(query);
+  latest.current = query;
+  const load = () => {
+    const q = query;
+    return api.adminFinance(q)
+      .then((r) => { if (latest.current === q) { setD(r); setErr(''); } })
+      .catch((e) => { if (latest.current === q) setErr(e?.message || 'Failed'); });
+  };
+  useEffect(() => { load(); }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Approve or reject a withdrawal.
@@ -50,18 +62,14 @@ export default function FinanceCenter() {
   if (!d) return <div className="animate-pulse"><div className="h-8 w-48 rounded bg-hair" /></div>;
   const f = d.summary;
 
-  const exportCsv = () => {
-    const rows = [['id', 'sellerId', 'amount', 'status', 'date'], ...d.settlements.map((s: any) => [s.id, s.sellerId, s.amount, s.status, new Date(s.createdAt).toISOString()])];
-    const csv = rows.map((r: any[]) => r.join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    const a = document.createElement('a'); a.href = url; a.download = 'loopy-settlements.csv'; a.click();
-  };
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="font-display text-[26px] font-bold text-slate">Finance Center</h1><p className="text-[14px] text-dim">Revenue, commission, payouts, taxes and settlements.</p></div>
-        <button onClick={exportCsv} className="rounded-lg bg-accent px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-600">Export settlements (CSV)</button>
+        <div><h1 className="font-display text-[26px] font-bold text-slate">Finance Center</h1><p className="text-[14px] text-dim">{rangeDates(range)} · revenue, commission, payouts and settlements</p></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <RangePicker range={range} onChange={setRange} />
+          <ExportMenu range={range} datasets={['payouts', 'summary', 'orders', 'sellers']} />
+        </div>
       </div>
 
       {/* Whether these figures can be trusted, before the figures themselves. */}
@@ -75,16 +83,16 @@ export default function FinanceCenter() {
         <StatCard label="Seller Earnings" value={money(f.sellerEarnings)} icon="store" accent="navy" />
         <StatCard label="Shipping Collected" value={money(f.shipping)} icon="truck" accent="navy" />
         <StatCard label="Refund Cost" value={money(f.refundCost)} icon="refund" accent={f.refundCost ? 'rose' : 'green'} />
-        <StatCard label="Payouts Pending" value={money(f.payoutPending)} icon="rupee" accent={f.payoutPending ? 'amber' : 'green'} />
+        <StatCard label="Payouts Pending" value={money(f.payoutPending)} icon="rupee" accent={f.payoutPending ? 'amber' : 'green'} hint="Every open request" />
       </div>
 
       <Card className="p-5">
-        <SectionTitle action={<span className="text-[12px] font-semibold text-accent">Commission · 30 days</span>}>Cash Flow</SectionTitle>
+        <SectionTitle action={<span className="text-[12px] font-semibold text-accent">Commission · {rangeLabel(range)}</span>}>Cash Flow</SectionTitle>
         <AreaTrend data={d.cashflow} money height={240} />
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="border-b border-hair px-4 py-3"><SectionTitle>Seller Settlements</SectionTitle></div>
+        <div className="border-b border-hair px-4 py-3"><SectionTitle action={<span className="text-[11.5px] text-pale">All pending · decided in period</span>}>Seller Settlements</SectionTitle></div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-[13px]">
             <thead><tr className="border-b border-hair text-[11px] uppercase tracking-wide text-pale"><th className="px-4 py-3 font-bold">Seller</th><th className="py-3 font-bold">Destination</th><th className="py-3 text-right font-bold">Amount</th><th className="py-3 font-bold">Status</th><th className="py-3 font-bold">Requested</th><th className="py-3 pr-4 text-right font-bold">Decision</th></tr></thead>

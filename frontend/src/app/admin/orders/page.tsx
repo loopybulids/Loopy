@@ -1,8 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Card, Icon, money, statusChip } from '@/components/admin/AdminKit';
+import ExportMenu from '@/components/admin/ExportMenu';
+import RangePicker from '@/components/admin/RangePicker';
+import { rangeDates, rangeLabel, rangeQuery, useAdminRange } from '@/lib/admin-range';
 
 const TABS = ['all', 'PendingPayment', 'Paid', 'Accepted', 'Shipped', 'Delivered', 'Cancelled', 'Refunded'];
 
@@ -12,14 +15,35 @@ export default function OrdersCenter() {
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const load = () => { setLoading(true); api.adminOrders(q, tab).then((r) => { setRows(r); setLoading(false); }).catch(() => setLoading(false)); };
-  useEffect(() => { load(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [range, setRange] = useAdminRange();
+  const query = rangeQuery(range);
+  // The search behind the rows on screen. A search spans every date — see
+  // AdminService.orders — so the footer has to say so.
+  const [searched, setSearched] = useState('');
+  const latest = useRef(0);
+
+  const load = () => {
+    const run = ++latest.current;
+    const term = q.trim();
+    setLoading(true);
+    api.adminOrders(term, tab, query)
+      .then((r) => { if (run === latest.current) { setRows(r); setSearched(term); } })
+      .catch(() => {})
+      .finally(() => { if (run === latest.current) setLoading(false); });
+  };
+  useEffect(() => { load(); }, [tab, query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-[26px] font-bold text-slate">Orders Control Center</h1>
-        <p className="text-[14px] text-dim">Every order across all sellers — search, filter and investigate.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-[26px] font-bold text-slate">Orders Control Center</h1>
+          <p className="text-[14px] text-dim">Every order across all sellers — search, filter and investigate.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <RangePicker range={range} onChange={setRange} />
+          <ExportMenu range={range} datasets={['orders', 'summary']} />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -62,16 +86,16 @@ export default function OrdersCenter() {
                   <td className="py-3"><span className="text-slate">{o.firstItem}</span>{o.itemCount > 1 && <span className="text-dim"> +{o.itemCount - 1}</span>}</td>
                   <td className="py-3 font-bold text-slate">{money(o.total)}</td>
                   <td className="py-3">{statusChip(o.status)}</td>
-                  <td className="py-3 text-[12px] text-dim">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                  <td className="py-3 text-[12px] text-dim">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}</td>
                   <td className="py-3 pr-4 text-right"><Link href={`/admin/orders/${o.id}`} className="font-bold text-accent hover:underline">Investigate →</Link></td>
                 </tr>
               ))}
-              {!loading && !rows.length && <tr><td colSpan={8} className="px-4 py-10 text-center text-dim">No orders found.</td></tr>}
+              {!loading && !rows.length && <tr><td colSpan={8} className="px-4 py-10 text-center text-dim">{searched ? 'No orders match that search.' : `No orders in this period (${rangeDates(range)}).`}</td></tr>}
               {loading && <tr><td colSpan={8} className="px-4 py-10 text-center text-dim animate-pulse">Loading orders…</td></tr>}
             </tbody>
           </table>
         </div>
-        {!loading && <div className="border-t border-hair px-4 py-3 text-[12px] text-dim">{rows.length} orders</div>}
+        {!loading && <div className="border-t border-hair px-4 py-3 text-[12px] text-dim">{rows.length} {rows.length === 1 ? 'order' : 'orders'} · {searched ? `matching “${searched}” across all dates` : rangeLabel(range)}</div>}
       </Card>
     </div>
   );

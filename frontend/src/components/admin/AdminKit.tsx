@@ -15,7 +15,8 @@ export const compact = (n: number) =>
 type IconName =
   | 'grid' | 'bag' | 'store' | 'users' | 'wallet' | 'headset' | 'chart' | 'gear'
   | 'bell' | 'search' | 'shield' | 'alert' | 'bolt' | 'check' | 'truck' | 'box'
-  | 'star' | 'rupee' | 'pulse' | 'cpu' | 'arrow' | 'logout' | 'back' | 'refund';
+  | 'star' | 'rupee' | 'pulse' | 'cpu' | 'arrow' | 'logout' | 'back' | 'refund'
+  | 'download' | 'calendar' | 'chevronLeft' | 'chevronRight' | 'chevronDown';
 
 export function Icon({ name, size = 18, className = '' }: { name: IconName; size?: number; className?: string }) {
   const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, className };
@@ -44,6 +45,11 @@ export function Icon({ name, size = 18, className = '' }: { name: IconName; size
     case 'back': return <svg {...p}><path d="M19 12H5M11 6l-6 6 6 6" /></svg>;
     case 'logout': return <svg {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>;
     case 'refund': return <svg {...p}><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" /></svg>;
+    case 'download': return <svg {...p}><path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" /></svg>;
+    case 'calendar': return <svg {...p}><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>;
+    case 'chevronLeft': return <svg {...p}><path d="m15 6-6 6 6 6" /></svg>;
+    case 'chevronRight': return <svg {...p}><path d="m9 6 6 6-6 6" /></svg>;
+    case 'chevronDown': return <svg {...p}><path d="m6 9 6 6 6-6" /></svg>;
     default: return null;
   }
 }
@@ -212,12 +218,14 @@ export function Spark({ data, color = '#1EA75B', height = 40, up = true }: { dat
  * dashboard read as decoration.
  */
 export function StatTile({
-  label, value, icon, delta, series, hint, href, tone = 'accent',
+  label, value, icon, delta, deltaSince, series, hint, href, tone = 'accent',
 }: {
   label: string;
   value: ReactNode;
   icon?: IconName;
   delta?: number;
+  /** What the delta compares against — "vs yesterday" if omitted. */
+  deltaSince?: string;
   series?: { label: string; value: number }[];
   hint?: string;
   href?: string;
@@ -243,7 +251,7 @@ export function StatTile({
         </div>
         {(delta !== undefined || hint) && (
           <div className="mt-1.5">
-            {delta !== undefined ? <Delta value={delta} /> : <span className="text-[11px] text-pale">{hint}</span>}
+            {delta !== undefined ? <Delta value={delta} since={deltaSince} /> : <span className="text-[11px] text-pale">{hint}</span>}
           </div>
         )}
       </div>

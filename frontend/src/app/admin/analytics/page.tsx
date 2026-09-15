@@ -2,11 +2,22 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { AreaTrend, Bars, Card, Chip, Donut, money, num, SectionTitle, StatCard } from '@/components/admin/AdminKit';
+import ExportMenu from '@/components/admin/ExportMenu';
+import RangePicker from '@/components/admin/RangePicker';
+import { rangeDates, rangeLabel, rangeQuery, useAdminRange } from '@/lib/admin-range';
 
 export default function AnalyticsCenter() {
   const [d, setD] = useState<any>(null);
   const [err, setErr] = useState('');
-  useEffect(() => { api.adminAnalytics().then(setD).catch((e) => setErr(e?.message || 'Failed')); }, []);
+  const [range, setRange] = useAdminRange();
+  const query = rangeQuery(range);
+  useEffect(() => {
+    let current = true;
+    api.adminAnalytics(query)
+      .then((r) => { if (current) { setD(r); setErr(''); } })
+      .catch((e) => { if (current) setErr(e?.message || 'Failed'); });
+    return () => { current = false; };
+  }, [query]);
 
   if (err) return <Card className="p-6 text-alert">{err}</Card>;
   if (!d) return <div className="animate-pulse"><div className="h-8 w-48 rounded bg-hair" /></div>;
@@ -15,7 +26,13 @@ export default function AnalyticsCenter() {
 
   return (
     <div className="space-y-5">
-      <div><h1 className="font-display text-[26px] font-bold text-slate">Business Intelligence</h1><p className="text-[14px] text-dim">Trends, funnel, retention and a 7-day forecast.</p></div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div><h1 className="font-display text-[26px] font-bold text-slate">Business Intelligence</h1><p className="text-[14px] text-dim">{rangeDates(range)} · trends, funnel, retention and a 7-day forecast</p></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <RangePicker range={range} onChange={setRange} />
+          <ExportMenu range={range} datasets={['summary', 'orders', 'sellers']} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Customer LTV" value={money(k.clv)} icon="rupee" accent="green" />
@@ -25,8 +42,8 @@ export default function AnalyticsCenter() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="p-5"><SectionTitle action={<span className="text-[12px] font-semibold text-accent">30 days</span>}>Revenue</SectionTitle><AreaTrend data={d.revenueSeries} money height={220} /></Card>
-        <Card className="p-5"><SectionTitle action={<span className="text-[12px] font-semibold text-dim">30 days</span>}>Orders</SectionTitle><Bars data={d.ordersSeries} color="#2A3341" height={220} /></Card>
+        <Card className="p-5"><SectionTitle action={<span className="text-[12px] font-semibold text-accent">{rangeLabel(range)}</span>}>Revenue</SectionTitle><AreaTrend data={d.revenueSeries} money height={220} /></Card>
+        <Card className="p-5"><SectionTitle action={<span className="text-[12px] font-semibold text-dim">{rangeLabel(range)}</span>}>Orders</SectionTitle><Bars data={d.ordersSeries} color="#2A3341" height={220} /></Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -48,7 +65,7 @@ export default function AnalyticsCenter() {
         <Card className="p-5 lg:col-span-1">
           <SectionTitle action={<span className="text-[11.5px] text-pale">Projected</span>}>Next 7 days</SectionTitle>
           <Bars data={d.forecast} color="#1EA75B" money height={190} />
-          <p className="mt-2 text-[11px] text-dim">Projected from the trailing 7-day average. Indicative only.</p>
+          <p className="mt-2 text-[11px] text-dim">Projected from the last 7 days, whichever range is selected. Indicative only.</p>
         </Card>
       </div>
     </div>

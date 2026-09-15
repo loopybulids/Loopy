@@ -36,6 +36,19 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+/**
+ * Fetch a file with the session attached, as a Blob. A plain download link
+ * cannot carry the token — it lives in localStorage, not a cookie.
+ */
+async function download(path: string): Promise<Blob> {
+  const res = await fetch(`${BASE}${path}`, { headers: authHeader(), cache: 'no-store' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.message || `Download failed (${res.status})`);
+  }
+  return res.blob();
+}
+
 /* ───────────────────────── read cache ─────────────────────────
  * Every console page is a client component that fetches on mount, so bouncing
  * Dashboard → Orders → Dashboard used to mean three full round trips and three
@@ -193,12 +206,12 @@ export const api = {
   // admin (auth required, role=admin)
   adminStats: () => req<any>(`/admin/stats`),
   adminOverview: () => req<any>(`/admin/overview`),
-  adminCommand: () => req<any>(`/admin/command`),
+  adminCommand: (range?: string) => req<any>(`/admin/command${range ? `?${range}` : ''}`),
   adminSellers: () => req<any[]>(`/admin/sellers`),
   adminSellerDetail: (id: string) => req<any>(`/admin/sellers/${id}/detail`),
   adminImpersonate: (id: string) => req<any>(`/admin/sellers/${id}/impersonate`, { method: 'POST' }),
-  adminOrders: (q?: string, status?: string) => {
-    const qs = new URLSearchParams();
+  adminOrders: (q?: string, status?: string, range?: string) => {
+    const qs = new URLSearchParams(range || '');
     if (q) qs.set('q', q);
     if (status && status !== 'all') qs.set('status', status);
     const s = qs.toString();
@@ -263,8 +276,12 @@ export const api = {
     }),
   adminCustomers: (q?: string) => req<any[]>(`/admin/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminCustomerDetail: (key: string) => req<any>(`/admin/customers/${encodeURIComponent(key)}`),
-  adminFinance: () => req<any>(`/admin/finance`),
-  adminAnalytics: () => req<any>(`/admin/analytics`),
+  adminFinance: (range?: string) => req<any>(`/admin/finance${range ? `?${range}` : ''}`),
+  adminAnalytics: (range?: string) => req<any>(`/admin/analytics${range ? `?${range}` : ''}`),
+  /** The bell — derived from live admin state, see AdminService.notifications. */
+  adminNotifications: () => req<any>(`/admin/notifications`),
+  /** A CSV export for a period (`range` from lib/admin-range), as a Blob. */
+  adminExport: (dataset: string, range: string) => download(`/admin/export/${dataset}?${range}`),
   approveSeller: (id: string) => req<any>(`/admin/sellers/${id}/approve`, { method: 'POST' }),
   rejectSeller: (id: string) => req<any>(`/admin/sellers/${id}/reject`, { method: 'POST' }),
   adminDisputes: () => req<any[]>(`/admin/disputes`),
