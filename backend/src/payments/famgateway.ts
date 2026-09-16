@@ -15,8 +15,8 @@ import { createHmac, timingSafeEqual } from 'crypto';
  *  - A payment session lasts five minutes. There is no sandbox: the only test
  *    is a live ₹1 payment (see scripts/famgateway-selftest.ts).
  *
- * The key travels in the `X-Api-Key` header, never the `?api_key=` query
- * string the older examples use — a key in a URL ends up in access logs.
+ * The key travels in the `X-Api-Key` header, plus — only for verify-order,
+ * which refuses the header — a copy in the query string. See `call()`.
  *
  * Docs: https://famgateway.in/docs.php
  */
@@ -61,13 +61,25 @@ export function parseIst(v: unknown): string | null {
   return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +(s || 0)) - IST_OFFSET_MS).toISOString();
 }
 
-async function call(path: string, init: { method: 'GET' | 'POST'; body?: unknown }): Promise<any> {
+async function call(path: string, init: { method: 'GET' | 'POST'; body?: unknown; keyInQuery?: boolean }): Promise<any> {
   const { key, base } = config();
   if (!key) throw new PaymentGatewayError('Online payments are not configured.');
 
+  /*
+   * `keyInQuery` exists because the gateway is not consistent: create-order
+   * accepts the header, and verify-order.php answers 401 "Missing api_key"
+   * unless the key is also in the query string. That cost a real payment —
+   * ₹26 arrived and the order stayed unpaid because verification was refused.
+   * The header is still sent; the query copy is what that endpoint reads, and
+   * it is the reason these URLs must never be logged.
+   */
+  const url = init.keyInQuery
+    ? `${base}${path}${path.includes('?') ? '&' : '?'}api_key=${encodeURIComponent(key)}`
+    : `${base}${path}`;
+
   let res: Awaited<ReturnType<typeof fetch>>;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await fetch(url, {
       method: init.method,
       headers: {
         'X-Api-Key': key,
@@ -138,7 +150,7 @@ export async function createGatewayOrder(input: {
 export async function verifyGatewayOrder(gatewayOrderId: string): Promise<GatewayStatus> {
   let json: any;
   try {
-    json = await call(`/api/verify-order.php?order_id=${encodeURIComponent(gatewayOrderId)}`, { method: 'GET' });
+    json = await call(`/api/verify-order.php?order_id=${encodeURIComponent(gatewayOrderId)}`, { method: 'GET', keyInQuery: true });
   } catch (e) {
     // 408 is how the gateway reports a session that ran out of time.
     if (e instanceof PaymentGatewayError && e.status === 408) return { status: 'expired' };

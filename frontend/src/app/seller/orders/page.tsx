@@ -179,6 +179,7 @@ function OrderActions({ order, busy, onAct, err }: {
   // Tracking number is rendered by OrderDetail just above, for both sides.
   return (
     <div className="mt-4 border-t border-line pt-4">
+      {order.status === 'PendingPayment' && <PaymentCheck order={order} />}
       {step ? (
         <>
           <div className="flex flex-wrap items-center gap-3">
@@ -306,6 +307,56 @@ function OrderActions({ order, busy, onAct, err }: {
       )}
 
       {err && <p className="mt-2 text-[13px] font-semibold text-rose">{err}</p>}
+    </div>
+  );
+}
+
+/**
+ * "Check payment" for an order still waiting on the gateway.
+ *
+ * A buyer who pays and then closes the tab leaves the order looking unpaid:
+ * the page they came back to is what normally confirms it, and the webhook
+ * that would otherwise do the job needs PUBLIC_API_URL set and can still be
+ * missed. This asks the gateway directly, so a seller is never left staring at
+ * "Awaiting payment" for money that has already arrived.
+ *
+ * It only ever reports what the gateway says — it cannot mark an order paid by
+ * itself, so pressing it on an unpaid order is harmless.
+ */
+function PaymentCheck({ order }: { order: any }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const check = async () => {
+    setBusy(true);
+    setMsg('');
+    try {
+      const updated = await api.confirmPayment(order.id);
+      if (updated?.status === 'Paid') {
+        setMsg('Payment confirmed.');
+        window.location.reload();
+        return;
+      }
+      setMsg('No payment has arrived for this order yet.');
+    } catch (e: any) {
+      setMsg(e?.message || 'Could not check the payment.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 rounded-xl border border-amber/40 bg-amber-soft/40 p-3">
+      <div className="text-[13px] font-bold text-navy">Waiting for the buyer’s payment</div>
+      <p className="mt-0.5 text-[12px] leading-snug text-muted">
+        If the buyer says they’ve paid, check with the payment gateway.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button onClick={check} disabled={busy} className="btn-ghost px-3 py-2 text-[12.5px] disabled:opacity-60">
+          {busy ? 'Checking…' : 'Check payment'}
+        </button>
+        {msg && <span className="text-[12px] font-semibold text-navy/70">{msg}</span>}
+      </div>
     </div>
   );
 }

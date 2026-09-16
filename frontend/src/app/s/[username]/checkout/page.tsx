@@ -23,6 +23,8 @@ export default function CheckoutPage() {
   const [err, setErr] = useState('');
   const [placed, setPlaced] = useState<any>(null);
   // After returning from the gateway: confirming, or why it didn't go through.
+  // Bumped by "Check my payment again", which re-runs the verification below.
+  const [recheck, setRecheck] = useState(0);
   const [payState, setPayState] = useState<null | {
     orderId: string;
     status: 'checking' | 'pending' | 'expired' | 'mismatch' | 'late' | 'cancelled' | 'error';
@@ -155,7 +157,7 @@ export default function CheckoutPage() {
 
     tick();
     return () => { stop = true; };
-  }, [username]);
+  }, [username, recheck]);
 
   const returnUrl = () => `${window.location.origin}${window.location.pathname}`;
 
@@ -253,7 +255,13 @@ export default function CheckoutPage() {
           <h1 className="mt-4 font-display text-[21px] font-bold text-navy">{heading}</h1>
           <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{detail}</p>
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-            {(status === 'expired' || status === 'error') && (
+            {/* An error here means we could not *check* the payment — it may
+                already have been made, so the offer is another check, never a
+                second payment. Only a session that expired unpaid gets that. */}
+            {status === 'error' && (
+              <button onClick={() => setRecheck((n) => n + 1)} className="btn-green">Check my payment again</button>
+            )}
+            {status === 'expired' && (
               <button onClick={() => retryPayment(orderId)} className="btn-green">Try the payment again</button>
             )}
             <Link href={`/s/${username}/orders`} className="btn-ghost">My orders</Link>
