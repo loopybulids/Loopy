@@ -21,7 +21,33 @@ export default function OrderInvestigation() {
   const [audit, setAudit] = useState<any[]>([]);
 
 
+  const [payMsg, setPayMsg] = useState('');
+
   const load = () => api.adminOrderDetail(id).then(setD).catch((e) => setErr(e?.message || 'Not found'));
+
+  /**
+   * Ask the payment gateway whether this order's money arrived.
+   *
+   * The buyer's own return from checkout normally records it, and a webhook
+   * covers the case where they close the tab — but a webhook needs a public
+   * API URL and can be missed, and the gateway only keeps a session for five
+   * minutes. This is the manual route for "I paid but it still says unpaid",
+   * and it cannot invent a payment: it records one only if the gateway
+   * confirms it.
+   */
+  const checkPayment = async () => {
+    setBusy('verify');
+    setPayMsg('');
+    try {
+      const updated = await api.confirmPayment(id);
+      setPayMsg(updated?.status === 'Paid' ? 'Payment confirmed — this order is now Paid.' : 'The gateway has no payment for this order yet.');
+      await load();
+    } catch (e: any) {
+      setPayMsg(e?.message || 'Could not check the payment.');
+    } finally {
+      setBusy('');
+    }
+  };
   const loadAudit = () => api.adminOrderAudit(id).then(setAudit).catch(() => setAudit([]));
 
   /**
@@ -182,6 +208,24 @@ This cannot be undone. Continue?`
           {/* actions */}
           <Card className="p-5">
             <SectionTitle>Actions</SectionTitle>
+
+            {d.status === 'PendingPayment' && (
+              <div className="mb-3 rounded-lg border border-warn/30 bg-warn-soft/50 p-3">
+                <div className="text-[12.5px] font-bold text-slate">Waiting for the buyer's payment</div>
+                <p className="mt-0.5 text-[11.5px] leading-snug text-dim">
+                  The seller cannot see this order until it is paid. If the buyer says they have paid, check with the gateway.
+                </p>
+                <button
+                  onClick={checkPayment}
+                  disabled={busy === 'verify'}
+                  className="mt-2 rounded-lg bg-slate px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-slate/90 disabled:opacity-60"
+                >
+                  {busy === 'verify' ? 'Checking…' : 'Check payment'}
+                </button>
+                {payMsg && <p className="mt-1.5 text-[11.5px] font-semibold text-dim">{payMsg}</p>}
+              </div>
+            )}
+
             {/* Only what the server will actually accept from this status. */}
             <div className="grid grid-cols-2 gap-2">
               {(d.allowedActions || []).map((a: any) => (

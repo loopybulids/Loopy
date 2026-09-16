@@ -232,6 +232,10 @@ export class SellersService {
     visits.forEach((v) => srcMap.set(v.source || 'Direct', (srcMap.get(v.source || 'Direct') || 0) + 1));
     const sources = [...srcMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
     const paid = orders.filter((o) => PAID.includes(o.status));
+    // Orders that exist as far as the seller is concerned. A checkout still
+    // waiting for payment is neither an order nor a customer yet, and counting
+    // it made the dashboard disagree with the (now filtered) orders queue.
+    const real = orders.filter((o) => o.status !== 'PendingPayment');
     const now = Date.now();
     const liveWindow = new Date(now - 5 * 60 * 1000);
     const liveSessions = new Set(visits.filter((v) => v.createdAt >= liveWindow).map((v, i) => v.session || `anon-${i}`));
@@ -243,9 +247,9 @@ export class SellersService {
       // dashboard's "Revenue" was smaller than the wallet's lifetime earnings
       // for the same orders. Same formula as getWallet now. See common/money.
       revenue: sellerReceivableOf(paid),
-      orders: orders.length,
+      orders: real.length,
       paidOrders: paid.length,
-      customers: new Set(orders.map((o) => o.buyerId || o.buyerPhone || o.buyerName).filter(Boolean)).size,
+      customers: new Set(real.map((o) => o.buyerId || o.buyerPhone || o.buyerName).filter(Boolean)).size,
       totalVisits: visitTotal,
       visitsToday: visits.filter((v) => v.createdAt >= todayStart).length,
       liveUsers: liveSessions.size,
@@ -638,9 +642,23 @@ export class SellersService {
     return { ok: true };
   }
 
+  /**
+   * The seller's order queue — everything except orders still waiting to be
+   * paid for.
+   *
+   * An unpaid order is not a sale. It is a checkout someone started, and it
+   * disappears again if they abandon it, so showing it here gave the seller a
+   * row with nothing to do ("No further action while this order is
+   * PendingPayment"), counted it in their totals, and would have had them
+   * packing goods nobody had paid for. It becomes visible the moment the
+   * payment is confirmed.
+   *
+   * Admins still see unpaid orders — that is where a payment that arrived but
+   * was not recorded gets sorted out.
+   */
   async getSellerOrders(sellerId: string) {
     const orders = await this.prisma.order.findMany({
-      where: { sellerId },
+      where: { sellerId, status: { not: 'PendingPayment' } },
       include: { items: true },
       orderBy: { createdAt: 'desc' },
     });
