@@ -25,8 +25,18 @@ let cached: any;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(express.json({ limit: '4mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '4mb' }));
+  /*
+   * Payment webhooks are signed over the exact bytes sent, so those routes keep
+   * a copy of the raw body — the signature cannot be recomputed from parsed
+   * JSON. This entry file bootstraps Nest itself and does not run main.ts, so
+   * the same rule has to be repeated here or FamGateway webhooks would be
+   * rejected as unsigned in production while working locally.
+   */
+  const keepRawBody = (req: any, _res: any, buf: Buffer) => {
+    if (req.url?.includes('/payments/')) req.rawBody = buf;
+  };
+  app.use(express.json({ limit: '4mb', verify: keepRawBody }));
+  app.use(express.urlencoded({ extended: true, limit: '4mb', verify: keepRawBody }));
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: false }),

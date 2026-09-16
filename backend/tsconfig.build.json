@@ -1,4 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "api", "prisma", "**/*spec.ts"]
+    // `scripts` is excluded for a structural reason, not tidiness: including
+  // any .ts file outside `src` moves TypeScript's common source root up to
+  // the project folder, so the build emits dist/src/app.module.js instead of
+  // dist/app.module.js — and api/index.ts (the Vercel entry) imports
+  // ../dist/app.module, which then does not exist. Every request to the
+  // deployed API fails with FUNCTION_INVOCATION_FAILED.
+  "exclude": ["node_modules", "test", "dist", "api", "prisma", "scripts", "**/*spec.ts"]
 }

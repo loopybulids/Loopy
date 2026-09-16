@@ -22,3 +22,6 @@ npm-debug.log*
 *.tsbuildinfo
 .eslintcache
 /coverage
+
+# production env copy for pasting into Render - never commit
+.env.render
