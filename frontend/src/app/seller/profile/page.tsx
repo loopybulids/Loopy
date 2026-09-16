@@ -132,12 +132,9 @@ export default function SellerProfile() {
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection icon={<Tag size={15} />} title="Branding" sub="Your logo and banner, used across the storefront.">
+      <SettingsSection icon={<Tag size={15} />} title="Branding" sub="Your logo, used across the storefront.">
         <SettingsRow label="Logo" hint="Square works best. Leave empty to use your store's initial." stack>
           <MediaInput value={p.logoUrl} onChange={(v) => set('logoUrl', v)} />
-        </SettingsRow>
-        <SettingsRow label="Banner" hint="Wide image behind your store name." stack>
-          <MediaInput value={p.bannerUrl} onChange={(v) => set('bannerUrl', v)} />
         </SettingsRow>
       </SettingsSection>
 

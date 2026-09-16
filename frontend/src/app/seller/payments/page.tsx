@@ -73,7 +73,43 @@ export default function Payments() {
     } finally { setBusy(false); }
   };
 
-  const txns = orders.filter((o) => ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'].includes(o.status));
+  /*
+   * One ledger, both directions.
+   *
+   * Orders are money in; an approved payout is money out, and the two belong
+   * in the same list in date order — otherwise the balance moves with nothing
+   * on the page to account for it. A paid payout carries the reference the
+   * admin entered when they made the transfer (the UTR), which is what a
+   * seller quotes to their bank if it has not arrived.
+   *
+   * A request still awaiting approval is left out: nothing has moved yet, and
+   * the banner above the panel already says it is pending.
+   */
+  const feed: {
+    id: string; at: number; ref: string; label: string; amount: number; out: boolean; note?: string;
+  }[] = [
+    ...orders
+      .filter((o) => ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'].includes(o.status))
+      .map((o) => ({
+        id: `order:${o.id}`,
+        at: o.createdAt ? new Date(o.createdAt).getTime() : 0,
+        ref: `#${String(o.id).slice(-6).toUpperCase()}`,
+        label: statusLabel(o.status, o.cancelledBy),
+        amount: sellerEarns(o),
+        out: false,
+      })),
+    ...((wallet?.payouts ?? []) as any[])
+      .filter((x) => x.status === 'paid' || x.status === 'rejected')
+      .map((x) => ({
+        id: `payout:${x.id}`,
+        at: new Date(x.decidedAt || x.createdAt).getTime(),
+        ref: x.status === 'paid' ? 'Payout to your account' : 'Payout rejected',
+        label: x.status === 'paid' ? 'Paid out' : 'Rejected',
+        amount: x.amount,
+        out: x.status === 'paid',
+        note: x.note || undefined,
+      })),
+  ].sort((a, b) => b.at - a.at);
 
   return (
     <div>
@@ -171,24 +207,30 @@ export default function Payments() {
         </Panel>
 
         <Panel title="Transactions">
-          {txns.length === 0 ? (
+          {feed.length === 0 ? (
             <Empty icon={<Wallet size={24} />} title="No transactions yet" hint="Payments from your orders will show up here as they’re collected and settled." />
           ) : (
             <div className="divide-y divide-line">
-              {txns.slice(0, 8).map((o) => (
-                <div key={o.id} className="flex items-center justify-between py-3 text-[14px]">
-                  <div>
-                    <div className="font-display font-bold text-navy">#{String(o.id).slice(-6).toUpperCase()}</div>
-                    <div className="text-[12px] text-faint">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '—'}</div>
+              {feed.slice(0, 8).map((t) => (
+                <div key={t.id} className="flex items-start justify-between gap-3 py-3 text-[14px]">
+                  <div className="min-w-0">
+                    <div className="truncate font-display font-bold text-navy">{t.ref}</div>
+                    <div className="text-[12px] text-faint">{t.at ? new Date(t.at).toLocaleDateString('en-IN') : '—'}</div>
+                    {/* The transfer reference, on the row it belongs to. */}
+                    {t.note && (
+                      <div className="mt-0.5 break-all font-mono text-[11.5px] text-faint">
+                        {t.out ? `UTR ${t.note}` : t.note}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
-                    {/* `o.total`/`o.amount` do not exist on a seller order — the
-                        API returns `totalAmount`, so every row read "+₹0". And
-                        the figure that belongs on this page is the seller's
-                        share, not the customer's total: the platform fee never
-                        reaches this wallet. */}
-                    <div className="font-bold text-green-600">+{money(sellerEarns(o))}</div>
-                    <div className="text-[12px] text-faint">{statusLabel(o.status, o.cancelledBy)}</div>
+                  <div className="shrink-0 text-right">
+                    {/* Out is written with a minus and in navy, not green: a
+                        withdrawal is not earnings, and the sign is the fastest
+                        way to read which way the money went. */}
+                    <div className={`font-bold ${t.out ? 'text-navy' : 'text-green-600'}`}>
+                      {t.out ? '−' : '+'}{money(t.amount)}
+                    </div>
+                    <div className="text-[12px] text-faint">{t.label}</div>
                   </div>
                 </div>
               ))}
