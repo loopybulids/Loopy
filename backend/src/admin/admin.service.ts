@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { amountsOf, discountOf, gmvOf, platformFeeOf, reconcile, sellerReceivableOf } from '../common/money';
 import { toCsv } from '../common/csv';
+import { FUNDS_HOLD, FUNDS_RELEASE, fundsDecision, releasedOrderIds } from '../common/funds';
 import { groupByBucket, inRange, istDateTime, parseRange, previousRange, rangeSlug, seriesOver } from '../common/date-range';
 import type { DateRange } from '../common/date-range';
 import {
@@ -354,6 +355,13 @@ export class AdminService {
       // rejected rather than applied.
       version: o.version,
       refundState: o.refundState,
+      /*
+       * Whether this order's money has been released to the seller, and by
+       * whom. Delivery no longer releases it, so the screen has to be able to
+       * say which of the two has happened. See common/funds.
+       */
+      funds: await fundsDecision(this.prisma, id),
+      canReleaseFunds: ['Delivered', 'Completed'].includes(o.status),
       // Which actions are legal from here — so the UI can't offer a button
       // the server will refuse.
       allowedActions: Object.entries(ORDER_TRANSITIONS)
@@ -712,6 +720,122 @@ export class AdminService {
    * along with who hid it and why. Without that, hiding would be
    * indistinguishable from deleting and a store could bury every complaint.
    */
+  /**
+   * Release an order's money to its seller, or put it back on hold.
+   *
+   * Delivery used to release the money by itself, which meant a seller marking
+   * their own order delivered made it withdrawable the same second — no window
+   * for a complaint, and nothing for an operator to check. Releasing is now a
+   * decision taken here, and it can be undone right up until the seller asks
+   * for a payout.
+   *
+   * Guarded like every other money action: the version the operator was
+   * looking at, an idempotency key so a retry is not a second decision, and an
+   * audit entry — which is also where the state itself is kept.
+   */
+  async setFundsRelease(
+    user: any,
+    id: string,
+    action: 'release' | 'hold',
+    opts: { expectedVersion?: unknown; idempotencyKey?: string } = {},
+  ) {
+    this.assertAdmin(user);
+    if (action !== 'release' && action !== 'hold') {
+      throw new BadRequestException(`Unknown funds action "${action}".`);
+    }
+
+    const key = opts.idempotencyKey?.trim();
+    if (!key) throw new BadRequestException('An Idempotency-Key header is required to move a seller’s money.');
+
+    const seen = await this.prisma.idempotencyKey.findUnique({ where: { key } });
+    if (seen) {
+      if (seen.target !== id || seen.scope !== `funds:${action}`) {
+        throw new ConflictException('That idempotency key was already used for a different action.');
+      }
+      return { ...JSON.parse(seen.response), replayed: true };
+    }
+
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const current = await fundsDecision(this.prisma, id);
+    const released = !!current?.released;
+    const amount = sellerReceivableOf([order]);
+
+    if (action === 'release') {
+      if (!['Delivered', 'Completed'].includes(order.status)) {
+        throw new BadRequestException(
+          `Money can only be released once the order has been delivered — this one is ${order.status}.`,
+        );
+      }
+      if (released) return { id, released: true, amount, version: order.version, alreadyDone: true };
+    } else {
+      if (!released) return { id, released: false, amount, version: order.version, alreadyDone: true };
+      // Clawing back money the seller has already asked for — or been paid —
+      // would leave their balance owing Loopy, which no screen can express.
+      const withdrawable = await this.sellerAvailable(order.sellerId);
+      if (withdrawable < amount) {
+        throw new ConflictException(
+          `₹${amount.toLocaleString('en-IN')} has already been requested or paid out, so it cannot go back on hold. Reject the payout request first.`,
+        );
+      }
+    }
+
+    const expected = requireVersion(opts.expectedVersion);
+
+    return this.prisma.$transaction(async (tx) => {
+      // Nothing on the order itself changes. The version still moves, so any
+      // other screen holding this order must reload before it can act.
+      const { count } = await tx.order.updateMany({
+        where: { id, version: expected },
+        data: { version: { increment: 1 } },
+      });
+      assertNotStale(count, 'This order');
+      const after = await tx.order.findUnique({ where: { id } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: String(user.userId || user.sub || user.id || 'unknown'),
+          actorEmail: user.email || null,
+          action: action === 'release' ? FUNDS_RELEASE : FUNDS_HOLD,
+          entity: 'order',
+          entityId: id,
+          before: JSON.stringify({ released, version: order.version }),
+          after: JSON.stringify({ released: action === 'release', version: after!.version }),
+          amount,
+        },
+      });
+      await tx.idempotencyKey.create({
+        data: {
+          key,
+          scope: `funds:${action}`,
+          actorId: String(user.userId || user.sub || user.id || 'unknown'),
+          target: id,
+          response: JSON.stringify({ id, released: action === 'release', amount, version: after!.version }),
+        },
+      });
+
+      return { id, released: action === 'release', amount, version: after!.version };
+    });
+  }
+
+  /** What a seller can withdraw right now: released money, less payouts in flight. */
+  private async sellerAvailable(sellerId: string) {
+    const [orders, payouts] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { sellerId, status: { in: PAID } },
+        select: { id: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
+      }),
+      this.prisma.payout.findMany({ where: { sellerId }, select: { amount: true, status: true } }),
+    ]);
+    const released = await releasedOrderIds(this.prisma, orders.map((o) => o.id));
+    const total = sellerReceivableOf(orders.filter((o) => released.has(o.id)));
+    const inFlight = payouts
+      .filter((p) => p.status === 'paid' || p.status === 'requested')
+      .reduce((s, p) => s + p.amount, 0);
+    return Math.max(0, total - inFlight);
+  }
+
   async reviews(user: any, filter?: string) {
     this.assertAdmin(user);
 

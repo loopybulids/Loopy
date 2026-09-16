@@ -240,6 +240,16 @@ export const api = {
       body: JSON.stringify({ to, expectedVersion }),
     }),
 
+  /**
+   * Release an order's money to the seller, or put it back on hold. Carries the
+   * version the screen showed and a per-click key, like the other money actions.
+   */
+  adminSetFunds: (id: string, action: 'release' | 'hold', expectedVersion: number, idempotencyKey: string) =>
+    req<any>(`/admin/orders/${id}/funds/${action}`, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ expectedVersion }),
+    }),
   adminOrderAudit: (id: string) => req<any[]>(`/admin/orders/${id}/audit`),
 
   /**

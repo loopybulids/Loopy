@@ -376,7 +376,8 @@ export class OrdersService {
     const already = await this.prisma.review.findUnique({ where: { orderId } });
     if (already) throw new BadRequestException('You have already reviewed this order.');
 
-    // releasing escrow on review keeps the demo's happy path moving
+    // A review completes the order. It does not release the money: that is an
+    // explicit admin decision now (common/funds).
     await this.prisma.order.update({ where: { id: orderId }, data: { status: 'Completed' } });
 
     // Attribute the review, so the seller sees who wrote it and the admin can

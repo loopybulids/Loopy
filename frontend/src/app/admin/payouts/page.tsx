@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Card, Chip, Icon, money, SectionTitle, StatCard, statusChip } from '@/components/admin/AdminKit';
 
@@ -23,44 +23,32 @@ export default function Payouts() {
   const load = () => api.adminPayouts().then(setD).catch((e) => setErr(e?.message || 'Failed to load'));
   useEffect(() => { load(); }, []);
 
+  // The request whose voucher is open, and what is about to be done to it.
+  const [sheet, setSheet] = useState<{ p: any; action: 'approve' | 'reject' } | null>(null);
+
   /**
-   * Approve or reject one request.
+   * Apply one decision.
    *
    * The key is minted per click, so the browser retrying is a no-op while a
    * deliberate second decision is a new one; the row's version goes back so a
    * screen loaded before someone else decided is refused rather than applied.
+   *
+   * Returns the failure message rather than showing it: the voucher is still
+   * open and is where the operator is looking.
    */
-  const decide = async (p: any, action: 'approve' | 'reject') => {
-    const who = p.seller?.storeName || p.sellerId?.slice(-8) || 'this seller';
-
-    let note: string | null = '';
-    if (action === 'reject') {
-      note = window.prompt(`Why is ${who}'s ${money(p.amount)} withdrawal being rejected?\n\nThe seller sees this reason.`);
-      if (note === null) return;
-      if (!note.trim()) { alert('A reason is required to reject.'); return; }
-    } else {
-      const lines = [
-        `Pay ${money(p.amount)} to ${who}.`,
-        p.seller?.destination ? `${p.seller.method === 'bank' ? 'Account' : 'UPI'}: ${p.seller.destination}` : 'NO DESTINATION ON FILE',
-        p.seller?.accountName ? `Name: ${p.seller.accountName}` : '',
-        '',
-        ...(p.warnings?.length ? ['⚠ ' + p.warnings.join('\n⚠ '), ''] : []),
-        'Approve only once the transfer has actually been made.',
-        'This cannot be undone.',
-      ].filter(Boolean);
-      if (!confirm(lines.join('\n'))) return;
-      note = window.prompt('Transfer reference (optional):', '') ?? '';
-    }
-
+  const decide = async (p: any, action: 'approve' | 'reject', note: string): Promise<string | null> => {
     setBusy(p.id);
     try {
       await api.adminPayoutAction(p.id, action, p.version, crypto.randomUUID(), note.trim() || undefined);
+      setSheet(null);
       await load();
+      return null;
     } catch (e: any) {
-      alert(e?.message || 'Failed');
       await load(); // a stale-version refusal means this screen is out of date
+      return e?.message || 'That did not go through.';
+    } finally {
+      setBusy('');
     }
-    setBusy('');
   };
 
   if (err) return <Card className="p-6 text-alert">{err}</Card>;
@@ -70,6 +58,15 @@ export default function Payouts() {
 
   return (
     <div className="space-y-5">
+      {sheet && (
+        <PayoutBill
+          p={sheet.p}
+          action={sheet.action}
+          busy={busy === sheet.p.id}
+          onClose={() => setSheet(null)}
+          onConfirm={(note) => decide(sheet.p, sheet.action, note)}
+        />
+      )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[26px] font-bold text-slate">Payout Requests</h1>
@@ -148,14 +145,14 @@ export default function Payouts() {
                     <div className="font-num text-[23px] font-semibold leading-none tracking-[-0.03em] text-slate">{money(p.amount)}</div>
                     <div className="mt-3 flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => decide(p, 'approve')}
+                        onClick={() => setSheet({ p, action: 'approve' })}
                         disabled={busy === p.id}
                         className="rounded-xl bg-accent px-3.5 py-2 text-[12.5px] font-bold text-white disabled:opacity-50"
                       >
                         {busy === p.id ? '…' : 'Approve & mark paid'}
                       </button>
                       <button
-                        onClick={() => decide(p, 'reject')}
+                        onClick={() => setSheet({ p, action: 'reject' })}
                         disabled={busy === p.id}
                         className="rounded-xl bg-alert-soft px-3 py-2 text-[12.5px] font-bold text-alert disabled:opacity-50"
                       >
@@ -209,6 +206,136 @@ export default function Payouts() {
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
+
+/**
+ * The payout voucher.
+ *
+ * This replaces a confirm() followed by a prompt(). Paying a seller is the one
+ * irreversible act on this screen, and those native dialogs showed the amount
+ * and the destination in two separate steps, in a box whose text cannot be
+ * selected — so a UPI ID could not be copied or checked against a banking app
+ * before approving. The voucher lays the whole bill out at once: who is paid,
+ * where, how much, what they have earned and been paid before, and anything
+ * that should stop the transfer. The reference or the rejection reason is
+ * typed in the same place.
+ */
+function PayoutBill({ p, action, busy, onClose, onConfirm }: {
+  p: any;
+  action: 'approve' | 'reject';
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (note: string) => Promise<string | null>;
+}) {
+  const [note, setNote] = useState('');
+  const [err, setErr] = useState('');
+  const rejecting = action === 'reject';
+  const seller = p.seller || {};
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const submit = async () => {
+    if (rejecting && !note.trim()) {
+      setErr('A reason is required — the seller sees it.');
+      return;
+    }
+    setErr('');
+    const failed = await onConfirm(note);
+    if (failed) setErr(failed);
+  };
+
+  const row = (label: string, value: ReactNode, mono = false) => (
+    <div className="flex items-baseline justify-between gap-3 py-2">
+      <span className="shrink-0 text-[11.5px] text-dim">{label}</span>
+      <span className={`text-right text-[12.5px] font-semibold text-slate ${mono ? 'break-all font-mono text-[12px]' : ''}`}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-label="Payout voucher"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[460px] overflow-hidden rounded-2xl border border-hair bg-white shadow-[0_28px_70px_-24px_rgba(15,23,42,0.5)]"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-hair bg-cool/60 px-5 py-4">
+          <div className="min-w-0">
+            <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-pale">Payout voucher</div>
+            <div className="mt-0.5 truncate font-display text-[16px] font-bold text-slate">{seller.storeName || 'Unknown store'}</div>
+            <div className="truncate font-mono text-[11px] text-pale">
+              {seller.username ? `@${seller.username}` : String(p.sellerId || '').slice(-8)} · #{String(p.id).slice(-8).toUpperCase()}
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="font-num text-[24px] font-semibold leading-none tracking-[-0.03em] text-slate">{money(p.amount)}</div>
+            <div className="mt-1 text-[10.5px] text-pale">to transfer</div>
+          </div>
+        </div>
+
+        <div className="divide-y divide-hair/70 px-5">
+          {row('Method', seller.method === 'bank' ? 'Bank transfer' : 'UPI')}
+          {row('Destination', seller.destination || <span className="text-alert">Nothing on file</span>, true)}
+          {row('Account holder', seller.accountName || '—')}
+          {row('KYC', <Chip tone={seller.kyc === 'approved' ? 'green' : 'amber'}>{seller.kyc || 'unknown'}</Chip>)}
+          {row('Requested', p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN') : '—')}
+          {row('Contact', seller.payoutEmail || seller.email || '—', true)}
+          {row('Earned to date', money(seller.lifetimeEarned || 0))}
+          {row('Already paid', money(seller.alreadyPaid || 0))}
+        </div>
+
+        {!!p.warnings?.length && (
+          <div className="mx-5 mt-3 space-y-0.5 rounded-lg border border-alert/25 bg-alert-soft/60 p-3">
+            {p.warnings.map((w: string) => (
+              <div key={w} className="flex items-start gap-1.5 text-[12px] font-semibold text-alert">
+                <Icon name="alert" size={13} /> {w}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="px-5 pb-1 pt-4">
+          <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-pale">
+            {rejecting ? 'Reason (the seller sees this)' : 'Transfer reference (UTR / txn id)'}
+          </label>
+          <textarea
+            autoFocus
+            rows={rejecting ? 3 : 2}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={rejecting ? 'e.g. the UPI ID does not match the KYC name' : 'Optional — worth keeping for reconciliation'}
+            className="mt-1.5 w-full rounded-lg border border-hair bg-white px-3 py-2 text-[13px] text-slate outline-none focus:border-accent/60"
+          />
+          <p className="mt-2.5 text-[11.5px] leading-snug text-dim">
+            {rejecting
+              ? 'The request is closed and the money goes back to the seller’s available balance, where they can ask again.'
+              : 'Approve only once the transfer has actually been made from your bank or UPI app. This cannot be undone.'}
+          </p>
+          {err && <p className="mt-2 text-[12px] font-semibold text-alert">{err}</p>}
+        </div>
+
+        <div className="mt-3 flex items-center justify-end gap-2 border-t border-hair bg-cool/40 px-5 py-3.5">
+          <button onClick={onClose} className="rounded-xl border border-hair bg-white px-3.5 py-2 text-[12.5px] font-bold text-dim transition-colors hover:text-slate">
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={busy}
+            className={`rounded-xl px-4 py-2 text-[12.5px] font-bold text-white transition-colors disabled:opacity-50 ${rejecting ? 'bg-alert hover:opacity-90' : 'bg-accent hover:bg-accent-600'}`}
+          >
+            {busy ? 'Working…' : rejecting ? 'Reject request' : `Mark ${money(p.amount)} as paid`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

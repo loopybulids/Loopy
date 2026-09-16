@@ -82,14 +82,14 @@ export default function Payments() {
       {/* The four states money passes through, in the order it passes through
           them, so the page explains itself. */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Pending (escrow)" value={money(wallet?.pending ?? 0)} delta="Ordered, not yet delivered" />
-        <StatCard label="Available" value={money(wallet?.available ?? 0)} icon={<Wallet size={18} />} accent delta="Delivered — ready to withdraw" />
+        <StatCard label="Pending (escrow)" value={money(wallet?.pending ?? 0)} delta="Held until Loopy releases it" />
+        <StatCard label="Available" value={money(wallet?.available ?? 0)} icon={<Wallet size={18} />} accent delta="Released — ready to withdraw" />
         <StatCard label="Awaiting approval" value={money(wallet?.requested ?? 0)} delta="Requested from Loopy" />
         <StatCard label="Settled" value={money(wallet?.settled ?? 0)} delta="Paid to your bank" />
       </div>
 
       <p className="mt-3 text-[12px] text-faint">
-        Lifetime earnings {money(wallet?.lifetime ?? 0)} · money moves left to right as orders are delivered and payouts approved.
+        Lifetime earnings {money(wallet?.lifetime ?? 0)} · money moves left to right as Loopy releases delivered orders and approves payouts.
       </p>
 
       {wallet?.requested > 0 && (

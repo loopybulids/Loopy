@@ -288,7 +288,7 @@ function OrderActions({ order, busy, onAct, err }: {
       ) : (
         <p className="text-[12.5px] font-semibold text-muted">
           {order.status === 'Delivered' ? 'Delivered.'
-            : order.status === 'Completed' ? 'Completed. Payout released.'
+            : order.status === 'Completed' ? 'Completed.'
             : order.status === 'Cancelled' ? 'This order was cancelled.'
             : `No further action while this order is ${order.status}.`}
         </p>

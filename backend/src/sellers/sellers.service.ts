@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { sellerReceivableOf } from '../common/money';
+import { releasedOrderIds } from '../common/funds';
 
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 
@@ -11,6 +12,7 @@ const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 type PrismaClientLike = {
   order: { findMany: (args: any) => Promise<any[]> };
   payout: { findMany: (args: any) => Promise<any[]> };
+  auditLog: { findMany: (args: any) => Promise<any[]> };
 };
 
 function shapeProduct(p: any) {
@@ -769,12 +771,25 @@ export class SellersService {
     const [orders, payouts] = await Promise.all([
       db.order.findMany({
         where: { sellerId },
-        select: { status: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
+        select: { id: true, status: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
       }),
       db.payout.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } }),
     ]);
 
-    const pending = sellerReceivableOf(orders.filter((o) => ['Paid', 'Accepted', 'Shipped'].includes(o.status)));
+    /*
+     * Withdrawable money is released money, not delivered money.
+     *
+     * An order stays in escrow even after the seller marks it delivered, until
+     * an admin releases it (see common/funds). Delivery is the seller's own
+     * word for what happened; release is Loopy's, and the balance answers to
+     * that one. Previously the two were the same event, so a seller could make
+     * their own money withdrawable the moment they pressed "delivered".
+     */
+    const earning = orders.filter((o) => PAID.includes(o.status));
+    const released = await releasedOrderIds(db, earning.map((o) => o.id));
+    const pending = sellerReceivableOf(earning.filter((o) => !released.has(o.id)));
+    const releasedTotal = sellerReceivableOf(earning.filter((o) => released.has(o.id)));
+    // Earned either way — what this seller has actually sold and delivered.
     const lifetime = sellerReceivableOf(orders.filter((o) => ['Delivered', 'Completed'].includes(o.status)));
 
     const settled = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
@@ -782,10 +797,12 @@ export class SellersService {
     // Money already requested is in flight: it is neither withdrawable again
     // nor settled yet. Leaving it in `available` would let a seller request
     // the same rupees twice and make the three cards overlap.
-    const available = Math.max(0, lifetime - settled - requested);
+    const available = Math.max(0, releasedTotal - settled - requested);
 
     return {
       available,
+      /** Released by Loopy, before payouts are taken off. */
+      released: releasedTotal,
       lifetime,
       pending,
       settled,

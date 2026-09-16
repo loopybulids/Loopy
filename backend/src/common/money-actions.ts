@@ -28,7 +28,9 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 export const ORDER_TRANSITIONS: Record<string, { to: string; from: string[]; label: string }> = {
   accept:  { to: 'Accepted',  from: ['Paid'], label: 'Accept order' },
   ship:    { to: 'Shipped',   from: ['Paid', 'Accepted'], label: 'Mark shipped' },
-  deliver: { to: 'Delivered', from: ['Shipped'], label: 'Verify delivery and release funds' },
+  // Delivery no longer releases the money — that is a separate decision,
+  // see setFundsRelease in admin.service and common/funds.
+  deliver: { to: 'Delivered', from: ['Shipped'], label: 'Verify delivery' },
   cancel:  { to: 'Cancelled', from: ['PendingPayment', 'Paid', 'Accepted', 'Shipped'], label: 'Cancel order' },
   refund:  { to: 'Refunded',  from: ['Cancelled', 'Disputed', 'Delivered', 'Completed'], label: 'Refund customer' },
 };

@@ -117,6 +117,24 @@ export class AdminController {
     });
   }
 
+  /**
+   * Release an order's money to the seller, or put it back on hold. Both move
+   * a seller's balance, so version + Idempotency-Key are enforced in the service.
+   */
+  @Post('orders/:id/funds/:action')
+  fundsAction(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('action') action: 'release' | 'hold',
+    @Body() body: any,
+    @Headers('idempotency-key') idem?: string,
+  ) {
+    return this.admin.setFundsRelease(req.user, id, action, {
+      expectedVersion: body?.expectedVersion,
+      idempotencyKey: idem || body?.idempotencyKey,
+    });
+  }
+
   @Get('orders/:id/audit')
   orderAudit(@Req() req: any, @Param('id') id: string) {
     return this.admin.orderAudit(req.user, id);

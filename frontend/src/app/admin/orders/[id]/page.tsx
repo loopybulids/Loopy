@@ -22,6 +22,7 @@ export default function OrderInvestigation() {
 
 
   const [payMsg, setPayMsg] = useState('');
+  const [fundsMsg, setFundsMsg] = useState('');
 
   const load = () => api.adminOrderDetail(id).then(setD).catch((e) => setErr(e?.message || 'Not found'));
 
@@ -35,6 +36,39 @@ export default function OrderInvestigation() {
    * and it cannot invent a payment: it records one only if the gateway
    * confirms it.
    */
+  /**
+   * Release this order's money to the seller, or pull it back.
+   *
+   * The confirmation names the amount and the store, because this is the click
+   * that decides whether a seller can withdraw. A release can be undone right
+   * up until they request a payout — after that the server refuses, since the
+   * money is already spoken for.
+   */
+  const moveFunds = async (action: 'release' | 'hold') => {
+    const amount = money(d.amounts.sellerReceivable);
+    const who = d.seller?.storeName || 'the seller';
+    const ok = window.confirm(
+      action === 'release'
+        ? `Release ${amount} to ${who}?\n\nIt becomes withdrawable straight away. You can put it back on hold until they request a payout.`
+        : `Put ${amount} back on hold?\n\nIt leaves ${who}'s available balance.`,
+    );
+    if (!ok) return;
+
+    setBusy('funds');
+    setFundsMsg('');
+    try {
+      await api.adminSetFunds(id, action, d.version, crypto.randomUUID());
+      await load();
+      await loadAudit();
+      setFundsMsg(action === 'release' ? 'Released to the seller.' : 'Back on hold.');
+    } catch (e: any) {
+      setFundsMsg(e?.message || 'Could not update this.');
+      await load(); // a stale-version rejection means this screen is out of date
+    } finally {
+      setBusy('');
+    }
+  };
+
   const checkPayment = async () => {
     setBusy('verify');
     setPayMsg('');
@@ -226,12 +260,40 @@ This cannot be undone. Continue?`
               </div>
             )}
 
+            {/* Escrow. Delivery does not pay the seller — this does. */}
+            {d.canReleaseFunds && (
+              <div className={`mb-3 rounded-lg border p-3 ${d.funds?.released ? 'border-accent/30 bg-accent-soft/50' : 'border-warn/30 bg-warn-soft/50'}`}>
+                <div className="text-[12.5px] font-bold text-slate">
+                  {d.funds?.released
+                    ? `${money(d.amounts.sellerReceivable)} released to the seller`
+                    : `${money(d.amounts.sellerReceivable)} held in escrow`}
+                </div>
+                <p className="mt-0.5 text-[11.5px] leading-snug text-dim">
+                  {d.funds?.released
+                    ? `Released ${new Date(d.funds.at).toLocaleString('en-IN')}${d.funds.by ? ` by ${d.funds.by}` : ''} — it is in the seller's available balance.`
+                    : 'Delivery alone does not pay the seller. Release this once you are satisfied the order is settled.'}
+                </p>
+                <button
+                  onClick={() => moveFunds(d.funds?.released ? 'hold' : 'release')}
+                  disabled={busy === 'funds'}
+                  className={`mt-2 rounded-lg px-3 py-1.5 text-[12px] font-bold text-white transition-colors disabled:opacity-60 ${d.funds?.released ? 'bg-warn hover:opacity-90' : 'bg-accent hover:bg-accent-600'}`}
+                >
+                  {busy === 'funds'
+                    ? 'Working…'
+                    : d.funds?.released
+                      ? 'Put back on hold'
+                      : `Release ${money(d.amounts.sellerReceivable)} to seller`}
+                </button>
+                {fundsMsg && <p className="mt-1.5 text-[11.5px] font-semibold text-dim">{fundsMsg}</p>}
+              </div>
+            )}
+
             {/* Only what the server will actually accept from this status. */}
             <div className="grid grid-cols-2 gap-2">
               {(d.allowedActions || []).map((a: any) => (
                 <Action
                   key={a.key}
-                  label={a.money && a.key === 'deliver' ? `Verify delivery · release ${money(d.amounts.sellerReceivable)}` : a.label}
+                  label={a.label}
                   tone={a.key === 'refund' || a.key === 'cancel' ? 'rose' : undefined}
                   busy={busy === a.key}
                   onClick={() => act(a.key, a.label, a.money)}
