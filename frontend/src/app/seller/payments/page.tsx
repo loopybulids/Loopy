@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
-import { PageHead, StatCard, Panel, Empty, money } from '@/components/seller-ui';
+import { PageHead, StatCard, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import { Wallet, Check } from '@/components/icons';
+import { statusLabel } from '@/components/store/OrderDetail';
 
 export default function Payments() {
   const [busy, setBusy] = useState(false);
@@ -181,8 +182,13 @@ export default function Payments() {
                     <div className="text-[12px] text-faint">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '—'}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-green-600">+{money(o.total || o.amount || 0)}</div>
-                    <div className="text-[12px] text-faint">{o.status}</div>
+                    {/* `o.total`/`o.amount` do not exist on a seller order — the
+                        API returns `totalAmount`, so every row read "+₹0". And
+                        the figure that belongs on this page is the seller's
+                        share, not the customer's total: the platform fee never
+                        reaches this wallet. */}
+                    <div className="font-bold text-green-600">+{money(sellerEarns(o))}</div>
+                    <div className="text-[12px] text-faint">{statusLabel(o.status, o.cancelledBy)}</div>
                   </div>
                 </div>
               ))}

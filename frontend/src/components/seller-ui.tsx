@@ -291,3 +291,16 @@ export function BuyerAvatar({ name, size = 36 }: { name?: string | null; size?: 
     </span>
   );
 }
+
+/**
+ * What an order is worth to the seller: goods less any discount, plus shipping.
+ *
+ * Every seller-facing list needs this one figure, and each had its own idea of
+ * it — `o.total || o.amount` (fields a seller order does not have, so they all
+ * rendered ₹0), or `itemsAmount` alone (ignoring shipping). It is not the
+ * customer's total either: the platform fee is charged on top of this and
+ * never reaches the seller. Same formula as the wallet and the payout ledger,
+ * backend/src/common/money.ts.
+ */
+export const sellerEarns = (o: any) =>
+  Math.max(0, (o?.itemsAmount ?? 0) - (o?.discountAmount ?? 0)) + (o?.shippingCharge ?? 0);

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { PageHead, StatStrip, Panel, Empty, money } from '@/components/seller-ui';
+import { PageHead, StatStrip, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import { Truck, Check } from '@/components/icons';
 
 const STATUS_CHIP: Record<string, string> = {
@@ -122,7 +122,7 @@ export default function Shipping() {
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-green-soft text-green-600"><Truck size={16} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="font-display text-[14px] font-bold text-navy">#{String(o.id).slice(-6).toUpperCase()}</div>
-                  <div className="truncate text-[12px] text-faint">{o.buyer?.name || o.customer?.name || 'Customer'} · {money(o.total || o.amount || 0)}</div>
+                  <div className="truncate text-[12px] text-faint">{o.buyer?.name || o.customer?.name || 'Customer'} · {money(sellerEarns(o))}</div>
                 </div>
                 <span className={STATUS_CHIP[o.status] || 'chip-navy'}>{o.status}</span>
                 <button onClick={() => ship(o.id)} disabled={busyId === o.id} className="btn-green ml-2 px-3 py-2 text-[12.5px] disabled:opacity-50">

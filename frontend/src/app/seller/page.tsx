@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
-import { BuyerAvatar, StatCard, StatStrip, Panel, Empty, money } from '@/components/seller-ui';
+import { BuyerAvatar, StatCard, StatStrip, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import { AreaTrend } from '@/components/admin/AdminKit';
 import { Bag, Check, Eye, Plus, Share, Star, Users, Wallet } from '@/components/icons';
 
@@ -168,7 +168,7 @@ export default function Dashboard() {
                     <div className="truncate font-display text-[14px] font-bold text-navy">{o.buyerName || o.buyer?.name || 'Customer'}</div>
                     <div className="truncate font-num text-[12px] text-faint">#{String(o.id).slice(-6).toUpperCase()}</div>
                   </div>
-                  <span className="text-[13px] font-bold text-navy">{money(o.total || o.totalAmount || o.amount || 0)}</span>
+                  <span className="text-[13px] font-bold text-navy">{money(sellerEarns(o))}</span>
                   <span className="chip-green ml-2">{o.status}</span>
                 </div>
               ))}

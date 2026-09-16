@@ -1,4 +1,5 @@
 'use client';
+import { sellerEarns } from '@/components/seller-ui';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, rupees } from '@/lib/api';
@@ -74,7 +75,7 @@ export default function Earnings() {
             {tx.length === 0 ? <div className="p-8 text-center text-[13px] s-muted">No transactions yet.</div> : tx.map((o) => (
               <div key={o.id} className="grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-3 border-t border-white/10 px-5 py-4">
                 <div><div className="text-[13px] font-bold text-white">Sale: {o.items[0]?.title}</div><div className="text-[11px] text-[#8A98AD]">ORDER #{o.id.slice(-6).toUpperCase()}</div></div>
-                <div className="font-bold text-green-500">+{rupees(o.itemsAmount)}</div>
+                <div className="font-bold text-green-500">+{rupees(sellerEarns(o))}</div>
                 <div><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${['Delivered', 'Completed'].includes(o.status) ? 'bg-green-500/15 text-green-500' : 'bg-amber/15 text-amber'}`}>{o.status}</span></div>
                 <div className="text-[12px] font-semibold text-[#C7D2E0]">View Receipt</div>
               </div>

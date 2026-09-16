@@ -1,4 +1,5 @@
 'use client';
+import { sellerEarns } from '@/components/seller-ui';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -87,7 +88,7 @@ export default function SellerDashboard() {
                       <div className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-3 px-1 pb-2 text-[10.5px] font-bold uppercase tracking-wide text-[#8A98AD]"><div>Item</div><div>Buyer</div><div>Status</div><div>Action</div></div>
                       {orders.map((o) => (
                         <div key={o.id} className="grid grid-cols-[1.6fr_1fr_1fr_auto] items-center gap-3 border-t border-white/10 px-1 py-3">
-                          <div><div className="text-[13px] font-bold text-white">{o.items[0]?.title}{o.items.length > 1 ? ` +${o.items.length - 1}` : ''}</div><div className="text-[11px] text-[#8A98AD]">#{o.id.slice(-6).toUpperCase()} · {rupees(o.totalAmount)}</div></div>
+                          <div><div className="text-[13px] font-bold text-white">{o.items[0]?.title}{o.items.length > 1 ? ` +${o.items.length - 1}` : ''}</div><div className="text-[11px] text-[#8A98AD]">#{o.id.slice(-6).toUpperCase()} · {rupees(sellerEarns(o))}</div></div>
                           <div className="text-[12.5px] text-[#C7D2E0]">{o.buyerName || 'Buyer'}</div>
                           <div><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${CHIP[o.status] || 'bg-white/10 text-[#C7D2E0]'}`}>{o.status}</span></div>
                           <div className="text-right">

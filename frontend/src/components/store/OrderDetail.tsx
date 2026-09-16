@@ -5,10 +5,14 @@ import { rupees } from '@/lib/api';
  * Full breakdown of a single order — items, who it's going to, where, how it
  * was paid and the money split.
  *
- * `commissionAmount` is shown as "Platform fee": the customer is charged it on
- * top of items + shipping, so hiding it would leave the lines not adding up to
- * the total they paid. What stays hidden is the settlement side — what the
- * seller receives is not the shopper's business.
+ * Two audiences, two money summaries.
+ *
+ * A shopper sees the platform fee, because they are charged it on top of items
+ * and shipping and the lines have to add up to what they paid. A seller does
+ * not: the fee is not theirs, it is not deducted from them, and showing it
+ * next to a total they are not receiving only invites the question of which
+ * number is theirs. They get "You receive" — items less any discount, plus
+ * shipping — which is exactly what reaches their wallet.
  */
 
 /** Statuses at which the goods are with the customer, so COD cash is in hand. */
@@ -101,7 +105,17 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
   );
 }
 
-export default function OrderDetail({ order, showContact = true }: { order: any; showContact?: boolean }) {
+export default function OrderDetail({
+  order,
+  showContact = true,
+  audience = 'buyer',
+}: {
+  order: any;
+  showContact?: boolean;
+  /** 'seller' swaps the fee and customer total for "You receive". */
+  audience?: 'buyer' | 'seller';
+}) {
+  const forSeller = audience === 'seller';
   const items = order?.items || [];
   const itemsAmount = order?.itemsAmount ?? items.reduce((s: number, i: any) => s + i.unitPrice * i.quantity, 0);
   const shipping = order?.shippingCharge ?? 0;
@@ -113,6 +127,9 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
   const contactPhone = order?.customer?.phone || order?.buyerPhone;
   const contactEmail = order?.customer?.email;
   const pay = paymentState(order);
+  // What the seller is owed for this order — the same formula as the wallet
+  // and the payout ledger (backend/src/common/money.ts).
+  const receivable = Math.max(0, (order?.itemsAmount ?? 0) - (order?.discountAmount ?? 0)) + (order?.shippingCharge ?? 0);
 
   return (
     <div className="space-y-4">
@@ -197,10 +214,10 @@ export default function OrderDetail({ order, showContact = true }: { order: any;
           <Row label={order?.couponCode ? `Discount · ${order.couponCode}` : 'Discount'} value={`−${rupees(discount)}`} />
         )}
         <Row label="Shipping" value={shipping ? rupees(shipping) : 'Free'} />
-        {fee > 0 && <Row label="Platform fee" value={rupees(fee)} />}
+        {fee > 0 && !forSeller && <Row label="Platform fee" value={rupees(fee)} />}
         <div className="mt-1 flex justify-between border-t border-line pt-2 text-[15px]">
-          <span className="font-semibold text-navy">Total</span>
-          <span className="font-display font-bold text-green-600">{rupees(order?.totalAmount ?? 0)}</span>
+          <span className="font-semibold text-navy">{forSeller ? 'You receive' : 'Total'}</span>
+          <span className="font-display font-bold text-green-600">{rupees(forSeller ? receivable : (order?.totalAmount ?? 0))}</span>
         </div>
         <div className="flex items-center justify-between pt-0.5 text-[13px]">
           <span className="text-muted">Payment</span>

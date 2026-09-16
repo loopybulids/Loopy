@@ -127,7 +127,7 @@ export default function Orders() {
                   </button>
                   {open && (
                     <div className="mb-3 rounded-xl border border-line bg-paper/50 p-4">
-                      <OrderDetail order={o} />
+                      <OrderDetail order={o} audience="seller" />
                       <OrderActions order={o} busy={acting === o.id} onAct={act} err={acting === o.id ? actErr : ''} />
                     </div>
                   )}
