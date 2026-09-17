@@ -27,14 +27,31 @@ const DELIVERED = ['Delivered', 'Completed'];
  * sync with the order's status.
  */
 export function paymentState(order: any): { label: string; paid: boolean; short: string } {
-  // Created, waiting on the gateway. Nothing has been collected, whatever the
-  // payment method says — otherwise an unpaid online order read "Paid online".
-  if (order?.status === 'PendingPayment') {
+  const p = String(order?.paymentId || '');
+  const status = String(order?.status || '');
+  const delivered = DELIVERED.includes(status);
+
+  /*
+   * `paymentId` holds `online:<method>` from the moment an order is created —
+   * that is the method the buyer picked, not a receipt. Only a confirmed
+   * payment appends the gateway's transaction id and UTR
+   * (payments.service settle), so a real payment is read from that, never from
+   * the field merely being present. Without this, an order the buyer never
+   * paid for and the seller rejected still read "Paid online · UPI · Paid".
+   */
+  const confirmed = /^online:[^:]+:.+/.test(p);
+
+  if (status === 'PendingPayment') {
     return { label: 'Awaiting payment', paid: false, short: 'Unpaid' };
   }
-
-  const p = String(order?.paymentId || '');
-  const delivered = DELIVERED.includes(order?.status);
+  if (status === 'Refunded') {
+    return { label: 'Refunded', paid: false, short: 'Refunded' };
+  }
+  if (status === 'Cancelled') {
+    return confirmed
+      ? { label: 'Paid — refund due', paid: true, short: 'Refund due' }
+      : { label: 'No payment taken', paid: false, short: 'Unpaid' };
+  }
 
   if (p === 'cod') {
     return {

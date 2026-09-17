@@ -8,18 +8,19 @@ import {
   validWebhookSignature, verifyGatewayOrder,
 } from './famgateway';
 
-/** An unpaid order older than this gives back the stock and coupon it holds. */
+/** An unpaid order older than this is closed, and its coupon use given back. */
 const ABANDON_AFTER_MS = 30 * 60 * 1000;
 
-export type SettleStatus = 'paid' | 'pending' | 'expired' | 'mismatch' | 'late' | 'cancelled' | 'unpaid';
+export type SettleStatus = 'paid' | 'pending' | 'expired' | 'mismatch' | 'late' | 'cancelled' | 'unpaid' | 'oversold';
 
 /**
  * Taking a buyer's money for an order.
  *
- * The order is created first, as PendingPayment, holding its stock and any
- * coupon use. A FamGateway session is then opened for the order total and the
- * buyer pays on the gateway's hosted UPI page. Only `settle()` can make the
- * order Paid, and it does so only after FamGateway itself confirms the money
+ * The order is created first, as PendingPayment. It holds a coupon use, but no
+ * stock: nothing leaves the catalogue until the money is confirmed. A
+ * FamGateway session is then opened for the order total and the buyer pays on
+ * the gateway's hosted UPI page. Only `settle()` can make the order Paid —
+ * and it is what decrements the stock, and it does so only after FamGateway itself confirms the money
  * arrived — whichever way the news reaches us first: the buyer coming back
  * from checkout, or the gateway's webhook.
  *
@@ -188,11 +189,57 @@ export class PaymentsService {
         return { status: 'late', order: updated };
       }
 
-      const { count } = await this.prisma.order.updateMany({
-        where: { id: order.id, status: 'PendingPayment' },
-        data: { status: 'Paid', paymentId, version: { increment: 1 } },
-      });
-      if (count > 0) {
+      /*
+       * Recording the payment and taking the stock are one transaction.
+       *
+       * Nothing was reserved at checkout, so the last item can be paid for
+       * twice — the decrement is conditional, and an order that loses that
+       * race is recorded as paid with a refund owed rather than quietly
+       * shipped. Money that arrived is never discarded just because the goods
+       * ran out.
+       */
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          const { count } = await tx.order.updateMany({
+            where: { id: order.id, status: 'PendingPayment' },
+            data: { status: 'Paid', paymentId, version: { increment: 1 } },
+          });
+          // Someone else recorded it first; their transaction took the stock.
+          if (count === 0) return { recorded: false, soldOut: [] as string[] };
+
+          const soldOut: string[] = [];
+          for (const it of order.items) {
+            const taken = await tx.product.updateMany({
+              where: { id: it.productId, quantity: { gte: it.quantity } },
+              data: { quantity: { decrement: it.quantity } },
+            });
+            if (taken.count === 0) soldOut.push(it.title);
+          }
+
+          if (soldOut.length) {
+            await tx.order.update({
+              where: { id: order.id },
+              data: {
+                status: 'Cancelled',
+                cancelledBy: 'system',
+                cancelReason: `${soldOut.join(', ')} sold out before this payment was confirmed — a full refund is due.`,
+                refundState: 'Required',
+                version: { increment: 1 },
+              },
+            });
+          }
+          return { recorded: true, soldOut };
+        },
+        { timeout: 20000, maxWait: 15000 },
+      );
+
+      if (result.recorded && result.soldOut.length) {
+        this.log.warn(`Order ${order.id} was paid but ${result.soldOut.join(', ')} had sold out — refund required`);
+        await this.audit(order.id, 'payment.received_oversold', { ...receipt, soldOut: result.soldOut });
+        return { status: 'oversold', order: await this.reload(order.id) };
+      }
+
+      if (result.recorded) {
         await this.audit(order.id, 'payment.received', receipt);
         // The seller hears about an online order once it is paid, not when it is merely started.
         await this.prisma.notification
@@ -241,7 +288,14 @@ export class PaymentsService {
     }
   }
 
-  /** Put back what an unpaid order was holding: its stock and its coupon use. */
+  /**
+   * Close an abandoned unpaid order and give back its coupon use.
+   *
+   * No stock is returned because none was taken: an online order decrements
+   * stock only when the payment is confirmed (see settle). The coupon is
+   * different — its redemption is written at checkout to hold the buyer's
+   * place in a usage limit, so it has to be undone here.
+   */
   private async release(order: { id: string; items: { productId: string; quantity: number }[] }) {
     await this.prisma.$transaction(
       async (tx) => {
@@ -256,10 +310,6 @@ export class PaymentsService {
         });
         if (count === 0) return; // paid, or cancelled, in the meantime
 
-        for (const it of order.items) {
-          // updateMany, not update: a product deleted since must not block the release.
-          await tx.product.updateMany({ where: { id: it.productId }, data: { quantity: { increment: it.quantity } } });
-        }
         const redemption = await tx.couponRedemption.findFirst({ where: { orderId: order.id } });
         if (redemption) {
           await tx.couponRedemption.delete({ where: { id: redemption.id } });

@@ -388,8 +388,21 @@ export class CustomersService {
           },
           include: { items: true },
         });
-        for (const r of rows) {
-          await tx.product.update({ where: { id: r.productId }, data: { quantity: { decrement: r.quantity } } });
+        /*
+         * Stock only comes off once the money is real.
+         *
+         * A COD order is confirmed the moment it is placed, so its items leave
+         * the catalogue here. An online order is not. It used to decrement
+         * stock as a reservation, so a buyer who closed the UPI page — or
+         * cancelled — quietly took items out of the seller's stock, and the
+         * seller watched their count fall for orders that were never paid.
+         * Online orders decrement in payments.service settle(), when the
+         * gateway confirms the payment.
+         */
+        if (method === 'cod') {
+          for (const r of rows) {
+            await tx.product.update({ where: { id: r.productId }, data: { quantity: { decrement: r.quantity } } });
+          }
         }
 
         // Redemption is recorded inside the same transaction as the order, so
@@ -491,7 +504,11 @@ export class CustomersService {
     if (!order) throw new NotFoundException('Order not found');
     if (order.status === 'Cancelled') throw new BadRequestException('This order is already cancelled.');
 
-    const restock = !['Delivered', 'Completed'].includes(order.status);
+    /*
+     * Stock is only given back if it was ever taken: an unpaid online order
+     * never decremented it, and goods already with the customer are gone.
+     */
+    const restock = !['Delivered', 'Completed', 'PendingPayment'].includes(order.status);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (restock) {

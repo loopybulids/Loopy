@@ -27,7 +27,7 @@ export default function CheckoutPage() {
   const [recheck, setRecheck] = useState(0);
   const [payState, setPayState] = useState<null | {
     orderId: string;
-    status: 'checking' | 'pending' | 'expired' | 'mismatch' | 'late' | 'cancelled' | 'error';
+    status: 'checking' | 'pending' | 'expired' | 'mismatch' | 'late' | 'cancelled' | 'oversold' | 'error';
     message?: string;
   }>(null);
   const [shipping, setShipping] = useState<any>(null);
@@ -133,7 +133,7 @@ export default function CheckoutPage() {
           setPlaced(r.order);
           return;
         }
-        if (r?.status === 'mismatch' || r?.status === 'late' || r?.status === 'cancelled') {
+        if (r?.status === 'mismatch' || r?.status === 'late' || r?.status === 'cancelled' || r?.status === 'oversold') {
           setPayState({ orderId: id, status: r.status });
           return;
         }
@@ -234,12 +234,14 @@ export default function CheckoutPage() {
     const heading = waiting ? 'Confirming your payment…'
       : status === 'expired' ? 'Payment not completed'
       : status === 'mismatch' ? 'The amount didn’t match'
+      : status === 'oversold' ? 'Sold out while you were paying'
       : status === 'late' ? 'Payment received late'
       : status === 'cancelled' ? 'This order was cancelled'
       : 'Payment needs attention';
     const detail = waiting ? (payState.message || 'This usually takes a few seconds after you pay in your UPI app. Keep this page open.')
       : status === 'expired' ? 'The payment window closed before a payment arrived. You have not been charged, and your order is saved — you can try again.'
       : status === 'mismatch' ? 'A payment arrived, but not for the full amount. Please don’t pay again — contact the store with the UPI reference from your app.'
+      : status === 'oversold' ? 'Your payment went through, but the last one sold while you were paying. You will be refunded in full — nothing else is needed from you.'
       : status === 'late' ? 'Your payment arrived after the order had timed out, so the items were released. You will be refunded in full — please contact the store if you have questions.'
       : status === 'cancelled' ? 'The payment wasn’t completed in time, so the order was cancelled. You have not been charged — please place it again.'
       : payState.message || 'Something went wrong while checking your payment.';
