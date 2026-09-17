@@ -86,7 +86,10 @@ export default function Payments() {
    * the banner above the panel already says it is pending.
    */
   const feed: {
-    id: string; at: number; ref: string; label: string; amount: number; out: boolean; note?: string;
+    id: string; at: number; ref: string; label: string; amount: number;
+    /** 'in' earns it, 'out' pays it away, 'none' moved nothing at all. */
+    flow: 'in' | 'out' | 'none';
+    note?: string;
   }[] = [
     ...orders
       .filter((o) => ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'].includes(o.status))
@@ -96,7 +99,7 @@ export default function Payments() {
         ref: `#${String(o.id).slice(-6).toUpperCase()}`,
         label: statusLabel(o.status, o.cancelledBy),
         amount: sellerEarns(o),
-        out: false,
+        flow: 'in' as const,
       })),
     ...((wallet?.payouts ?? []) as any[])
       .filter((x) => x.status === 'paid' || x.status === 'rejected')
@@ -106,7 +109,10 @@ export default function Payments() {
         ref: x.status === 'paid' ? 'Payout to your account' : 'Payout rejected',
         label: x.status === 'paid' ? 'Paid out' : 'Rejected',
         amount: x.amount,
-        out: x.status === 'paid',
+        // A rejected payout is not income: nothing moved, so it carries no
+        // sign. It was rendering as a green "+₹199", which read as money
+        // arriving at the very moment a withdrawal had been refused.
+        flow: x.status === 'paid' ? ('out' as const) : ('none' as const),
         note: x.note || undefined,
       })),
   ].sort((a, b) => b.at - a.at);
@@ -219,16 +225,15 @@ export default function Payments() {
                     {/* The transfer reference, on the row it belongs to. */}
                     {t.note && (
                       <div className="mt-0.5 break-all font-mono text-[11.5px] text-faint">
-                        {t.out ? `UTR ${t.note}` : t.note}
+                        {t.flow === 'out' ? `UTR ${t.note}` : t.note}
                       </div>
                     )}
                   </div>
                   <div className="shrink-0 text-right">
-                    {/* Out is written with a minus and in navy, not green: a
-                        withdrawal is not earnings, and the sign is the fastest
-                        way to read which way the money went. */}
-                    <div className={`font-bold ${t.out ? 'text-navy' : 'text-green-600'}`}>
-                      {t.out ? '−' : '+'}{money(t.amount)}
+                    {/* The sign is the fastest way to read which way money
+                        went, so only entries that moved money carry one. */}
+                    <div className={`font-bold ${t.flow === 'out' ? 'text-navy' : t.flow === 'none' ? 'text-faint' : 'text-green-600'}`}>
+                      {t.flow === 'out' ? '−' : t.flow === 'in' ? '+' : ''}{money(t.amount)}
                     </div>
                     <div className="text-[12px] text-faint">{t.label}</div>
                   </div>
