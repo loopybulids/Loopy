@@ -19,10 +19,10 @@ export type SettleStatus = 'paid' | 'pending' | 'expired' | 'mismatch' | 'late' 
  * The order is created first, as PendingPayment. It holds a coupon use, but no
  * stock: nothing leaves the catalogue until the money is confirmed. A
  * FamGateway session is then opened for the order total and the buyer pays on
- * the gateway's hosted UPI page. Only `settle()` can make the order Paid —
- * and it is what decrements the stock, and it does so only after FamGateway itself confirms the money
- * arrived — whichever way the news reaches us first: the buyer coming back
- * from checkout, or the gateway's webhook.
+ * the gateway's hosted UPI page. Only `settle()` can make the order Paid, and
+ * only once FamGateway itself confirms the money arrived — whichever way that
+ * news reaches us first, the buyer coming back from checkout or the gateway's
+ * webhook. Taking the stock is part of the same step.
  *
  * The gateway's order id is kept in `Order.razorpayOrderId`. That column was
  * always "the payment provider's order id"; only the provider changed, and
