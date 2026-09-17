@@ -249,6 +249,20 @@ export default function TrackOrders() {
                         />
                       )}
 
+                      {/*
+                        The store's details, before the irreversible button
+                        rather than after it. Plenty of cancellations are really
+                        questions — a wrong size, a slow delivery, an address to
+                        change — and a seller can fix those, where a cancelled
+                        order cannot be undone.
+                      */}
+                      <StoreContact
+                        seller={o.seller}
+                        orderId={o.id}
+                        className="mt-2.5 border-t border-rose/20 pt-2.5"
+                        lead="Would the store be able to help instead? Message"
+                      />
+
                       <div className="mt-2.5 flex gap-2">
                         <button
                           onClick={() => cancel(o.id)}
@@ -310,7 +324,13 @@ export default function TrackOrders() {
  * mean. Renders nothing at all when the seller published no details, rather
  * than an empty "Contact ... at".
  */
-function StoreContact({ seller, orderId, className = '' }: { seller: any; orderId?: string; className?: string }) {
+function StoreContact({ seller, orderId, className = '', lead }: {
+  seller: any;
+  orderId?: string;
+  className?: string;
+  /** Opening words before the links. Defaults to "Contact <store> at". */
+  lead?: string;
+}) {
   const store = seller?.storeName || 'the store';
   const ref = orderId ? `#${String(orderId).slice(-6).toUpperCase()}` : '';
 
@@ -333,7 +353,7 @@ function StoreContact({ seller, orderId, className = '' }: { seller: any; orderI
 
   return (
     <p className={`text-[12.5px] leading-relaxed text-muted ${className}`}>
-      Contact {store} at{' '}
+      {lead ? `${lead} ` : `Contact ${store} at `}
       {links.map((l, i) => (
         <span key={l.href}>
           {i > 0 && ' · '}
