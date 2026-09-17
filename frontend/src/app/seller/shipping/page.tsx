@@ -55,12 +55,42 @@ export default function Shipping() {
     } catch { /* ignore */ } finally { setSaving(false); }
   };
 
-  const ship = async (id: string) => {
-    // Courier is required by the API — ask before shipping.
-    const courier = window.prompt('Shipping agency / courier name');
-    if (!courier?.trim()) return;
-    setBusyId(id);
-    try { await api.shipOrder(id, courier.trim()); await load(); } catch { /* ignore */ } finally { setBusyId(''); }
+  /*
+   * Shipping details were collected with window.prompt(): one unstyled browser
+   * box titled "loopy-fr.vercel.app says", with nowhere for the tracking
+   * number, and a failure was swallowed silently — the seller pressed OK and
+   * nothing happened. This is the same two fields as a card.
+   */
+  const [shipFor, setShipFor] = useState<any>(null);
+  const [courier, setCourier] = useState('');
+  const [awb, setAwb] = useState('');
+  const [shipErr, setShipErr] = useState('');
+
+  const openShip = (o: any) => {
+    setShipFor(o);
+    setCourier(o.courier || '');
+    setAwb(o.awbNumber || '');
+    setShipErr('');
+  };
+
+  const ship = async () => {
+    const o = shipFor;
+    if (!o) return;
+    if (!courier.trim()) return setShipErr('Enter the courier or agency name.');
+
+    setShipErr('');
+    setBusyId(o.id);
+    try {
+      await api.shipOrder(o.id, courier.trim(), awb.trim() || undefined);
+      setShipFor(null);
+      setCourier('');
+      setAwb('');
+      await load();
+    } catch (e: any) {
+      setShipErr(e?.message || 'Could not mark this as shipped.');
+    } finally {
+      setBusyId('');
+    }
   };
 
   const toShip = orders.filter((o) => o.status === 'Paid' || o.status === 'Accepted');
@@ -125,7 +155,7 @@ export default function Shipping() {
                   <div className="truncate text-[12px] text-faint">{o.buyer?.name || o.customer?.name || 'Customer'} · {money(sellerEarns(o))}</div>
                 </div>
                 <span className={STATUS_CHIP[o.status] || 'chip-navy'}>{o.status}</span>
-                <button onClick={() => ship(o.id)} disabled={busyId === o.id} className="btn-green ml-2 px-3 py-2 text-[12.5px] disabled:opacity-50">
+                <button onClick={() => openShip(o)} disabled={busyId === o.id} className="btn-green ml-2 px-3 py-2 text-[12.5px] disabled:opacity-50">
                   {busyId === o.id ? 'Shipping…' : 'Mark shipped'}
                 </button>
               </div>
@@ -135,6 +165,63 @@ export default function Shipping() {
       </Panel>
 
       <p className="mt-4 text-center text-[12px] text-faint">Courier integrations (Shiprocket · Delhivery · Blue Dart) connect in Settings.</p>
+      {shipFor && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-navy/35 p-4 backdrop-blur-sm"
+          onClick={() => setShipFor(null)}
+          role="dialog"
+          aria-label="Shipping details"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] rounded-2xl border border-line bg-white p-5 shadow-2xl">
+            <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-faint">Mark as shipped</div>
+            <div className="mt-0.5 font-display text-[16px] font-bold text-navy">
+              Order #{String(shipFor.id).slice(-6).toUpperCase()}
+            </div>
+            <p className="mt-0.5 text-[12px] text-muted">
+              {shipFor.buyer?.name || shipFor.customer?.name || 'Customer'} · {money(sellerEarns(shipFor))}
+            </p>
+
+            <label className="mt-4 block text-[12px] font-bold uppercase tracking-wide text-faint">
+              Courier / shipping agency
+            </label>
+            <input
+              autoFocus
+              value={courier}
+              onChange={(e) => { setCourier(e.target.value); setShipErr(''); }}
+              placeholder="Delhivery, Blue Dart, India Post…"
+              className="c-input mt-1.5"
+            />
+
+            <label className="mt-3 block text-[12px] font-bold uppercase tracking-wide text-faint">
+              Tracking number <span className="font-semibold normal-case text-muted">(optional)</span>
+            </label>
+            <input
+              value={awb}
+              onChange={(e) => { setAwb(e.target.value.toUpperCase()); setShipErr(''); }}
+              placeholder="e.g. DL5367293468"
+              className="c-input mt-1.5 font-mono text-[13px] uppercase"
+            />
+            <p className="mt-1 text-[11px] text-faint">
+              Letters, numbers and dashes. The buyer is emailed the courier and this number, so they can track the parcel.
+            </p>
+
+            {shipErr && <p className="mt-2.5 text-[12.5px] font-semibold text-rose">{shipErr}</p>}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button onClick={ship} disabled={busyId === shipFor.id} className="btn-green px-4 py-2.5 text-[13px] disabled:opacity-60">
+                {busyId === shipFor.id ? 'Marking…' : 'Mark as shipped'}
+              </button>
+              <button
+                onClick={() => setShipFor(null)}
+                className="rounded-lg px-3 py-2.5 text-[13px] font-semibold text-muted hover:text-navy"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
