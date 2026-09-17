@@ -357,23 +357,20 @@ export default function Landing() {
           </div>
           <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-faint">Follow</div>
-            {/* Only accounts that exist. Facebook, LinkedIn and YouTube sat here
-                as plain text styled to look like links — a footer full of things
-                that do nothing when clicked. */}
             <ul className="mt-4 space-y-2.5 text-[13.5px] text-muted">
               <li>
                 <a
                   href="https://www.instagram.com/loopynow"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 transition-colors hover:text-navy"
+                  className="inline-flex items-center gap-1.5 transition-colors hover:text-navy"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-                    <rect x="3" y="3" width="18" height="18" rx="5" />
-                    <circle cx="12" cy="12" r="4" />
-                    <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+                    <circle cx="12" cy="12" r="3.9" />
+                    <circle cx="17.3" cy="6.7" r="1.15" fill="currentColor" stroke="none" />
                   </svg>
-                  @loopynow
+                  Instagram
                 </a>
               </li>
             </ul>
