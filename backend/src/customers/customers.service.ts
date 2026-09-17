@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { verifyGoogleIdToken } from '../auth/google-verify';
-import { sendMail, verificationEmail } from '../mail/mailer';
+import { cancelRequestEmail, sendMail, verificationEmail } from '../mail/mailer';
 import { computeAmounts } from '../common/money';
 import { describeCoupon, discountFor, normalizeCode } from '../common/coupons';
 import { PaymentsService } from '../payments/payments.service';
@@ -479,7 +479,14 @@ export class CustomersService {
        */
       this.prisma.seller.findUnique({
         where: { id: sellerId },
-        select: { storeName: true, contactEmail: true, contactPhone: true, whatsapp: true, instagram: true },
+        select: {
+          storeName: true, contactEmail: true, contactPhone: true, whatsapp: true, instagram: true,
+          // Last resort. Most stores have published nothing at all, and a buyer
+          // who needs to cancel is then left with no route whatsoever — worse
+          // than showing the address the seller signed up with, which is a
+          // business address in all but name.
+          user: { select: { email: true } },
+        },
       }),
     ]);
 
@@ -507,6 +514,60 @@ export class CustomersService {
    * order is Delivered or Completed the items are physically gone, so putting
    * them back would oversell the catalogue.
    */
+  /**
+   * Ask the store to cancel an order.
+   *
+   * Buyers no longer cancel orders themselves. A seller may have already
+   * packed or posted the parcel, and the outcome a buyer actually wants —
+   * cancelled, or a different size, or a changed address — is usually a
+   * conversation rather than a button. This carries their message to the
+   * store's inbox and also drops it in their console, so the request survives
+   * mail being down or an address going stale.
+   */
+  async requestCancellation(user: any, orderId: string, message: string) {
+    const { customerId } = this.assertCustomer(user);
+    const text = String(message || '').trim();
+    if (!text) throw new BadRequestException('Please write a short message for the store.');
+    if (text.length > 1000) throw new BadRequestException('Please keep your message under 1000 characters.');
+
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, customerId },
+      include: { items: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (['Cancelled', 'Refunded'].includes(order.status)) {
+      throw new BadRequestException('This order is already cancelled.');
+    }
+
+    const [seller, customer] = await Promise.all([
+      this.prisma.seller.findUnique({
+        where: { id: order.sellerId },
+        select: { storeName: true, contactEmail: true, user: { select: { email: true } } },
+      }),
+      this.prisma.customer.findUnique({ where: { id: customerId }, select: { name: true, email: true } }),
+    ]);
+
+    // The console copy goes in first: it is the one that cannot bounce.
+    await this.prisma.notification.create({
+      data: {
+        sellerId: order.sellerId,
+        type: 'cancel_request',
+        title: 'Cancellation requested ✕',
+        body: `${customer?.name || 'A customer'} asked to cancel #${order.id.slice(-6).toUpperCase()}: ${text.slice(0, 200)}`,
+        link: '/seller/orders',
+      },
+    }).catch(() => { /* a notification must never sink the request */ });
+
+    const to = seller?.contactEmail || seller?.user?.email;
+    let emailed = false;
+    if (to) {
+      const m = cancelRequestEmail(order, seller?.storeName, { name: customer?.name, email: customer?.email }, text);
+      emailed = await sendMail(to, m.subject, m.html, m.text).catch(() => false);
+    }
+
+    return { sent: true, emailed, store: seller?.storeName || null };
+  }
+
   async cancelOrder(user: any, orderId: string, reason?: string) {
     const { customerId } = this.assertCustomer(user);
     const order = await this.prisma.order.findFirst({

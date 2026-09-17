@@ -118,6 +118,17 @@ export default function SellerProfile() {
       </SettingsSection>
 
       <SettingsSection icon={<Verified size={15} />} title="Contact" sub="How buyers reach you. Shown on your storefront.">
+        {/* Most stores leave all four of these empty, and then a shopper who
+            needs to cancel or ask about an order has nowhere to turn. */}
+        {!p.contactEmail && !p.contactPhone && !p.whatsapp && !p.instagram && (
+          <div className="border-b border-line bg-amber-soft/40 px-4 py-3">
+            <div className="text-[13px] font-bold text-navy">Buyers can’t reach you yet</div>
+            <p className="mt-0.5 text-[12px] leading-snug text-muted">
+              Add at least one — WhatsApp is the one shoppers use most. Until then, anyone who needs to cancel or ask
+              about an order is shown your account email instead.
+            </p>
+          </div>
+        )}
         <SettingsRow label="Email">
           <input value={p.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} placeholder="hello@store.com" className="c-input" />
         </SettingsRow>

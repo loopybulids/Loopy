@@ -7,29 +7,24 @@ import { custApi, getCust } from '@/lib/customer';
 import AccountShell from '@/components/store/AccountShell';
 import OrderDetail from '@/components/store/OrderDetail';
 
-const OTHER = 'Other';
-/** Preset cancellation reasons — the seller sees whichever is chosen. */
-/** What a buyer can still cancel themselves — mirrors BUYER_CANCELLABLE on the server. */
-const CANCELLABLE = ['PendingPayment', 'Paid', 'Accepted'];
-
-const REASONS = [
-  'Ordered by mistake',
-  'Changed my mind',
-  'Found a better price elsewhere',
-  'Delivery is taking too long',
-  'Item no longer needed',
-  'Wrong size or variant selected',
-  OTHER,
-];
+/**
+ * Where asking the store to cancel still makes sense — anything that has not
+ * reached the customer. A tick-list of reasons used to stand here, which asked
+ * the buyer to classify themselves and told the seller almost nothing; a
+ * sentence in their own words is more use to both.
+ */
+const CANCELLABLE = ['PendingPayment', 'Paid', 'Accepted', 'Shipped'];
 
 export default function TrackOrders() {
   const { username } = useParams<{ username: string }>();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [confirming, setConfirming] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState<string | null>(null);
-  const [reason, setReason] = useState('');
-  const [note, setNote] = useState('');
+  // Which order's "ask the store" card is open, what they have typed, and
+  // which request has been sent (with whether the email actually left).
+  const [asking, setAsking] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState<string | null>(null);
+  const [sent, setSent] = useState<{ id: string; emailed: boolean; store: string | null } | null>(null);
   const [err, setErr] = useState('');
 
   // Rating form: which order is open, and what has been picked so far.
@@ -64,22 +59,21 @@ export default function TrackOrders() {
     }
   };
 
-  const cancel = async (id: string) => {
-    const final = reason === OTHER ? note.trim() : reason;
-    if (!reason) return setErr('Please choose a reason.');
-    if (reason === OTHER && !final) return setErr('Please tell us why you’re cancelling.');
+  const askToCancel = async (id: string) => {
+    const text = message.trim();
+    if (!text) return setErr('Please write a short message for the store.');
 
     setErr('');
-    setCancelling(id);
+    setSending(id);
     try {
-      const updated = await custApi.cancelOrder(username, id, final);
-      setOrders((list) => list.map((o) => (o.id === id ? { ...o, ...updated } : o)));
-      setConfirming(null);
-      setReason(''); setNote('');
+      const r = await custApi.requestCancellation(username, id, text);
+      setSent({ id, emailed: !!r?.emailed, store: r?.store || null });
+      setAsking(null);
+      setMessage('');
     } catch (e: any) {
-      setErr(e?.message || 'Could not cancel this order.');
+      setErr(e?.message || 'Could not send your message.');
     } finally {
-      setCancelling(null);
+      setSending(null);
     }
   };
 
@@ -215,63 +209,59 @@ export default function TrackOrders() {
 
               {CANCELLABLE.includes(o.status) && (
                 <div className="mt-4 border-t border-line pt-3.5">
-                  {confirming === o.id ? (
-                    <div className="rounded-xl border border-rose/30 bg-rose-soft/40 p-3.5">
-                      <p className="text-[12.5px] font-semibold text-navy">
-                        Why are you cancelling this order?
+                  {sent?.id === o.id ? (
+                    <div className="rounded-xl border border-green/30 bg-green-soft/40 p-3.5">
+                      <p className="text-[13px] font-bold text-navy">Message sent</p>
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
+                        {sent.store || 'The store'} has your request and will confirm the cancellation. The order stays
+                        open until they do{sent.emailed ? ', and a copy is in their inbox' : ''}.
                       </p>
-                      <p className="mt-0.5 text-[11.5px] text-muted">The seller will see your reason.</p>
-
-                      <div className="mt-2.5 space-y-1.5">
-                        {REASONS.map((r) => (
-                          <label key={r} className={`flex cursor-pointer items-center gap-2 rounded-lg border bg-white px-3 py-2 text-[13px] transition-colors ${reason === r ? 'border-rose text-navy' : 'border-line text-muted hover:text-navy'}`}>
-                            <input
-                              type="radio"
-                              name={`cancel-${o.id}`}
-                              checked={reason === r}
-                              onChange={() => { setReason(r); setErr(''); }}
-                              className="accent-rose"
-                            />
-                            {r}
-                          </label>
-                        ))}
-                      </div>
-
-                      {reason === OTHER && (
-                        <textarea
-                          value={note}
-                          onChange={(e) => setNote(e.target.value)}
-                          rows={3}
-                          maxLength={300}
-                          autoFocus
-                          placeholder="Tell the seller why you're cancelling…"
-                          className="c-input mt-2 text-[13px]"
-                        />
+                      {!sent.emailed && (
+                        <p className="mt-1.5 text-[12px] font-semibold text-amber">
+                          We couldn’t email them just now — it is in their Loopy console, but do message them directly too.
+                        </p>
                       )}
+                      <StoreContact seller={o.seller} orderId={o.id} className="mt-2" lead="Follow up with them —" />
+                    </div>
+                  ) : asking === o.id ? (
+                    <div className="rounded-xl border border-line bg-paper/70 p-3.5">
+                      <p className="text-[13px] font-bold text-navy">
+                        Ask {o.seller?.storeName || 'the store'} to cancel this order
+                      </p>
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
+                        The store cancels orders, so they can check whether yours has already been packed or posted —
+                        and often fix what is wrong instead. Write to them below, or reach them directly.
+                      </p>
 
-                      {/*
-                        The store's details, before the irreversible button
-                        rather than after it. Plenty of cancellations are really
-                        questions — a wrong size, a slow delivery, an address to
-                        change — and a seller can fix those, where a cancelled
-                        order cannot be undone.
-                      */}
                       <StoreContact
                         seller={o.seller}
                         orderId={o.id}
-                        className="mt-2.5 border-t border-rose/20 pt-2.5"
-                        lead="Would the store be able to help instead? Message"
+                        className="mt-2 border-t border-line pt-2"
+                        lead="Message them directly —"
                       />
 
-                      <div className="mt-2.5 flex gap-2">
+                      <textarea
+                        autoFocus
+                        rows={3}
+                        maxLength={1000}
+                        value={message}
+                        onChange={(e) => { setMessage(e.target.value); setErr(''); }}
+                        placeholder={`Hi, please cancel order #${String(o.id).slice(-6).toUpperCase()} — `}
+                        className="c-input mt-2.5 text-[13px]"
+                      />
+
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <button
-                          onClick={() => cancel(o.id)}
-                          disabled={cancelling === o.id}
-                          className="rounded-lg bg-rose px-4 py-2 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                          onClick={() => askToCancel(o.id)}
+                          disabled={sending === o.id}
+                          className="btn-green px-4 py-2 text-[13px] disabled:opacity-60"
                         >
-                          {cancelling === o.id ? 'Cancelling…' : 'Yes, cancel order'}
+                          {sending === o.id ? 'Sending…' : 'Send to the store'}
                         </button>
-                        <button onClick={() => { setConfirming(null); setErr(''); setReason(''); setNote(''); }} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy">
+                        <button
+                          onClick={() => { setAsking(null); setErr(''); setMessage(''); }}
+                          className="rounded-lg px-3 py-2 text-[13px] font-semibold text-muted hover:text-navy"
+                        >
                           Keep order
                         </button>
                       </div>
@@ -279,7 +269,7 @@ export default function TrackOrders() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => { setConfirming(o.id); setErr(''); setReason(''); setNote(''); }}
+                      onClick={() => { setAsking(o.id); setErr(''); setMessage(''); }}
                       className="text-[12.5px] font-semibold text-rose hover:underline"
                     >
                       Cancel this order
@@ -299,7 +289,7 @@ export default function TrackOrders() {
                 <div className="mt-4 border-t border-line pt-3.5">
                   <p className="text-[12.5px] leading-relaxed text-muted">
                     Need to cancel or return this order?{' '}
-                    {o.status === 'Shipped' ? 'It has already been dispatched' : 'It has been delivered'}, so{' '}
+                    It has been delivered, so{' '}
                     {o.seller?.storeName || 'the store'} arranges that with you directly.
                   </p>
                   <StoreContact seller={o.seller} orderId={o.id} className="mt-1.5" />
@@ -349,7 +339,27 @@ function StoreContact({ seller, orderId, className = '', lead }: {
     handle && { label: `@${handle}`, href: `https://instagram.com/${handle}` },
   ].filter(Boolean) as { label: string; href: string }[];
 
-  if (!links.length) return null;
+  /*
+   * Nothing published. Rather than showing no way to reach the store at all,
+   * fall back to the address the seller registered with — labelled plainly, so
+   * a buyer is not misled into thinking it is a support desk.
+   */
+  if (!links.length) {
+    const fallback = seller?.user?.email;
+    if (!fallback) return null;
+    return (
+      <p className={`text-[12.5px] leading-relaxed text-muted ${className}`}>
+        {lead ? `${lead} ` : `Contact ${store} at `}
+        <a
+          href={`mailto:${fallback}${ref ? `?subject=${encodeURIComponent(`Order ${ref}`)}` : ''}`}
+          className="font-semibold text-green-600 hover:underline"
+        >
+          {fallback}
+        </a>
+        <span className="text-faint"> — the store hasn’t published a support contact.</span>
+      </p>
+    );
+  }
 
   return (
     <p className={`text-[12.5px] leading-relaxed text-muted ${className}`}>

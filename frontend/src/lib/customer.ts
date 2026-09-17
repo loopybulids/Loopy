@@ -125,6 +125,12 @@ export const custApi = {
       body: JSON.stringify({ code, itemsSubtotal }),
     }),
   orders: (u: string) => custReq(u, '/customer/orders'),
+  /**
+   * Ask the store to cancel an order. Reaches the seller's inbox and their
+   * console — see customers.service requestCancellation.
+   */
+  requestCancellation: (u: string, id: string, message: string) =>
+    custReq(u, `/customer/orders/${id}/cancel-request`, { method: 'POST', body: JSON.stringify({ message }) }),
   cancelOrder: (u: string, id: string, reason?: string) =>
     custReq(u, `/customer/orders/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };

@@ -92,6 +92,13 @@ export class CustomersController {
   @Get('customer/orders')
   orders(@Req() req: any) { return this.customers.getOrders(req.user); }
 
+  /** A buyer's message asking the store to cancel — emailed to the seller. */
+  @UseGuards(JwtAuthGuard)
+  @Post('customer/orders/:id/cancel-request')
+  requestCancellation(@Req() req: any, @Param('id') id: string, @Body() body: { message?: string }) {
+    return this.customers.requestCancellation(req.user, id, body?.message || '');
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('customer/orders/:id/cancel')
   cancelOrder(@Req() req: any, @Param('id') id: string, @Body() body: { reason?: string }) {

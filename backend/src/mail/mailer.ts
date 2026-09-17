@@ -153,6 +153,50 @@ export function orderRejectedEmail(order: any, storeName?: string, reason?: stri
   };
 }
 
+/** Escape anything a person typed before it goes into HTML mail. */
+function esc(v: string) {
+  return String(v).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
+  )[c]);
+}
+
+/**
+ * A buyer asking the store to cancel an order.
+ *
+ * Their address is quoted in the body rather than used as the From header:
+ * mail sent as the buyer would fail this domain's SPF and land in spam, so the
+ * seller replies to the address written here instead.
+ *
+ * The message is escaped — it is typed by a member of the public and goes
+ * straight into an HTML email.
+ */
+export function cancelRequestEmail(
+  order: any,
+  storeName: string | undefined,
+  from: { name?: string | null; email?: string | null },
+  message: string,
+) {
+  const who = from.name || 'A customer';
+  const reply = from.email
+    ? `<a href="mailto:${esc(from.email)}?subject=${encodeURIComponent(`Order #${ref(order)}`)}">${esc(from.email)}</a>`
+    : 'them';
+
+  return {
+    subject: `Cancellation requested — order #${ref(order)}`,
+    text:
+      `${who} has asked to cancel order #${ref(order)}.\n\n"${message}"\n\n` +
+      `Reply to ${from.email || 'the customer'} to sort it out. ` +
+      `If you agree, reject the order in your Loopy console so the money goes back.`,
+    html: shell(
+      `${esc(who)} wants to cancel order #${ref(order)}`,
+      `<b>Their message</b><br><i>${esc(message).replace(/\n/g, '<br>')}</i>
+       <br><br>Reply to ${reply} to sort it out. If you agree, reject the order in your Loopy console so the
+       money goes back to them.`,
+      summary(order),
+    ),
+  };
+}
+
 export function verificationEmail(code: string, storeName?: string) {
   const who = storeName ? ` for ${storeName}` : '';
   return {
