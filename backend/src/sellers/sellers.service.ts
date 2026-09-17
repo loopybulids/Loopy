@@ -2,8 +2,33 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { sellerReceivableOf } from '../common/money';
 import { releasedOrderIds } from '../common/funds';
+import { toCsv } from '../common/csv';
+import { groupByBucket, istDateTime, parseRange, rangeSlug } from '../common/date-range';
 
 const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
+
+const SELLER_EXPORTS = ['orders', 'summary', 'payouts', 'products'] as const;
+
+/**
+ * How a stored `paymentId` reads in a spreadsheet.
+ *
+ * `online:<method>` on its own is the method the buyer chose, written when the
+ * order was created — only a confirmed payment appends the transaction id, so
+ * a bare value means no money arrived. Same rule as the order screens.
+ */
+function payLabel(paymentId: string | null) {
+  const p = String(paymentId || '');
+  if (p === 'cod') return 'Cash on delivery';
+  if (/^online:[^:]+:.+/.test(p)) return `Paid online (${(p.split(':')[1] || '').toUpperCase()})`;
+  if (p.startsWith('online')) return 'Not confirmed';
+  return p || '—';
+}
+
+/** The gateway's transaction id and UTR, when there is a real payment. */
+function payReference(paymentId: string | null) {
+  const parts = String(paymentId || '').split(':');
+  return parts.length > 2 ? parts.slice(2).join(' · ') : '';
+}
 
 /**
  * Just enough of a Prisma client to read the wallet, so the same code can run
@@ -658,6 +683,129 @@ export class SellersService {
    * Admins still see unpaid orders — that is where a payment that arrived but
    * was not recorded gets sorted out.
    */
+  /**
+   * A seller's own data as CSV, for a period.
+   *
+   * Every query filters on `sellerId`, so no dataset can reach another store's
+   * rows. Built on the same helpers as the admin exports (common/csv and
+   * common/date-range) — Excel-safe quoting and encoding, and IST day
+   * boundaries rather than the server's.
+   *
+   * The platform fee has no column here on purpose: the buyer is charged it on
+   * top and it never reaches the seller, so the figure that belongs in their
+   * spreadsheet is what they receive.
+   */
+  async exportData(sellerId: string, dataset: string, from?: string, to?: string) {
+    if (!(SELLER_EXPORTS as readonly string[]).includes(dataset)) {
+      throw new BadRequestException(`Unknown export "${dataset}". Choose one of: ${SELLER_EXPORTS.join(', ')}.`);
+    }
+
+    const earliest = from === 'all'
+      ? (await this.prisma.order.findFirst({ where: { sellerId }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }))?.createdAt
+      : null;
+    const range = parseRange(from, to, { defaultDays: 30, earliest });
+    const period = { gte: range.start, lt: range.end };
+    let headers: string[] = [];
+    let rows: unknown[][] = [];
+
+    if (dataset === 'orders') {
+      // Unpaid checkouts are left out for the same reason they are kept off the
+      // orders screen: they are not sales, and half of them never will be.
+      const orders = await this.prisma.order.findMany({
+        where: { sellerId, createdAt: period, status: { not: 'PendingPayment' } },
+        orderBy: { createdAt: 'asc' },
+        include: { items: { select: { title: true, quantity: true } } },
+      });
+      headers = [
+        'Order ID', 'Placed (IST)', 'Status', 'Customer', 'Phone', 'Items', 'Units',
+        'Items total (₹)', 'Discount (₹)', 'Coupon', 'Shipping (₹)', 'You receive (₹)',
+        'Payment', 'Payment reference', 'Courier', 'Tracking number',
+      ];
+      rows = orders.map((o) => [
+        o.id, istDateTime(o.createdAt), o.status, o.buyerName, o.buyerPhone,
+        o.items.map((i) => `${i.title} × ${i.quantity}`).join('; '),
+        o.items.reduce((n, i) => n + i.quantity, 0),
+        o.itemsAmount, o.discountAmount || 0, o.couponCode, o.shippingCharge,
+        sellerReceivableOf([o]), payLabel(o.paymentId), payReference(o.paymentId),
+        o.courier, o.awbNumber,
+      ]);
+    } else if (dataset === 'summary') {
+      const orders = await this.prisma.order.findMany({
+        where: { sellerId, createdAt: period, status: { not: 'PendingPayment' } },
+        select: {
+          status: true, itemsAmount: true, shippingCharge: true, discountAmount: true,
+          buyerId: true, buyerName: true, buyerPhone: true, createdAt: true,
+        },
+      });
+      // The total's Customers is a distinct count across the whole period, not
+      // the sum of the column — one shopper ordering on three days is one
+      // customer.
+      const line = (label: string, os: typeof orders) => {
+        const paid = os.filter((o) => PAID.includes(o.status));
+        return [
+          label,
+          os.length,
+          paid.length,
+          os.filter((o) => ['Delivered', 'Completed'].includes(o.status)).length,
+          os.filter((o) => o.status === 'Cancelled').length,
+          paid.reduce((n, o) => n + o.itemsAmount, 0),
+          paid.reduce((n, o) => n + (o.discountAmount || 0), 0),
+          paid.reduce((n, o) => n + o.shippingCharge, 0),
+          sellerReceivableOf(paid),
+          new Set(os.map((o) => o.buyerId || o.buyerPhone || o.buyerName || 'guest')).size,
+        ];
+      };
+      headers = [
+        range.bucket === 'day' ? 'Date' : 'Month', 'Orders', 'Paid', 'Delivered', 'Cancelled',
+        'Items total (₹)', 'Discounts (₹)', 'Shipping (₹)', 'You receive (₹)', 'Customers',
+      ];
+      rows = groupByBucket(orders, range).map(({ bucket, rows: os }) => line(bucket.key, os));
+      rows.push(line('Total', orders));
+    } else if (dataset === 'payouts') {
+      const payouts = await this.prisma.payout.findMany({
+        where: { sellerId, createdAt: period },
+        orderBy: { createdAt: 'asc' },
+      });
+      headers = ['Payout ID', 'Requested (IST)', 'Amount (₹)', 'Status', 'Decided (IST)', 'Reference / reason'];
+      rows = payouts.map((x) => [
+        x.id, istDateTime(x.createdAt), x.amount,
+        x.status === 'paid' ? 'Paid' : x.status === 'rejected' ? 'Rejected' : 'Awaiting approval',
+        istDateTime(x.decidedAt), x.note,
+      ]);
+    } else {
+      const [products, items] = await Promise.all([
+        this.prisma.product.findMany({
+          where: { sellerId },
+          orderBy: { createdAt: 'asc' },
+          // Explicit select: the row also holds base64 images, which have no
+          // place in a spreadsheet and would make this enormous.
+          select: { id: true, title: true, category: true, price: true, quantity: true, isActive: true, createdAt: true },
+        }),
+        this.prisma.orderItem.findMany({
+          where: { order: { sellerId, createdAt: period, status: { in: PAID } } },
+          select: { productId: true, quantity: true, unitPrice: true },
+        }),
+      ]);
+      const sold = new Map<string, { units: number; value: number }>();
+      for (const it of items) {
+        const acc = sold.get(it.productId) || { units: 0, value: 0 };
+        acc.units += it.quantity;
+        acc.value += it.unitPrice * it.quantity;
+        sold.set(it.productId, acc);
+      }
+      headers = [
+        'Product ID', 'Title', 'Category', 'Price (₹)', 'Stock', 'Listed', 'Created (IST)',
+        'Units sold (period)', 'Sales value (period) (₹)',
+      ];
+      rows = products.map((pr) => [
+        pr.id, pr.title, pr.category, pr.price, pr.quantity, pr.isActive, istDateTime(pr.createdAt),
+        sold.get(pr.id)?.units || 0, sold.get(pr.id)?.value || 0,
+      ]);
+    }
+
+    return { filename: `loopy-${dataset}_${rangeSlug(range)}.csv`, csv: toCsv(headers, rows), rows: rows.length };
+  }
+
   async getSellerOrders(sellerId: string) {
     const orders = await this.prisma.order.findMany({
       where: { sellerId, status: { not: 'PendingPayment' } },

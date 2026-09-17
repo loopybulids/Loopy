@@ -9,6 +9,13 @@ import { describeCoupon, discountFor, normalizeCode } from '../common/coupons';
 import { PaymentsService } from '../payments/payments.service';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Statuses a buyer may still cancel on their own — everything before the
+ * parcel leaves. After dispatch it is a return, which the store has to
+ * arrange.
+ */
+const BUYER_CANCELLABLE = ['PendingPayment', 'Paid', 'Accepted'];
 const MAX_OTP_ATTEMPTS = 5;
 
 function parse(s: string): any[] { try { const v = JSON.parse(s); return Array.isArray(v) ? v : []; } catch { return []; } }
@@ -464,10 +471,15 @@ export class CustomersService {
         include: { items: true },
         orderBy: { createdAt: 'desc' },
       }),
-      // Attached to each order so a cancelled buyer knows who to chase.
+      /*
+       * Attached to each order so a buyer who needs to cancel or return knows
+       * who to reach — every channel the seller published, not just email and
+       * phone. WhatsApp is the one most Indian shoppers actually use, and it
+       * was being collected in the seller's profile and never passed on.
+       */
       this.prisma.seller.findUnique({
         where: { id: sellerId },
-        select: { storeName: true, contactEmail: true, contactPhone: true },
+        select: { storeName: true, contactEmail: true, contactPhone: true, whatsapp: true, instagram: true },
       }),
     ]);
 
@@ -503,6 +515,19 @@ export class CustomersService {
     });
     if (!order) throw new NotFoundException('Order not found');
     if (order.status === 'Cancelled') throw new BadRequestException('This order is already cancelled.');
+    /*
+     * Self-cancelling stops at dispatch, and this is where that becomes true.
+     * The endpoint accepted any status but Cancelled, so a Delivered — even
+     * Completed — order could be cancelled by the buyer after they had the
+     * goods, reversing the seller's earnings for something already shipped.
+     */
+    if (!BUYER_CANCELLABLE.includes(order.status)) {
+      throw new BadRequestException(
+        order.status === 'Shipped'
+          ? 'This order has already been dispatched — please contact the store to arrange a return.'
+          : `An order that is ${order.status.toLowerCase()} can no longer be cancelled here. Please contact the store to arrange a return or refund.`,
+      );
+    }
 
     /*
      * Stock is only given back if it was ever taken: an unpaid online order

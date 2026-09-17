@@ -154,6 +154,8 @@ export const api = {
   updateStoreConfig: (config: any) =>
     req<any>(`/sellers/me/store-config`, { method: 'PUT', body: JSON.stringify({ config }) }),
   myOrders: () => req<any[]>(`/sellers/me/orders`),
+  /** Your own data as a CSV file (`range` from lib/admin-range), as a Blob. */
+  myExport: (dataset: string, range: string) => download(`/sellers/me/export/${dataset}?${range}`),
   myProducts: () => req<any[]>(`/sellers/me/products`),
   myWallet: () => req<any>(`/sellers/me/wallet`),
 

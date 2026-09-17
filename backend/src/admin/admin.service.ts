@@ -374,8 +374,14 @@ export class AdminService {
       amounts: (() => {
         const a = amountsOf(o);
         return {
-          // customer-facing — these three always sum to `total`
+          // Customer-facing: items less the discount, plus shipping and the
+          // fee, always sum to `total`. The discount was missing here, so the
+          // admin's breakdown of a discounted order did not add up to what was
+          // charged — ₹199 + ₹60 + ₹7 shown against a ₹216 total.
           items: a.items,
+          discount: a.discount,
+          netItems: a.netItems,
+          couponCode: o.couponCode,
           shipping: a.shipping,
           platformFee: a.fee,
           total: a.customerTotal,

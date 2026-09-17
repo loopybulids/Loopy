@@ -13,6 +13,20 @@ const REFUND_NEXT: Record<string, string[]> = {
   Refunded: [],
 };
 
+/**
+ * The fee as a percentage of the list price, for this order.
+ *
+ * Read off the order rather than from the current setting: the fee used to be
+ * charged on the discounted amount, so a stored ₹7 on ₹199 of goods is 3.5%
+ * however the rule reads today. One decimal, and none when it is a round
+ * number.
+ */
+function feeRate(a: any): string {
+  if (!a?.items || !a?.platformFee) return '';
+  const pct = (a.platformFee / a.items) * 100;
+  return pct.toFixed(1).replace(/\.0$/, '');
+}
+
 export default function OrderInvestigation() {
   const { id } = useParams<{ id: string }>();
   const [d, setD] = useState<any>(null);
@@ -195,15 +209,24 @@ This cannot be undone. Continue?`
               <Field label="Gateway Ref" value={d.payment.razorpay || '—'} />
             </div>
 
-            {/* Customer-facing lines. These three always sum to the total —
-                platform economics are shown separately below so the breakdown
-                can never appear to disagree with what was charged. */}
+            {/* Customer-facing lines. These sum to the total — platform
+                economics are shown separately below so the breakdown can never
+                appear to disagree with what was charged. */}
             <div className="mt-4 border-t border-hair pt-3">
               <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-pale">What the customer paid</div>
               <div className="space-y-1.5 text-[13px]">
                 <Line label="Items" value={money(d.amounts.items)} />
+                {d.amounts.discount > 0 && (
+                  <Line
+                    label={d.amounts.couponCode ? `Discount · ${d.amounts.couponCode}` : 'Discount'}
+                    value={`−${money(d.amounts.discount)}`}
+                  />
+                )}
                 <Line label="Shipping" value={money(d.amounts.shipping)} />
-                <Line label={`Platform fee (${d.amounts.items ? Math.round((d.amounts.platformFee / d.amounts.items) * 100) : 0}%)`} value={money(d.amounts.platformFee)} />
+                {/* The rate is derived from this order rather than the current
+                    setting: older orders were charged on the discounted amount,
+                    and a fixed "5%" label would misdescribe them. */}
+                <Line label={`Platform fee${feeRate(d.amounts) ? ` (${feeRate(d.amounts)}%)` : ''}`} value={money(d.amounts.platformFee)} />
                 <div className="flex justify-between border-t border-hair pt-1.5 text-[14px] font-bold text-slate">
                   <span>Order total</span><span>{money(d.amounts.total)}</span>
                 </div>
@@ -213,7 +236,10 @@ This cannot be undone. Continue?`
             <div className="mt-4 border-t border-hair pt-3">
               <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-pale">Settlement</div>
               <div className="space-y-1.5 text-[13px]">
-                <Line label="Seller receivable (items + shipping)" value={money(d.amounts.sellerReceivable)} />
+                <Line
+                  label={d.amounts.discount > 0 ? 'Seller receivable (items − discount + shipping)' : 'Seller receivable (items + shipping)'}
+                  value={money(d.amounts.sellerReceivable)}
+                />
                 <Line label="Loopy keeps (platform fee)" value={money(d.amounts.platformFee)} />
                 <Line label="GST on fee (est. 18%)" value={money(d.amounts.gstOnFee)} muted />
               </div>
@@ -221,7 +247,9 @@ This cannot be undone. Continue?`
 
             {/* A stored total that disagrees with its parts is a ledger fault. */}
             {d.amounts.reconciles ? (
-              <p className="mt-3 text-[12px] font-semibold text-accent">✓ Reconciled — total equals items + shipping + fee.</p>
+              <p className="mt-3 text-[12px] font-semibold text-accent">
+                ✓ Reconciled — total equals items{d.amounts.discount > 0 ? ' − discount' : ''} + shipping + fee.
+              </p>
             ) : (
               <p className="mt-3 rounded-lg bg-alert-soft px-3 py-2 text-[12px] font-bold text-alert">
                 ⚠ Ledger mismatch of {money(d.amounts.difference)} — stored total does not equal its components. Do not settle this order until it is corrected.

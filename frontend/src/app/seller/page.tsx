@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
 import { BuyerAvatar, StatCard, StatStrip, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import { AreaTrend } from '@/components/admin/AdminKit';
+import SellerExport from '@/components/SellerExport';
 import { Bag, Check, Eye, Plus, Share, Star, Users, Wallet } from '@/components/icons';
 
 export default function Dashboard() {
@@ -77,6 +78,12 @@ export default function Dashboard() {
         </div>
       ) : (
       <>
+      {/* Your data, downloadable. Sits above the figures rather than in the
+          page header, which no longer has a title row. */}
+      <div className="flex justify-end">
+        <SellerExport />
+      </div>
+
       {/* Money first, three across — the figures a seller opens this page for. */}
       <div className="grid gap-3 sm:grid-cols-3">
         {/* All-time earnings first: it's the number sellers actually look for.

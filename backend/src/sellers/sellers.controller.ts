@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { SellersService } from './sellers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SellerGuard } from '../auth/seller.guard';
@@ -180,6 +180,26 @@ export class SellersController {
   @Post('me/payouts')
   payout(@Req() req: any) {
     return this.sellers.requestPayout(req.user.sellerId);
+  }
+
+  /**
+   * The seller's own data as a CSV file: orders | summary | payouts | products.
+   * `from` / `to` are IST days (YYYY-MM-DD), or from=all.
+   */
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @Get('me/export/:dataset')
+  async exportData(
+    @Req() req: any,
+    @Param('dataset') dataset: string,
+    @Res({ passthrough: true }) res: { setHeader(name: string, value: string): void },
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const out = await this.sellers.exportData(req.user.sellerId, dataset, from, to);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    return out.csv;
   }
 
   // Authenticated seller — save storefront builder config

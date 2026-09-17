@@ -9,6 +9,9 @@ import OrderDetail from '@/components/store/OrderDetail';
 
 const OTHER = 'Other';
 /** Preset cancellation reasons — the seller sees whichever is chosen. */
+/** What a buyer can still cancel themselves — mirrors BUYER_CANCELLABLE on the server. */
+const CANCELLABLE = ['PendingPayment', 'Paid', 'Accepted'];
+
 const REASONS = [
   'Ordered by mistake',
   'Changed my mind',
@@ -206,26 +209,11 @@ export default function TrackOrders() {
                     </p>
                   )}
 
-                  {(o.seller?.contactEmail || o.seller?.contactPhone) && (
-                    <p className="mt-2 border-t border-line pt-2 text-[12.5px] text-muted">
-                      Questions? Contact {o.seller?.storeName || 'the store'} at{' '}
-                      {o.seller?.contactEmail && (
-                        <a href={`mailto:${o.seller.contactEmail}`} className="font-semibold text-green-600 hover:underline">
-                          {o.seller.contactEmail}
-                        </a>
-                      )}
-                      {o.seller?.contactEmail && o.seller?.contactPhone && ' · '}
-                      {o.seller?.contactPhone && (
-                        <a href={`tel:${o.seller.contactPhone}`} className="font-semibold text-green-600 hover:underline">
-                          {o.seller.contactPhone}
-                        </a>
-                      )}
-                    </p>
-                  )}
+                  <StoreContact seller={o.seller} orderId={o.id} className="mt-2 border-t border-line pt-2" />
                 </div>
               )}
 
-              {o.status !== 'Cancelled' && (
+              {CANCELLABLE.includes(o.status) && (
                 <div className="mt-4 border-t border-line pt-3.5">
                   {confirming === o.id ? (
                     <div className="rounded-xl border border-rose/30 bg-rose-soft/40 p-3.5">
@@ -285,10 +273,80 @@ export default function TrackOrders() {
                   )}
                 </div>
               )}
+
+              {/*
+                Past dispatch there is nothing honest to offer but the store's
+                number. A parcel already on its way cannot be unmade from a web
+                page, and the button used to appear on every order — including
+                completed ones — which invited buyers to "cancel" something
+                they already had.
+              */}
+              {!CANCELLABLE.includes(o.status) && !['Cancelled', 'Refunded'].includes(o.status) && (
+                <div className="mt-4 border-t border-line pt-3.5">
+                  <p className="text-[12.5px] leading-relaxed text-muted">
+                    Need to cancel or return this order?{' '}
+                    {o.status === 'Shipped' ? 'It has already been dispatched' : 'It has been delivered'}, so{' '}
+                    {o.seller?.storeName || 'the store'} arranges that with you directly.
+                  </p>
+                  <StoreContact seller={o.seller} orderId={o.id} className="mt-1.5" />
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
     </AccountShell>
+  );
+}
+
+/**
+ * How to reach the store.
+ *
+ * Shown wherever the buyer's own options run out — after a cancellation, and
+ * on anything already dispatched — so the next step is a person rather than a
+ * dead end. Every channel the seller filled in on their profile appears, with
+ * WhatsApp first: it is what most shoppers here actually use, and a tap opens
+ * a chat already quoting the order, so nobody has to explain which one they
+ * mean. Renders nothing at all when the seller published no details, rather
+ * than an empty "Contact ... at".
+ */
+function StoreContact({ seller, orderId, className = '' }: { seller: any; orderId?: string; className?: string }) {
+  const store = seller?.storeName || 'the store';
+  const ref = orderId ? `#${String(orderId).slice(-6).toUpperCase()}` : '';
+
+  // A bare 10-digit Indian number needs its country code for wa.me to work.
+  const waDigits = String(seller?.whatsapp || '').replace(/\D/g, '');
+  const wa = waDigits.length === 10 ? `91${waDigits}` : waDigits;
+  const handle = String(seller?.instagram || '').trim().replace(/^@/, '');
+
+  const links = [
+    wa.length >= 11 && {
+      label: 'WhatsApp',
+      href: `https://wa.me/${wa}${ref ? `?text=${encodeURIComponent(`Hi ${store}, about my order ${ref} —`)}` : ''}`,
+    },
+    seller?.contactPhone && { label: seller.contactPhone, href: `tel:${seller.contactPhone}` },
+    seller?.contactEmail && { label: seller.contactEmail, href: `mailto:${seller.contactEmail}${ref ? `?subject=${encodeURIComponent(`Order ${ref}`)}` : ''}` },
+    handle && { label: `@${handle}`, href: `https://instagram.com/${handle}` },
+  ].filter(Boolean) as { label: string; href: string }[];
+
+  if (!links.length) return null;
+
+  return (
+    <p className={`text-[12.5px] leading-relaxed text-muted ${className}`}>
+      Contact {store} at{' '}
+      {links.map((l, i) => (
+        <span key={l.href}>
+          {i > 0 && ' · '}
+          <a
+            href={l.href}
+            target={l.href.startsWith('http') ? '_blank' : undefined}
+            rel={l.href.startsWith('http') ? 'noreferrer' : undefined}
+            className="font-semibold text-green-600 hover:underline"
+          >
+            {l.label}
+          </a>
+        </span>
+      ))}
+    </p>
   );
 }
