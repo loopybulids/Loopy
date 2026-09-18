@@ -6,6 +6,7 @@ import RedirectAuthed from '@/components/RedirectAuthed';
 import Logo from '@/components/Logo';
 import LoopyIntro from '@/components/LoopyIntro';
 import ShopScene from '@/components/ShopScene';
+import ContactSection from '@/components/ContactSection';
 import LoopyFlow from '@/components/LoopyFlow';
 import { ArrowRight, Bolt, Plus, Share, ShieldLock, Star, Store, Truck } from '@/components/icons';
 
@@ -325,6 +326,8 @@ export default function Landing() {
       </section>
 
       {/* ───── footer ───── */}
+      <ContactSection />
+
       <footer className="border-t border-line">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-10 sm:px-8 sm:py-14 md:grid-cols-[1.5fr_1fr_1fr]">
           <div>

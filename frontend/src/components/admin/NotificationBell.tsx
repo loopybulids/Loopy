@@ -9,7 +9,7 @@ type Tone = 'alert' | 'warn' | 'info';
 
 interface Notice {
   id: string;
-  kind: 'payout' | 'dispute' | 'refund' | 'kyc' | 'review' | 'order';
+  kind: 'payout' | 'dispute' | 'refund' | 'kyc' | 'review' | 'order' | 'support';
   tone: Tone;
   title: string;
   body: string;
@@ -22,7 +22,7 @@ const SEEN_KEY = 'loopy_admin_seen';
 const POLL_MS = 60_000;
 
 const GLYPH: Record<Notice['kind'], IconName> = {
-  payout: 'rupee', dispute: 'alert', refund: 'refund', kyc: 'shield', review: 'star', order: 'bag',
+  payout: 'rupee', dispute: 'alert', refund: 'refund', kyc: 'shield', review: 'star', order: 'bag', support: 'headset',
 };
 const TILE: Record<Tone, string> = {
   alert: 'bg-alert-soft text-alert',

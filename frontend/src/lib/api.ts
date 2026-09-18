@@ -205,6 +205,16 @@ export const api = {
   shipOrder: (id: string, courier: string, awbNumber?: string) =>
     req<any>(`/orders/${id}/ship`, { method: 'POST', body: JSON.stringify({ courier, awbNumber }) }),
 
+  /** Report a platform problem as a seller. Lands in the admin inbox. */
+  sellerReport: (body: { topic: string; subject: string; message: string }) =>
+    req<any>(`/support/seller`, { method: 'POST', body: JSON.stringify(body) }),
+  /** This seller's own reports, and whether each has been resolved. */
+  myReports: () => req<any[]>(`/support/seller`),
+
+  /** Public contact form — emails support. See SupportService.contact. */
+  contact: (body: { name: string; email: string; subject: string; message: string }) =>
+    req<{ sent: boolean; supportEmail: string }>(`/support/contact`, { method: 'POST', body: JSON.stringify(body) }),
+
   // admin (auth required, role=admin)
   adminStats: () => req<any>(`/admin/stats`),
   adminOverview: () => req<any>(`/admin/overview`),
@@ -297,6 +307,10 @@ export const api = {
   approveSeller: (id: string) => req<any>(`/admin/sellers/${id}/approve`, { method: 'POST' }),
   rejectSeller: (id: string) => req<any>(`/admin/sellers/${id}/reject`, { method: 'POST' }),
   adminDisputes: () => req<any[]>(`/admin/disputes`),
+  /** The support inbox: contact-form messages and seller reports. */
+  adminSupportInbox: (range?: string) => req<any>(`/admin/support/inbox${range ? `?${range}` : ''}`),
+  adminSupportDecide: (id: string, action: 'resolve' | 'reopen') =>
+    req<any>(`/admin/support/${id}/${action}`, { method: 'POST' }),
   resolveDispute: (id: string, resolution: 'refunded' | 'released') =>
     req<any>(`/admin/disputes/${id}/resolve`, { method: 'POST', body: JSON.stringify({ resolution }) }),
 };

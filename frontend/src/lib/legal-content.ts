@@ -6,7 +6,7 @@
  * from this file; to change a policy, change the document and regenerate
  * (scratchpad/gen_legal.py) rather than editing a page.
  *
- * 18 Articles, 51 Sections, 179 paragraphs.
+ * 18 Articles, 51 Sections, 178 paragraphs.
  */
 
 export type LegalBlock = { kind: 'p' | 'li'; text: string };
@@ -1208,10 +1208,6 @@ export const LEGAL_SECTIONS: LegalSection[] = [
       {
         "kind": "p",
         "text": "Loopy operated by Zohan Alam, Mumbai, India. Not yet incorporated; see Article 1."
-      },
-      {
-        "kind": "p",
-        "text": "Last updated 18 September 2026. This document is a draft prepared for review and is not legal advice."
       }
     ],
     "subs": []

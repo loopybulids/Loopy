@@ -14,17 +14,20 @@ const REFUND_NEXT: Record<string, string[]> = {
 };
 
 /**
- * The fee as a percentage of the list price, for this order.
+ * How to describe the fee on this order.
  *
  * Read off the order rather than from the current setting: the fee used to be
  * charged on the discounted amount, so a stored ₹7 on ₹199 of goods is 3.5%
- * however the rule reads today. One decimal, and none when it is a round
- * number.
+ * however the rule reads today.
+ *
+ * Small orders pay a flat minimum, where a derived rate would be nonsense —
+ * ₹5 on ₹15 of goods is not "a 33% fee", it is the floor.
  */
-function feeRate(a: any): string {
-  if (!a?.items || !a?.platformFee) return '';
+function feeLabel(a: any): string {
+  if (!a?.items || !a?.platformFee) return 'Platform fee';
+  if (a.platformFee <= 5 && a.items < 100) return 'Platform fee (minimum)';
   const pct = (a.platformFee / a.items) * 100;
-  return pct.toFixed(1).replace(/\.0$/, '');
+  return `Platform fee (${pct.toFixed(1).replace(/\.0$/, '')}%)`;
 }
 
 export default function OrderInvestigation() {
@@ -226,7 +229,7 @@ This cannot be undone. Continue?`
                 {/* The rate is derived from this order rather than the current
                     setting: older orders were charged on the discounted amount,
                     and a fixed "5%" label would misdescribe them. */}
-                <Line label={`Platform fee${feeRate(d.amounts) ? ` (${feeRate(d.amounts)}%)` : ''}`} value={money(d.amounts.platformFee)} />
+                <Line label={feeLabel(d.amounts)} value={money(d.amounts.platformFee)} />
                 <div className="flex justify-between border-t border-hair pt-1.5 text-[14px] font-bold text-slate">
                   <span>Order total</span><span>{money(d.amounts.total)}</span>
                 </div>

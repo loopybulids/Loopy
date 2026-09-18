@@ -31,7 +31,9 @@ export default function CheckoutPage() {
     message?: string;
   }>(null);
   const [shipping, setShipping] = useState<any>(null);
-  const [feePct, setFeePct] = useState<number | null>(null);
+  // The store's fee rule, straight from the API — never assumed here, because
+  // the total shown has to be the total charged.
+  const [feeRule, setFeeRule] = useState<{ pct: number; flat: number; flatBelow: number } | null>(null);
   const [code, setCode] = useState('');
   const [coupon, setCoupon] = useState<any>(null);
   const [couponErr, setCouponErr] = useState('');
@@ -49,7 +51,14 @@ export default function CheckoutPage() {
   useEffect(() => {
     api.getStore(username).then((s: any) => {
       setShipping(s?.shipping || null);
-      setFeePct(s?.platformFeePct ?? null);
+      setFeeRule(
+        s?.platformFee
+          ? s.platformFee
+          : s?.platformFeePct != null
+            // An older API that publishes only the rate.
+            ? { pct: s.platformFeePct, flat: 0, flatBelow: 0 }
+            : null,
+      );
     }).catch(() => {});
   }, [username]);
   useEffect(() => { load(); window.addEventListener('cust-change', load); window.addEventListener('cart-change', () => setCart(getCart(username))); return () => window.removeEventListener('cust-change', load); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -69,12 +78,18 @@ export default function CheckoutPage() {
   // Platform fee, charged on the goods value on top of shipping. Must match
   // computeAmounts() in backend/src/common/money.ts or the total shown here
   // won't be the total charged.
-  // A seller's coupon comes off the goods value. The platform fee is a flat
-  // percentage of the LIST price and is not reduced by it — same order of
-  // operations as computeAmounts() on the server.
+  // A seller's coupon comes off the goods value. The fee is charged on the
+  // LIST price and is not reduced by it — the same order of operations as
+  // computeAmounts() on the server. Small orders pay a flat minimum instead of
+  // a percentage, which is why the rule travels from the API rather than
+  // living here as a number.
   const discount = Math.min(coupon?.discount ?? 0, subtotal);
   const netItems = subtotal - discount;
-  const fee = feePct == null ? null : Math.round((subtotal * feePct) / 100);
+  const fee = feeRule == null
+    ? null
+    : subtotal < feeRule.flatBelow
+      ? Math.round(feeRule.flat)
+      : Math.round((subtotal * feeRule.pct) / 100);
   const total = shipCost == null || fee == null ? null : netItems + shipCost + fee;
   const belowMin = shipping?.minOrderAmount != null && subtotal < shipping.minOrderAmount;
 

@@ -9,9 +9,7 @@ import { exitImpersonation } from '@/lib/impersonate';
 import NotificationsBell from '@/components/NotificationsBell';
 import Logo from '@/components/Logo';
 import StoreSwitcher from '@/components/StoreSwitcher';
-import {
-  Bag, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet,
-} from '@/components/icons';
+import { Bag, Bolt, Cog, Grid, Heart, LogOut, Loop, MessageDots, Plus, Share, Store, Tag, Truck, Verified, Wallet } from '@/components/icons';
 
 /* ───── sidebar tabs (PRD seller modules) ───── */
 const NAV = [
@@ -26,6 +24,7 @@ const NAV = [
   { href: '/seller/payments', label: 'Payments', icon: <Wallet size={18} /> },
   { href: '/seller/discounts', label: 'Discounts', icon: <Tag size={18} /> },
   { href: '/seller/reviews', label: 'Reviews', icon: <MessageDots size={18} /> },
+  { href: '/seller/feedback', label: 'Help & feedback', icon: <Bolt size={18} /> },
   { href: '/seller/profile', label: 'Profile', icon: <Verified size={18} /> },
 ];
 
