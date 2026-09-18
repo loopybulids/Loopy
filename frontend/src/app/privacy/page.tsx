@@ -13,7 +13,7 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('privacy-policy', 'cookie-policy');
+  const sections = legalSections('privacy', 'cookies');
   return (
     <LegalShell
       title="Privacy Policy"

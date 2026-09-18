@@ -1,12 +1,12 @@
 /**
  * Loopy's legal policies, as a single source of truth.
  *
- * Generated from LoopyNow_Legal_Policies.docx — the reviewed policy document —
- * so the site cannot drift from the signed-off wording. Every legal page on the
- * site renders from this file; to change a policy, change it here (or
- * regenerate from an updated document) rather than editing a page.
+ * Generated from Loopy_Legal_Policies.docx — the reviewed policy document — so
+ * the site cannot drift from the signed-off wording. Every legal page renders
+ * from this file; to change a policy, change the document and regenerate
+ * (scratchpad/gen_legal.py) rather than editing a page.
  *
- * 15 sections, 63 subsections.
+ * 18 Articles, 51 Sections, 179 paragraphs.
  */
 
 export type LegalBlock = { kind: 'p' | 'li'; text: string };
@@ -19,93 +19,67 @@ export type LegalSection = {
   subs: LegalSubsection[];
 };
 
-/** Document-level facts shown in the header of every policy page. */
+/** Document-level facts, shown in the header of every policy page. */
 export const LEGAL_META = {
-  site: "https://www.loopynow.shop",
-  contact: "support.loopynow.shop@gmail.com",
-  /** Empty until the policy is formally adopted — the pages say so when it is. */
-  effectiveDate: "",
-  /** Kept verbatim: this is a pre-review draft and the site should not pretend otherwise. */
-  draftNote: "This document is a draft prepared for LoopyNow's MVP stage. It should be reviewed by a qualified lawyer licensed in India before publication, and updated with the registered legal entity name, address, and Grievance Officer details once the business is formally registered.",
+  "site": "https://www.loopynow.shop",
+  "contact": "loopynowshopsupport@gmail.com",
+  "lastUpdated": "18 September 2026",
+  "operators": "Zohan Alam (Founder) and Ankit Sah (Co-Founder) , Subhash Raj (Tech Lead) trading as Loopy from Mumbai, Maharashtra, India",
+  "grievanceOfficer": "Ankit Sah",
+  "structureNote": "This document is structured as numbered Articles and Sections (e.g. Article 6, Section 6.3) for ease of reference and citation.",
+  "blurb": "Every policy that governs the use of Loopy, in one document. It covers who we are, what we do and do not do, how orders and payments work, and how to reach us if something goes wrong."
 };
+
+/**
+ * The document's own plain-language summary for buyers.
+ *
+ * Kept as its own export because it is deliberately not a policy: it says so
+ * itself, and the page has to present it as a summary rather than as terms.
+ */
+export const LEGAL_GLANCE: string[] = [
+  "Loopy is a marketplace, not the Seller. Your contract of sale is with the Seller, not with Loopy (Article 3.1).",
+  "You must be 18 or older to create an account or place an Order (Article 3.2).",
+  "A platform fee of 5% is added at checkout and is not refundable, even if your Order is cancelled or returned (Article 6.2).",
+  "Refunds and cancellations are the Seller's call — except where the product was never delivered, is defective, wrong, or counterfeit, where Loopy will enforce a refund regardless of the Seller's decision (Article 9.2–9.3).",
+  "Sellers are paid roughly 24 hours after your Order is placed. You can still cancel, request a refund or raise a dispute during that window (Article 6.3).",
+  "Loopy does not ship, store or inspect products — delivery timelines and product quality are the Seller's responsibility, not ours (Article 7).",
+  "If something goes wrong, our grievance officer is Ankit Sah, reachable at loopynowshopsupport@gmail.com (Article 11.1)."
+];
 
 export const LEGAL_SECTIONS: LegalSection[] = [
   {
     "n": 1,
-    "id": "definitions-and-interpretation",
-    "title": "Definitions and Interpretation",
-    "intro": [
-      {
-        "kind": "p",
-        "text": "The definitions below apply across every policy in this document unless a specific policy states otherwise. Defined terms are capitalised throughout."
-      }
-    ],
+    "id": "who-operates-loopy",
+    "title": "Who Operates Loopy",
+    "intro": [],
     "subs": [
       {
         "no": "1.1",
-        "title": "Key Terms",
+        "title": "The Operator",
         "blocks": [
           {
-            "kind": "li",
-            "text": "\"Platform\" or \"LoopyNow\" means the website located at https://www.loopynow.shop, together with any associated mobile applications, APIs, and services operated in connection with it."
-          },
-          {
-            "kind": "li",
-            "text": "\"Operator\", \"we\", \"us\", or \"our\" means the operator of the Platform, currently trading as LoopyNow, and to be formally identified as [Legal Entity Name, to be inserted upon business registration] upon registration."
-          },
-          {
-            "kind": "li",
-            "text": "\"User\" means any person who accesses or uses the Platform, including both Buyers and Sellers."
-          },
-          {
-            "kind": "li",
-            "text": "\"Buyer\" means a User who browses, orders, or purchases products listed on the Platform."
-          },
-          {
-            "kind": "li",
-            "text": "\"Seller\" means a User who registers on the Platform to list, advertise, and sell products to Buyers."
-          },
-          {
-            "kind": "li",
-            "text": "\"Listing\" means any product, description, price, image, or offer that a Seller publishes on the Platform."
-          },
-          {
-            "kind": "li",
-            "text": "\"Order\" means a confirmed request by a Buyer to purchase one or more Listings from a Seller through the Platform."
-          },
-          {
-            "kind": "li",
-            "text": "\"Payout\" means the transfer of funds collected from a Buyer, net of applicable fees, to a Seller's designated UPI ID or bank account."
-          },
-          {
-            "kind": "li",
-            "text": "\"Payout Hold Period\" means the 48-hour period, calculated from the date and time an Order is placed, during which funds relating to that Order are held by the Platform before becoming eligible for release or refund processing."
-          },
-          {
-            "kind": "li",
-            "text": "\"Account\" means the registered profile a User creates on the Platform, whether as a Buyer or a Seller, including any linked Google account used for sign-in."
-          },
-          {
-            "kind": "li",
-            "text": "\"Content\" means text, images, product descriptions, reviews, ratings, and any other material submitted to or displayed on the Platform."
-          },
-          {
-            "kind": "li",
-            "text": "\"Applicable Law\" means the laws of the Republic of India, including but not limited to the Consumer Protection Act, 2019, the Consumer Protection (E-Commerce) Rules, 2020, the Information Technology Act, 2000, and the Digital Personal Data Protection Act, 2023, as amended from time to time."
+            "kind": "p",
+            "text": "Loopy is an early-stage platform. It is currently operated by its founding team — Zohan Alam (Founder) and Ankit Sah (Co-Founder) , Subhash Raj (Tech Lead) trading as Loopy from Mumbai, Maharashtra, India. Loopy is not yet incorporated as a company or an LLP. Zohan Alam holds final decision-making authority for the business; Ankit Sah makes and assists with decisions in other matters, including as the grievance officer named in Article 11."
           }
         ]
       },
       {
         "no": "1.2",
-        "title": "Role of the Platform",
+        "title": "Registration of a Legal Entity",
         "blocks": [
           {
             "kind": "p",
-            "text": "LoopyNow operates as an online marketplace and intermediary within the meaning of the Information Technology Act, 2000 and the Consumer Protection (E-Commerce) Rules, 2020. LoopyNow connects Buyers with independent Sellers and facilitates the discovery, ordering, and payment process for transactions between them. LoopyNow is not the manufacturer, importer, or seller of the products listed on the Platform, and does not take ownership or possession of any product at any stage of the transaction unless expressly stated otherwise for a specific Listing."
-          },
+            "text": "We are in the process of registering a legal entity and expect to complete this by [MONTH, YEAR — estimate, confirm before publishing]. When we do, this page will be updated with the registered name, registration number and registered office, and the agreement between you and the operator will continue with that entity. We say this plainly so that you know exactly who you are dealing with."
+          }
+        ]
+      },
+      {
+        "no": "1.3",
+        "title": "Interpretation",
+        "blocks": [
           {
             "kind": "p",
-            "text": "Because LoopyNow acts as an intermediary, primary responsibility for product quality, accuracy of Listings, packaging, shipping, and fulfilment of an Order rests with the Seller who created that Listing. Where Applicable Law imposes obligations directly on marketplaces, LoopyNow will comply with those obligations; nothing in this document is intended to exclude liability that cannot lawfully be excluded."
+            "text": "Throughout this document, \"Loopy\", \"we\", \"us\" and \"our\" mean the operator named above. Nothing in this document should be read as a claim that Loopy holds any licence, registration, certification or regulatory approval that it does not in fact hold."
           }
         ]
       }
@@ -113,219 +87,122 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 2,
-    "id": "terms-of-service",
-    "title": "Terms of Service",
+    "id": "definitions",
+    "title": "Definitions",
     "intro": [
       {
         "kind": "p",
-        "text": "These Terms of Service (\"Terms\") govern access to and use of the Platform by all Users. By creating an Account, browsing the Platform, or placing or fulfilling an Order, you agree to be bound by these Terms, together with the Privacy Policy, Seller Agreement, Buyer Terms, and all other policies referenced in this document. If you do not agree, you must not use the Platform."
+        "text": "These meanings apply throughout this document."
+      },
+      {
+        "kind": "p",
+        "text": "Platform — the Loopy website at www.loopynow.shop and any app or service we operate in connection with it."
+      },
+      {
+        "kind": "p",
+        "text": "User — anyone who uses the Platform, whether as a Buyer or a Seller."
+      },
+      {
+        "kind": "p",
+        "text": "Buyer — a User who places an Order through the Platform."
+      },
+      {
+        "kind": "p",
+        "text": "Seller — a User who registers to list and sell products through the Platform."
+      },
+      {
+        "kind": "p",
+        "text": "Listing — a product, description, image, price or offer published by a Seller."
+      },
+      {
+        "kind": "p",
+        "text": "Order — a Buyer's confirmed purchase of one or more Listings."
+      },
+      {
+        "kind": "p",
+        "text": "Payment Provider — FamGateway, the third-party payment gateway we use to collect payments from Buyers and to pay Sellers."
+      },
+      {
+        "kind": "p",
+        "text": "Settlement — the payout of an Order's proceeds, net of fees and deductions, to the Seller."
+      },
+      {
+        "kind": "p",
+        "text": "Settlement Delay — the period of approximately 24 hours after an Order is placed before that Order becomes eligible for Settlement, described in Article 6."
+      },
+      {
+        "kind": "p",
+        "text": "Applicable Law — the laws of India, including the Consumer Protection Act, 2019 and rules made under it, the Information Technology Act, 2000, and the Digital Personal Data Protection Act, 2023."
       }
     ],
-    "subs": [
-      {
-        "no": "2.1",
-        "title": "Eligibility",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "The Platform is open to Users of all ages for browsing and other non-transactional features. However, placing an Order, completing checkout, or making a payment requires that the payment be made by, or with the explicit involvement and authorisation of, a person who is at least 18 years of age and capable of entering into a legally binding contract under the Indian Contract Act, 1872 (\"Adult\")."
-          },
-          {
-            "kind": "p",
-            "text": "Where a User is under 18, that User may browse the Platform, but an Adult must complete the Account registration (where required for checkout), authorise the payment, and, where applicable, provide consent to the collection and processing of the minor's personal information as described in the Privacy Policy. LoopyNow may request verification of age, or of an Adult's involvement in a specific transaction, at its discretion, and may decline to process an Order where this cannot be confirmed."
-          }
-        ]
-      },
-      {
-        "no": "2.2",
-        "title": "Account Registration and Google Sign-In",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Accounts are created using Google Sign-In. By registering, you authorise LoopyNow to receive your name, email address, and profile information from your Google account for the purpose of creating and verifying your Account. You are responsible for maintaining the confidentiality and security of your Google credentials and for all activity that occurs under your Account."
-          },
-          {
-            "kind": "p",
-            "text": "Google's own account-eligibility rules govern who may independently create a Google Account. Where a User is below the minimum age required to hold a Google Account in their region, or is otherwise under 18, an Adult must complete Account registration and checkout on that User's behalf, as described in Section 2.1."
-          },
-          {
-            "kind": "p",
-            "text": "You agree to provide accurate, current, and complete information during registration and to promptly update that information if it changes. LoopyNow reserves the right to suspend or terminate an Account that contains false, misleading, or unverifiable information."
-          }
-        ]
-      },
-      {
-        "no": "2.3",
-        "title": "Nature of the Platform",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "LoopyNow is a marketplace intermediary as described in Section 1.2. Contracts of sale formed through the Platform are formed directly between the Buyer and the Seller. LoopyNow facilitates discovery, checkout, payment collection, and dispute assistance, but is not a party to the underlying contract of sale unless a specific Listing states that LoopyNow itself is the seller."
-          }
-        ]
-      },
-      {
-        "no": "2.4",
-        "title": "Fees",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "LoopyNow charges Buyers a platform fee of 5% of the Order value. This fee is calculated and displayed at checkout, in addition to the Listing price and any shipping charges, before the Buyer confirms payment. The platform fee is retained by LoopyNow in consideration of the Platform's facilitation, payment-processing, and support services, and does not reduce the amount payable to the Seller for the Order."
-          },
-          {
-            "kind": "p",
-            "text": "LoopyNow does not currently charge Sellers a separate commission or listing fee, but reserves the right to introduce Seller-side fees in the future, in which case reasonable advance notice will be given as described below. LoopyNow will provide reasonable advance notice of any change to its fee structure, including any change to the 5% platform fee charged to Buyers."
-          }
-        ]
-      },
-      {
-        "no": "2.5",
-        "title": "Account Suspension and Termination",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "LoopyNow may suspend, restrict, or terminate a User's Account, with or without notice, where the User breaches these Terms, engages in fraudulent or abusive conduct, repeatedly fails to fulfil Orders, receives a disproportionate volume of verified complaints, or where required to do so by Applicable Law or a competent authority. Where practicable, LoopyNow will give the User an opportunity to explain their conduct before taking action, except where immediate suspension is necessary to prevent harm to other Users or to the Platform."
-          },
-          {
-            "kind": "p",
-            "text": "A User may close their Account at any time by contacting support.loopynow.shop@gmail.com, subject to the settlement of any pending Orders, Payouts, or disputes."
-          }
-        ]
-      },
-      {
-        "no": "2.6",
-        "title": "Intellectual Property",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "The LoopyNow name, logo, website design, and underlying software are the property of the Operator and may not be copied, reproduced, or used without prior written permission. Sellers retain ownership of the Content they upload but grant LoopyNow a non-exclusive, royalty-free licence to host, display, reproduce, and distribute that Content on the Platform and in connection with promoting the Platform, for as long as the relevant Listing remains active and for a reasonable period thereafter for record-keeping purposes."
-          }
-        ]
-      },
-      {
-        "no": "2.7",
-        "title": "Modification of Terms",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "LoopyNow may update these Terms from time to time to reflect changes in its services, business practices, or Applicable Law. Material changes will be notified to Users through the Platform or by email at least seven days before they take effect. Continued use of the Platform after a change takes effect constitutes acceptance of the revised Terms."
-          }
-        ]
-      },
-      {
-        "no": "2.8",
-        "title": "Governing Law and Jurisdiction",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "These Terms are governed by the laws of India. Subject to the Grievance Redressal Policy in Section 11, the courts at the location of the Operator's registered office shall have exclusive jurisdiction over any dispute arising out of or relating to these Terms, without prejudice to any statutory forum a consumer is entitled to approach under Applicable Law."
-          }
-        ]
-      }
-    ]
+    "subs": []
   },
   {
     "n": 3,
-    "id": "seller-agreement",
-    "title": "Seller Agreement",
+    "id": "terms-of-use",
+    "title": "Terms of Use",
     "intro": [
       {
         "kind": "p",
-        "text": "This Seller Agreement applies to every User who registers as a Seller on the Platform and sets out the specific obligations that apply to Sellers, in addition to the general Terms of Service."
+        "text": "By using the Platform, placing an Order or listing a product, you agree to this document. If you do not agree, please do not use the Platform."
       }
     ],
     "subs": [
       {
         "no": "3.1",
-        "title": "Seller Verification",
+        "title": "What Loopy Is",
         "blocks": [
           {
             "kind": "p",
-            "text": "To register as a Seller, you must provide and keep current the following information:"
-          },
-          {
-            "kind": "li",
-            "text": "A valid email address and phone number;"
-          },
-          {
-            "kind": "li",
-            "text": "Your full name or registered business name;"
-          },
-          {
-            "kind": "li",
-            "text": "Your business or operating address;"
-          },
-          {
-            "kind": "li",
-            "text": "Your payout details, being either a UPI ID or a bank account number together with the IFSC code and the account holder's name."
+            "text": "Loopy is a marketplace. Sellers are independent businesses and individuals. When you buy something on Loopy, the contract of sale is between you and that Seller. Loopy is not the seller, manufacturer, importer or distributor of the products listed, and does not take physical possession of any product at any point."
           },
           {
             "kind": "p",
-            "text": "LoopyNow may verify this information before activating a Seller's ability to publish Listings or receive Payouts, and may periodically re-verify it. Providing false or mismatched verification details is a material breach of this Agreement and may result in suspension of the Seller Account and withholding of pending Payouts pending resolution."
+            "text": "What Loopy provides is the Platform itself: the ability to discover Listings, place and track Orders, communicate about an Order, and get help from our support team. We are responsible for those services and for how we operate the Platform. We are not a guarantor or insurer of what a Seller or Buyer does."
           }
         ]
       },
       {
         "no": "3.2",
-        "title": "Listings",
+        "title": "Who Can Use Loopy",
         "blocks": [
           {
             "kind": "p",
-            "text": "Sellers are solely responsible for the accuracy, legality, and completeness of every Listing they publish, including product descriptions, images, pricing, stock availability, and applicable warranties. Listings must not be misleading and must comply with the Prohibited Products Policy in Section 13. LoopyNow may remove or edit a Listing that appears to breach this Agreement or Applicable Law, and will notify the Seller where reasonably practicable."
+            "text": "You must be at least 18 years old to create an account, place an Order or list a product. Anyone may browse the Platform, but accounts and transactions are restricted to adults who can enter into a binding contract under the Indian Contract Act, 1872. We do not knowingly collect personal information from anyone under 18. If you believe a minor has used an account or a payment method without authorisation, contact us and we will act on it — see Article 9."
           }
         ]
       },
       {
         "no": "3.3",
-        "title": "Order Fulfilment and Shipping Responsibility",
+        "title": "Your Account",
         "blocks": [
           {
             "kind": "p",
-            "text": "Sellers are responsible for packaging, dispatching, and shipping Orders to Buyers, as set out in the Shipping Policy in Section 7. LoopyNow does not arrange courier pickup, does not take custody of products, and is not responsible for delays, damage, or loss occurring during shipping. Each Order is assigned a tracking ID, which the Seller must update within the Platform once the Order is dispatched so that both the Buyer and LoopyNow can monitor delivery status."
+            "text": "Accounts are created using Google Sign-In. Keep your credentials secure; you are responsible for activity under your account. Give us accurate information and keep it current. We may suspend or close an account that contains false or unverifiable information, that breaches this document, or where we are required to do so by law. Where it is practical to do so, we will tell you why first and give you a chance to respond."
+          },
+          {
+            "kind": "p",
+            "text": "You can close your account at any time by emailing us, once any open Orders, Settlements or complaints are resolved."
           }
         ]
       },
       {
         "no": "3.4",
-        "title": "Refund Decisions",
+        "title": "Intellectual Property",
         "blocks": [
           {
             "kind": "p",
-            "text": "Where a Buyer requests a refund or return, the decision to accept or decline that request rests with the Seller, in accordance with the Refund & Return Policy in Section 6. LoopyNow's role is limited to facilitating the request, relaying communication between the parties, and assisting with dispute resolution where a Seller does not respond within a reasonable time. LoopyNow may, at its discretion, intervene in cases of clear Seller misconduct, non-delivery, or violation of Applicable Law."
+            "text": "The Loopy name, logo, site design and software belong to the operator. Sellers keep ownership of the content they upload, and grant us permission to display and reproduce it on the Platform and to promote the Platform, for as long as the Listing is live and for a reasonable period afterwards for our records. If you believe a Listing infringes your intellectual property, write to us with details and we will review and act on it."
           }
         ]
       },
       {
         "no": "3.5",
-        "title": "Payouts and the 48-Hour Hold Period",
+        "title": "Changes to This Document",
         "blocks": [
           {
             "kind": "p",
-            "text": "Funds collected from a Buyer for an Order are held by LoopyNow for the Payout Hold Period of 48 hours from the date and time the Order is placed. During this period, the Order remains eligible for cancellation, dispute, or refund processing. Once the Payout Hold Period expires and no unresolved dispute exists, the applicable funds, net of fees, become eligible for release to the Seller's verified UPI ID or bank account, subject to the payout schedule described in the Seller Payout Policy in Section 8."
-          },
-          {
-            "kind": "p",
-            "text": "LoopyNow may extend the Payout Hold Period for a specific Order where a dispute, chargeback, or suspected fraud is under investigation, and will inform the Seller of the reason for any such extension."
-          }
-        ]
-      },
-      {
-        "no": "3.6",
-        "title": "Taxes",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Sellers are solely responsible for determining, collecting, and remitting any Goods and Services Tax (GST), income tax, or other tax applicable to their sales, and for maintaining any registrations required under Applicable Law. LoopyNow does not provide tax advice and is not responsible for a Seller's tax compliance."
-          }
-        ]
-      },
-      {
-        "no": "3.7",
-        "title": "Seller Conduct",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Sellers must not: manipulate reviews or ratings; misrepresent products; use another Seller's Content without authorisation; attempt to direct Buyers to transact outside the Platform to avoid fees; or engage in any conduct that undermines Buyer trust in the Platform. Breach of this section may result in suspension of the Seller Account under Section 2.5."
+            "text": "We may update this document as the Platform develops or as the law requires. If a change materially affects you, we will give notice on the Platform or by email at least seven days before it takes effect. Using the Platform after that date means you accept the updated version. Earlier versions are available on request."
           }
         ]
       }
@@ -335,74 +212,55 @@ export const LEGAL_SECTIONS: LegalSection[] = [
     "n": 4,
     "id": "buyer-terms",
     "title": "Buyer Terms",
-    "intro": [
-      {
-        "kind": "p",
-        "text": "This section sets out the specific terms that apply to Users who place Orders on the Platform as Buyers."
-      }
-    ],
+    "intro": [],
     "subs": [
       {
         "no": "4.1",
-        "title": "Buyer Information",
+        "title": "Providing Your Details",
         "blocks": [
           {
             "kind": "p",
-            "text": "To place an Order, a Buyer must provide a valid phone number, delivery address, and name. This information is shared with the relevant Seller solely for the purpose of fulfilling the Order and is handled in accordance with the Privacy Policy in Section 5."
+            "text": "To place an Order you give us your name, phone number and delivery address. We pass those details to the Seller fulfilling your Order so that it can be delivered, and handle them as described in Article 12."
           }
         ]
       },
       {
         "no": "4.2",
-        "title": "Placing an Order",
+        "title": "Order Confirmation",
         "blocks": [
           {
             "kind": "p",
-            "text": "An Order is confirmed once payment has been successfully processed. LoopyNow will issue an Order confirmation and a tracking ID that the Buyer can use to monitor the status of their Order within the Platform."
+            "text": "Your Order is confirmed once payment has been successfully processed. You will get an Order confirmation, and tracking information once the Seller dispatches it."
           }
         ]
       },
       {
         "no": "4.3",
-        "title": "Buyer Responsibilities",
+        "title": "Your Obligations as a Buyer",
         "blocks": [
           {
             "kind": "p",
-            "text": "Buyers must provide accurate delivery details, be reasonably available to receive delivery, and inspect products promptly upon receipt. Buyers must raise any concern about a delivered product within the timeframe set out in the Refund & Return Policy. Buyers must not misuse the refund or dispute process to obtain products without payment, and repeated unfounded claims may result in restrictions on the Buyer's Account."
-          }
-        ]
-      },
-      {
-        "no": "4.4",
-        "title": "Payments and Platform Fee",
-        "blocks": [
+            "text": "Before you buy, read the Listing — including the Seller's own return and delivery terms, which may differ between Sellers. Please also:"
+          },
           {
-            "kind": "p",
-            "text": "The amount charged to a Buyer at checkout consists of the Listing price, any shipping charges set by the Seller, and a platform fee of 5% of the Order value charged by LoopyNow, each shown separately before payment is confirmed. Payment must be made using a payment method belonging to, or authorised by, an Adult, in accordance with Section 2.1; LoopyNow does not knowingly accept payment instruments held or operated independently by a minor. Payments are processed through third-party payment gateways integrated with the Platform. LoopyNow does not store full payment card details. By making a payment, the Buyer (or the Adult authorising the payment) authorises LoopyNow to collect the full checkout amount, to retain the platform fee, and to hold the remaining Order proceeds on behalf of the Seller during the Payout Hold Period described in Section 3.5."
-          }
-        ]
-      },
-      {
-        "no": "4.5",
-        "title": "Orders Placed by a Minor Without Authorisation",
-        "blocks": [
+            "kind": "li",
+            "text": "give accurate delivery details, and be reasonably available to receive delivery;"
+          },
           {
-            "kind": "p",
-            "text": "LoopyNow acknowledges that, notwithstanding Section 4.4, an Order may sometimes be placed using an Adult's saved or linked payment method by a minor without that Adult's knowledge or authorisation — for example, a parent's child placing an Order on the parent's Account or card. Where an Adult reports such an Order to support.loopynow.shop@gmail.com, LoopyNow will assist by raising the matter with the Seller who fulfilled the Order."
+            "kind": "li",
+            "text": "check the product when it arrives and raise any problem promptly, as set out in Article 9;"
+          },
+          {
+            "kind": "li",
+            "text": "pay using a payment method you are authorised to use;"
+          },
+          {
+            "kind": "li",
+            "text": "use the Platform lawfully, and not to defraud a Seller."
           },
           {
             "kind": "p",
-            "text": "However, as set out in the Refund & Return Policy in Section 6, the decision to accept, decline, or partially accept the resulting return or refund request remains with the Seller. LoopyNow's role is limited to facilitating that request and does not extend to unilaterally reversing a payment that has already been made to, or held on behalf of, the Seller."
-          }
-        ]
-      },
-      {
-        "no": "4.6",
-        "title": "Buyer Account Confirmation",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Where an Order involves a Payout or refund, LoopyNow may require confirmation through the Buyer's authenticated Google-linked Account before releasing funds or processing the request, to protect against unauthorised transactions."
+            "text": "Repeated unfounded refund or dispute claims may lead us to restrict your account. Nothing in this Article removes any right you have as a consumer under Applicable Law."
           }
         ]
       }
@@ -410,156 +268,82 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 5,
-    "id": "privacy-policy",
-    "title": "Privacy Policy",
+    "id": "seller-terms",
+    "title": "Seller Terms",
     "intro": [
       {
         "kind": "p",
-        "text": "This Privacy Policy explains what personal information LoopyNow collects from Buyers and Sellers, how it is used, and the choices available to Users. It forms part of the Terms of Service."
+        "text": "These terms apply to every Seller in addition to the rest of this document."
       }
     ],
     "subs": [
       {
         "no": "5.1",
-        "title": "Information We Collect",
+        "title": "Registering as a Seller",
         "blocks": [
           {
             "kind": "p",
-            "text": "From Sellers, we collect:"
+            "text": "To sell on Loopy you must give us, and keep current:"
           },
           {
             "kind": "li",
-            "text": "Email address and phone number;"
+            "text": "your full legal name or registered business name, and your business or operating address;"
           },
           {
             "kind": "li",
-            "text": "Seller name or business name;"
+            "text": "a working email address and phone number for customer contact;"
           },
           {
             "kind": "li",
-            "text": "Seller address;"
+            "text": "your GSTIN, where you are required to be registered under GST law, and your PAN;"
           },
           {
             "kind": "li",
-            "text": "Payout details: UPI ID, or bank account number, IFSC code, and account holder name."
+            "text": "settlement details — a UPI ID, or a bank account number with IFSC and account holder name."
           },
           {
             "kind": "p",
-            "text": "From Buyers, we collect:"
-          },
-          {
-            "kind": "li",
-            "text": "Phone number, delivery address, and name;"
-          },
-          {
-            "kind": "li",
-            "text": "Order and tracking history;"
-          },
-          {
-            "kind": "li",
-            "text": "Payment confirmation data provided by our payment gateway (we do not store full card numbers)."
-          },
-          {
-            "kind": "p",
-            "text": "Where a User signs in with Google, we receive the name, email address, and profile details authorised by that User through Google's sign-in process. We also automatically collect limited technical data such as device type, browser type, and usage data through cookies, as described in the Cookie Policy in Section 9."
+            "text": "Some of this information is displayed to Buyers on your Listings, because Applicable Law requires a marketplace to show who the seller is. We may verify your details before activating your account or releasing a Settlement, and may re-verify later. Giving us false or mismatched details is a serious breach of these terms and may result in suspension and in Settlement being withheld until the matter is resolved."
           }
         ]
       },
       {
         "no": "5.2",
-        "title": "How We Use Information",
+        "title": "Your Listings",
         "blocks": [
           {
-            "kind": "li",
-            "text": "To create and verify Buyer and Seller Accounts;"
-          },
-          {
-            "kind": "li",
-            "text": "To process Orders, payments, and Payouts;"
-          },
-          {
-            "kind": "li",
-            "text": "To connect Buyers and Sellers for the purpose of shipping and delivery;"
-          },
-          {
-            "kind": "li",
-            "text": "To communicate Order updates, tracking information, and support responses;"
-          },
-          {
-            "kind": "li",
-            "text": "To investigate disputes, fraud, and breaches of our policies;"
-          },
-          {
-            "kind": "li",
-            "text": "To comply with Applicable Law, including tax and consumer protection requirements;"
-          },
-          {
-            "kind": "li",
-            "text": "To improve and maintain the Platform."
+            "kind": "p",
+            "text": "You are responsible for everything in your Listings: descriptions, images, pricing, stock, delivery timelines, any warranty you offer, and your return policy. Listings must be accurate, must not mislead, and must comply with Article 14. You are responsible for holding any licence that the law requires for what you sell. We may remove or edit a Listing that appears to breach these terms or the law, and will tell you where we reasonably can."
           }
         ]
       },
       {
         "no": "5.3",
-        "title": "Sharing of Information",
+        "title": "Fulfilment",
         "blocks": [
           {
             "kind": "p",
-            "text": "We share Buyer contact and delivery details with the Seller fulfilling that Buyer's Order, solely for shipping purposes. We share limited Order and product information between Buyer and Seller to allow communication about an Order. We may share information with payment gateway providers to process transactions, with courier or logistics partners engaged by a Seller, and with regulators, law enforcement, or courts where required by Applicable Law. We do not sell personal information to third parties for marketing purposes."
+            "text": "You pack, dispatch and ship every Order you accept, using your own courier. You must update the Order status and tracking information on the Platform promptly after dispatch. Repeated failure to dispatch, to update tracking, or to respond to Buyers is a breach of these terms."
           }
         ]
       },
       {
         "no": "5.4",
-        "title": "Data Retention",
+        "title": "Tax",
         "blocks": [
           {
             "kind": "p",
-            "text": "We retain Account, Order, and payout information for as long as the Account remains active and for a reasonable period thereafter to comply with tax, accounting, and legal obligations, and to resolve any disputes. Users may request deletion of their Account, subject to retention of records required by Applicable Law."
+            "text": "You are responsible for your own tax position: determining, charging, collecting and remitting GST, income tax and any other tax on your sales, and holding the registrations the law requires. We do not give tax advice. Where Applicable Law requires Loopy to register, to collect tax at source on supplies made through the Platform, or to report those supplies, Loopy will do so and will reflect any such collection in your Settlement statement."
           }
         ]
       },
       {
         "no": "5.5",
-        "title": "Data Security",
+        "title": "Conduct",
         "blocks": [
           {
             "kind": "p",
-            "text": "We apply reasonable technical and organisational measures to protect personal information against unauthorised access, alteration, or disclosure. No method of transmission or storage is completely secure, and Users are encouraged to protect their own Account credentials, including their linked Google account."
-          }
-        ]
-      },
-      {
-        "no": "5.6",
-        "title": "User Rights",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Subject to Applicable Law, Users may request access to, correction of, or deletion of their personal information, and may withdraw consent to non-essential processing, by contacting support.loopynow.shop@gmail.com. We will respond within a reasonable time and in accordance with the Digital Personal Data Protection Act, 2023."
-          }
-        ]
-      },
-      {
-        "no": "5.7",
-        "title": "Children's Privacy",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "The Platform may be browsed by Users of any age, but Orders and payments require the involvement of an Adult, as described in Section 2.1. Where LoopyNow knows a User is under 18, it limits the processing of that User's personal information to what is necessary to operate the Platform and complete the relevant transaction, and does not use such information for behavioural monitoring or targeted advertising directed at children, in accordance with the Digital Personal Data Protection Act, 2023."
-          },
-          {
-            "kind": "p",
-            "text": "Where an Account or payment involves a User under 18, LoopyNow requires the verifiable consent of a parent or lawful guardian before processing that minor's personal information beyond what is necessary to complete the specific transaction. A parent or guardian may contact support.loopynow.shop@gmail.com to review, correct, or request deletion of a minor's information, or to withdraw consent, at any time."
-          }
-        ]
-      },
-      {
-        "no": "5.8",
-        "title": "Changes to this Policy",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "We may update this Privacy Policy from time to time. Material changes will be notified through the Platform. Continued use of the Platform after such notice constitutes acceptance of the updated policy."
+            "text": "Do not manipulate reviews or ratings, misrepresent products, use another Seller's content without permission, or route Buyers off the Platform to avoid fees. Breach may lead to suspension under Article 3."
           }
         ]
       }
@@ -567,66 +351,121 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 6,
-    "id": "refund-return-policy",
-    "title": "Refund & Return Policy",
-    "intro": [
-      {
-        "kind": "p",
-        "text": "This policy explains how refund and return requests are handled on the Platform. It applies to all Orders placed through LoopyNow."
-      }
-    ],
+    "id": "payments-and-settlement",
+    "title": "Payments and Settlement",
+    "intro": [],
     "subs": [
       {
         "no": "6.1",
-        "title": "Raising a Request",
+        "title": "How Payment Works",
         "blocks": [
           {
             "kind": "p",
-            "text": "A Buyer who wishes to return a product or request a refund must raise the request through the Order details page within the Platform, describing the reason for the request, within a reasonable period after delivery (as specified on the relevant Listing, where applicable). The request is routed to the Seller who fulfilled the Order."
+            "text": "When you pay for an Order, your payment is collected through FamGateway, our payment gateway. Loopy receives that payment and pays out the Seller's share, after the Settlement Delay described below, to the Seller's UPI ID or bank account, less our platform fee and any deductions described in this Article. Loopy does not operate a wallet or a deposit account for Users, and does not invest or use Order funds for any purpose other than completing the Order they relate to."
           }
         ]
       },
       {
         "no": "6.2",
-        "title": "Seller Decision",
+        "title": "What You Pay",
         "blocks": [
           {
             "kind": "p",
-            "text": "The decision to accept, partially accept, or decline a refund or return request rests with the Seller. LoopyNow does not compel a Seller to issue a refund except where required by Applicable Law (for example, in cases of non-delivery, a materially defective product, or a product that differs substantially from its Listing) or where LoopyNow determines, following its own review, that the request is clearly justified."
+            "text": "At checkout you will see, separately and before you confirm payment: the Listing price, any shipping charge set by the Seller, applicable taxes, and Loopy's platform fee of 5% of the Order value. The platform fee pays for the Platform and our support services. Payment is processed through FamGateway; we do not receive or store your full card details. If we change the platform fee, we will give notice as described in Article 3."
           },
           {
             "kind": "p",
-            "text": "Sellers are encouraged to respond to a refund request within a reasonable time. Where a Seller does not respond within the timeframe communicated to them, LoopyNow may escalate the matter as a dispute and assist in reaching a resolution, including by contacting the Seller directly."
+            "text": "The platform fee is not refundable once an Order is placed, even if the Order is later cancelled or a return is agreed with the Seller. The only exception is where Applicable Law requires the entire amount you paid, including the platform fee, to be refunded — see the exceptions in Article 9."
           }
         ]
       },
       {
         "no": "6.3",
-        "title": "The 48-Hour Payout Hold",
+        "title": "The Settlement Delay",
         "blocks": [
           {
             "kind": "p",
-            "text": "Funds relating to an Order are held by LoopyNow for the Payout Hold Period described in Section 3.5. A refund request raised within this period, or before the Payout has otherwise been released, can generally be resolved by returning the held funds to the Buyer if the Seller agrees or if LoopyNow determines a refund is warranted. Where a Payout has already been released to the Seller, a refund requires the Seller's cooperation, and LoopyNow will assist in coordinating repayment."
+            "text": "An Order's proceeds do not reach the Seller immediately. For approximately 24 hours from the time the Order is placed, the Order remains in a settlement delay, during which it can still be cancelled, refunded or disputed without needing to recover money from the Seller. After that period, if there is no open cancellation, refund request, dispute, chargeback or fraud review, we pay out the proceeds to the Seller."
+          },
+          {
+            "kind": "p",
+            "text": "The delay gives us time to catch a cancellation, an obvious problem, or a dispute before money moves to the Seller. It is not a guarantee of payment to a Seller, and not a guarantee of a refund to a Buyer."
+          },
+          {
+            "kind": "p",
+            "text": "We may extend this delay, or withhold a Settlement in whole or in part, where an Order is subject to an open dispute, a chargeback, suspected fraud, or a legal or regulatory requirement. We will tell the Seller the reason where we practically can."
           }
         ]
       },
       {
         "no": "6.4",
-        "title": "Non-Refundable Situations",
+        "title": "Settlement to Sellers",
         "blocks": [
           {
             "kind": "p",
-            "text": "LoopyNow does not, as a matter of Platform policy, guarantee refunds for change of mind, buyer's remorse, or minor variations from a Listing that were reasonably disclosed, except where the Seller's own return policy for that Listing permits it or Applicable Law requires it."
+            "text": "Settlement is paid to the UPI ID or bank account you gave us. You are responsible for keeping those details accurate; we cannot recover a payment sent to the wrong account because the details you gave us were wrong or out of date. Settlement amounts are net of our platform fee, any payment-gateway or bank charges, and any tax we are required to collect at source. Those deductions are shown in your Settlement statement."
           }
         ]
       },
       {
         "no": "6.5",
-        "title": "Refund Method",
+        "title": "When Something Goes Wrong With a Payment",
         "blocks": [
           {
             "kind": "p",
-            "text": "Approved refunds are processed to the original payment method used for the Order, through our payment gateway, within a reasonable time after approval."
+            "text": "Situation"
+          },
+          {
+            "kind": "p",
+            "text": "What Happens"
+          },
+          {
+            "kind": "p",
+            "text": "Payment fails at checkout"
+          },
+          {
+            "kind": "p",
+            "text": "No Order is created. Any amount debited is reversed through FamGateway, usually within 7–14 business days."
+          },
+          {
+            "kind": "p",
+            "text": "Buyer cancels before dispatch"
+          },
+          {
+            "kind": "p",
+            "text": "See Article 8. The product price and shipping charge are returned as the Seller decides; the platform fee is not refundable."
+          },
+          {
+            "kind": "p",
+            "text": "Seller cannot fulfil"
+          },
+          {
+            "kind": "p",
+            "text": "The Order is cancelled; the product price and shipping charge are returned to the Buyer. The platform fee is not refundable."
+          },
+          {
+            "kind": "p",
+            "text": "Refund approved"
+          },
+          {
+            "kind": "p",
+            "text": "Processed to the original payment method through FamGateway — see Article 9."
+          },
+          {
+            "kind": "p",
+            "text": "Chargeback raised with the Buyer's bank"
+          },
+          {
+            "kind": "p",
+            "text": "The bank's process governs the outcome. We may withhold the related Settlement while it runs, and will share Order and tracking records with the parties involved."
+          },
+          {
+            "kind": "p",
+            "text": "Suspected fraud"
+          },
+          {
+            "kind": "p",
+            "text": "We may pause Settlement and review the Order, as described in Article 11."
           }
         ]
       }
@@ -634,47 +473,37 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 7,
-    "id": "shipping-policy",
-    "title": "Shipping Policy",
+    "id": "shipping-and-delivery",
+    "title": "Shipping and Delivery",
     "intro": [],
     "subs": [
       {
         "no": "7.1",
-        "title": "Seller Responsibility",
+        "title": "Who Ships Your Order",
         "blocks": [
           {
             "kind": "p",
-            "text": "Shipping and delivery of every Order is the sole responsibility of the Seller who fulfils that Order. LoopyNow does not operate its own courier or logistics service and does not take physical custody of products at any point. Sellers may choose their own courier or logistics partner, provided that delivery timelines and costs are accurately disclosed to Buyers at checkout."
+            "text": "The Seller who accepts your Order ships it. Loopy does not run a courier service, does not arrange pickup and does not take custody of any product. Sellers choose their own courier and must disclose delivery timelines and charges accurately on the Listing or at checkout."
           }
         ]
       },
       {
         "no": "7.2",
-        "title": "Order Tracking",
+        "title": "Tracking and Timelines",
         "blocks": [
           {
             "kind": "p",
-            "text": "Every Order is assigned a tracking ID. Sellers must update the Order status and tracking information within the Platform promptly after dispatch so that Buyers can monitor delivery progress. Failure to update tracking information within a reasonable time may be treated as a service issue for the purposes of the Refund & Return Policy."
+            "text": "Every Order gets tracking information, which the Seller updates on the Platform after dispatch. We do not promise a delivery date and cannot guarantee delivery: the timeline shown to you is the Seller's, not ours."
           }
         ]
       },
       {
         "no": "7.3",
-        "title": "Delivery Issues",
+        "title": "Late, Lost or Damaged Deliveries",
         "blocks": [
           {
             "kind": "p",
-            "text": "LoopyNow is not liable for delays, loss, or damage occurring during transit, as these fall within the Seller's shipping arrangements. However, LoopyNow will assist Buyers in raising the issue with the Seller and, where appropriate, in escalating a non-delivery complaint as a dispute under the Refund & Return Policy."
-          }
-        ]
-      },
-      {
-        "no": "7.4",
-        "title": "Shipping Charges",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Any shipping charges are set and disclosed by the Seller on the relevant Listing or at checkout and are the Seller's responsibility to justify and apply consistently."
+            "text": "If your Order is late, lost or arrives damaged, tell us and we will help you reach the Seller. Whether the product price is refunded is the Seller's decision, except that non-delivery, a materially late delivery, and a damaged or defective product are among the cases in Article 9 where a refund is not left to the Seller's discretion. The platform fee is not refundable in any case — see Article 6. Nothing here limits your rights as a consumer under Applicable Law against the Seller or, where the law makes us responsible, against us."
           }
         ]
       }
@@ -682,51 +511,47 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 8,
-    "id": "seller-payout-policy",
-    "title": "Seller Payout Policy",
+    "id": "cancellations",
+    "title": "Cancellations",
     "intro": [],
     "subs": [
       {
         "no": "8.1",
-        "title": "Payout Method",
+        "title": "Cancellation Policy",
         "blocks": [
           {
             "kind": "p",
-            "text": "Payouts are made to the UPI ID or bank account (identified by account number, IFSC code, and account holder name) provided by the Seller during verification. Sellers are responsible for ensuring these details are accurate and current; LoopyNow is not liable for a Payout sent to an incorrect account resulting from outdated or incorrect details supplied by the Seller."
+            "text": "Whether an Order can be cancelled, and what you get back if it is, is set by the Seller's own cancellation policy shown on the Listing. To cancel, contact the Seller directly using the contact details on their storefront. Loopy will help you reach the Seller if you need it, but the decision on a cancellation request belongs to the Seller, not to us."
           }
         ]
       },
       {
         "no": "8.2",
-        "title": "Payout Hold Period",
+        "title": "What Is Refunded",
         "blocks": [
           {
             "kind": "p",
-            "text": "As described in Section 3.5, funds for each Order are held for 48 hours from the Order date before becoming eligible for Payout. This hold period allows time for cancellation, dispute, or refund requests to be raised and resolved before funds are released."
+            "text": "Where a Seller agrees to a cancellation, the product price and any shipping charge are refunded as the Seller decides. The platform fee is not refundable, whether or not the Order is cancelled — see Article 6."
           }
         ]
       },
       {
         "no": "8.3",
-        "title": "Payout Schedule and Fees",
+        "title": "Cancellation by a Seller",
         "blocks": [
           {
             "kind": "p",
-            "text": "LoopyNow's platform fee of 5% is charged to the Buyer at checkout, as described in Section 2.4, and is retained by LoopyNow directly from the checkout amount. It is not deducted from the Seller's Payout. Once the Payout Hold Period has expired and no unresolved dispute exists, the Seller receives the full Listing price and shipping charge for the Order, released to the Seller's designated account, less only any payment-gateway or bank charges that may apply and are disclosed in the seller dashboard."
-          },
-          {
-            "kind": "p",
-            "text": "LoopyNow reserves the right to introduce a separate Seller-side fee in the future, with reasonable advance notice as described in Section 2.4."
+            "text": "A Seller may also cancel an Order before dispatch — for example, where a product is out of stock — in which case the product price and shipping charge are returned to you; the platform fee is still not refundable."
           }
         ]
       },
       {
         "no": "8.4",
-        "title": "Withheld Payouts",
+        "title": "After Dispatch",
         "blocks": [
           {
             "kind": "p",
-            "text": "LoopyNow may withhold a Payout, in whole or in part, where an Order is subject to an active dispute, suspected fraud, a chargeback, or a legal or regulatory requirement, until the matter is resolved. LoopyNow will inform the Seller of the reason for withholding a Payout where practicable."
+            "text": "Once an Order has been dispatched, Article 9 (returns and refunds) applies instead of cancellation."
           }
         ]
       }
@@ -734,37 +559,85 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 9,
-    "id": "cancellation-policy",
-    "title": "Cancellation Policy",
+    "id": "returns-and-refunds",
+    "title": "Returns and Refunds",
     "intro": [],
     "subs": [
       {
         "no": "9.1",
-        "title": "Buyer-Initiated Cancellation",
+        "title": "Raising a Request",
         "blocks": [
           {
             "kind": "p",
-            "text": "A Buyer may request cancellation of an Order before it has been dispatched by the Seller, through the Order details page. Once an Order has been marked as dispatched, cancellation is no longer available and the matter is instead handled under the Refund & Return Policy."
+            "text": "Raise a return or refund request from the Order page, with the reason and photographs where relevant, within [N] days of delivery or of the expected delivery date. The request goes to the Seller and to our support team at the same time."
           }
         ]
       },
       {
         "no": "9.2",
-        "title": "Seller-Initiated Cancellation",
+        "title": "The Seller's Decision Is Final",
         "blocks": [
           {
             "kind": "p",
-            "text": "A Seller may cancel an Order prior to dispatch where the product is out of stock or cannot otherwise be fulfilled. In such cases, the full Order amount is returned to the Buyer."
+            "text": "The Seller knows their own product and their own return policy, so the Seller decides whether to accept, partially accept or decline a return or refund request, in line with the return policy shown on that Listing. Once the Seller has made that decision, it is final, and Loopy does not reopen or overrule it as a matter of course."
           }
         ]
       },
       {
         "no": "9.3",
-        "title": "Effect of Cancellation",
+        "title": "The Exceptions the Law Requires",
         "blocks": [
           {
             "kind": "p",
-            "text": "A cancelled Order results in the release of held funds back to the Buyer through the original payment method, without requiring a separate refund request, provided cancellation occurs within the Payout Hold Period."
+            "text": "There is a narrow set of situations where a Seller cannot refuse to take back a product or refuse to refund you, whatever their own return policy says, because Indian consumer law does not allow it to be a matter of discretion. These are where the product:"
+          },
+          {
+            "kind": "li",
+            "text": "was never delivered, or was delivered late against the timeline shown at checkout;"
+          },
+          {
+            "kind": "li",
+            "text": "is defective, damaged, deficient or spurious;"
+          },
+          {
+            "kind": "li",
+            "text": "is not the product you ordered, or does not match the Listing in a material way;"
+          },
+          {
+            "kind": "li",
+            "text": "is counterfeit, or cannot lawfully be sold."
+          },
+          {
+            "kind": "p",
+            "text": "In these specific cases we will act on the refund whether or not the Seller agrees, because it is a legal entitlement rather than a business decision. Outside them, the outcome is the Seller's call. In practice, most Sellers refund the Buyer directly themselves — using their own payment method or account — as soon as the request is confirmed, and no action from Loopy is needed. If a Seller does not do this, Loopy will step in and instruct the payment gateway to withhold or reverse the related Settlement, as described below."
+          }
+        ]
+      },
+      {
+        "no": "9.4",
+        "title": "How It Is Processed",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "We aim to pass on the Seller's decision within 7–14 business days of your request. Approved refunds are returned to your original payment method through FamGateway, and we will initiate them within 7–14 business days of approval; how long the money then takes to reach you depends on your bank. If a return shipment is needed, the Listing or our support team will tell you where to send it and who pays for it. If the Seller does not respond in time, the matter is escalated under Article 11, and — for the exceptions above only — we may instruct the payment gateway to withhold or reverse the related Settlement."
+          }
+        ]
+      },
+      {
+        "no": "9.5",
+        "title": "Orders You Did Not Authorise",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "If you believe an Order was placed on your account or payment method without your authorisation — including by a minor in your household — tell us as soon as you can. We will raise it with the Seller under Article 11 and ask whether they are willing to accept a return and issue a refund. If the Seller agrees, we will process it, subject to Article 6 on the platform fee. If the Seller does not agree, we are not able to refund the product price ourselves, because we have no way to independently verify what happened on your device or account."
+          },
+          {
+            "kind": "p",
+            "text": "This is separate from any right you have against your bank or card network: if a transaction was genuinely unauthorised, you may still be able to have it reversed directly with them, independently of anything in this document."
+          },
+          {
+            "kind": "p",
+            "text": "Drafting note: a minor's contract is void under the Indian Contract Act, 1872, and treating an unauthorised order as non-refundable by default, purely at the Seller's discretion, carries real legal risk if challenged — this is one of the weaker points in this document as currently drafted."
           }
         ]
       }
@@ -772,77 +645,211 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 10,
-    "id": "cookie-policy",
-    "title": "Cookie Policy",
-    "intro": [],
-    "subs": [
+    "id": "who-is-responsible-for-what",
+    "title": "Who Is Responsible for What",
+    "intro": [
       {
-        "no": "10.1",
-        "title": "What Cookies We Use",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "The Platform uses cookies and similar technologies to keep Users signed in, remember preferences, understand how the Platform is used, and support Google Sign-In authentication. We use:"
-          },
-          {
-            "kind": "li",
-            "text": "Essential cookies, required for login, checkout, and core Platform functionality;"
-          },
-          {
-            "kind": "li",
-            "text": "Analytics cookies, used to understand usage patterns and improve the Platform;"
-          },
-          {
-            "kind": "li",
-            "text": "Authentication cookies, used to maintain a secure session after Google Sign-In."
-          }
-        ]
+        "kind": "p",
+        "text": "This table is a summary. The detailed terms above prevail if they differ."
       },
       {
-        "no": "10.2",
-        "title": "Managing Cookies",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Most browsers allow Users to control or delete cookies through their settings. Disabling essential cookies may prevent parts of the Platform, such as sign-in or checkout, from functioning correctly."
-          }
-        ]
+        "kind": "p",
+        "text": "Matter"
+      },
+      {
+        "kind": "p",
+        "text": "Responsible"
+      },
+      {
+        "kind": "p",
+        "text": "Product description, price, stock, quality, authenticity, safety, legality, licences"
+      },
+      {
+        "kind": "p",
+        "text": "Seller"
+      },
+      {
+        "kind": "p",
+        "text": "Packing, dispatch, courier choice, delivery, tracking updates"
+      },
+      {
+        "kind": "p",
+        "text": "Seller"
+      },
+      {
+        "kind": "p",
+        "text": "Seller's own return policy, warranty and after-sales service"
+      },
+      {
+        "kind": "p",
+        "text": "Seller"
+      },
+      {
+        "kind": "p",
+        "text": "Seller's taxes and registrations"
+      },
+      {
+        "kind": "p",
+        "text": "Seller"
+      },
+      {
+        "kind": "p",
+        "text": "Accurate delivery and contact details, payment authorisation, lawful use"
+      },
+      {
+        "kind": "p",
+        "text": "Buyer"
+      },
+      {
+        "kind": "p",
+        "text": "Checking the product on arrival and raising problems in time"
+      },
+      {
+        "kind": "p",
+        "text": "Buyer"
+      },
+      {
+        "kind": "p",
+        "text": "Operating the Platform, Order creation, and assisting both Buyers and Sellers"
+      },
+      {
+        "kind": "p",
+        "text": "Loopy"
+      },
+      {
+        "kind": "p",
+        "text": "Disclosing fees and Seller details, handling complaints, the settlement delay"
+      },
+      {
+        "kind": "p",
+        "text": "Loopy"
+      },
+      {
+        "kind": "p",
+        "text": "Return and refund decisions, outside the exceptions in Article 9"
+      },
+      {
+        "kind": "p",
+        "text": "Seller (final)"
+      },
+      {
+        "kind": "p",
+        "text": "Cancellation policy and cancellation decisions"
+      },
+      {
+        "kind": "p",
+        "text": "Seller (final) — Loopy assists contact only"
+      },
+      {
+        "kind": "p",
+        "text": "Enforcing the legally mandatory refund exceptions in Article 9"
+      },
+      {
+        "kind": "p",
+        "text": "Loopy"
+      },
+      {
+        "kind": "p",
+        "text": "Platform fee refunds"
+      },
+      {
+        "kind": "p",
+        "text": "Never, except where Article 9's mandatory exceptions require the full amount refunded"
+      },
+      {
+        "kind": "p",
+        "text": "Handling personal data as described in Article 12"
+      },
+      {
+        "kind": "p",
+        "text": "Loopy, with its providers"
+      },
+      {
+        "kind": "p",
+        "text": "Collecting Buyer payments and paying out Sellers; card and UPI data security"
+      },
+      {
+        "kind": "p",
+        "text": "Loopy, via a licensed payment gateway"
+      },
+      {
+        "kind": "p",
+        "text": "Physical transit of the parcel"
+      },
+      {
+        "kind": "p",
+        "text": "Courier engaged by the Seller"
       }
-    ]
+    ],
+    "subs": []
   },
   {
     "n": 11,
-    "id": "disclaimer-and-limitation-of-liability",
-    "title": "Disclaimer and Limitation of Liability",
+    "id": "complaints-and-disputes",
+    "title": "Complaints and Disputes",
     "intro": [],
     "subs": [
       {
         "no": "11.1",
-        "title": "Marketplace Role",
+        "title": "Grievance Officer",
         "blocks": [
           {
             "kind": "p",
-            "text": "As set out in Section 1.2, LoopyNow is an intermediary that connects Buyers and Sellers. LoopyNow does not manufacture, inspect, or take possession of the products listed on the Platform, and does not guarantee the accuracy of any Listing, the quality or safety of any product, or the conduct of any Buyer or Seller."
+            "text": "If something has gone wrong, write to our grievance officer:"
+          },
+          {
+            "kind": "p",
+            "text": "Name: Ankit Sah (Team Loopy)"
+          },
+          {
+            "kind": "p",
+            "text": "Designation: Co-Founder, Loopy"
+          },
+          {
+            "kind": "p",
+            "text": "Email: loopynowshopsupport@gmail.com"
+          },
+          {
+            "kind": "p",
+            "text": "Address: Mumbai, Maharashtra given"
+          },
+          {
+            "kind": "p",
+            "text": "We will acknowledge your complaint within 48 hours of receiving it and aim to resolve it within one month, in line with Applicable Law. Give us the Order number and a short description of the problem."
           }
         ]
       },
       {
         "no": "11.2",
-        "title": "Limitation of Liability",
+        "title": "Disputes Between a Buyer and a Seller",
         "blocks": [
           {
             "kind": "p",
-            "text": "To the fullest extent permitted by Applicable Law, LoopyNow shall not be liable for indirect, incidental, or consequential loss arising from the use of the Platform, delays or failures in shipping, disputes between Buyers and Sellers, or fraudulent conduct by one User against another as described in the Fraud Prevention and Enforcement Policy in Section 15. This limitation does not exclude any liability that cannot lawfully be excluded under the Consumer Protection Act, 2019 or other Applicable Law, including liability arising from LoopyNow's own acts or omissions as an intermediary."
+            "text": "Most problems are between a Buyer and the Seller, and the underlying contract is theirs. Our role is to help it get resolved: we relay communication, look at the Order record, tracking and messages, and tell both sides what we think the right outcome is. Where Article 9 applies, we will enforce a refund. Where it does not, our view is a recommendation, not a binding ruling, and neither party gives up any right to take the matter further."
+          },
+          {
+            "kind": "p",
+            "text": "Where we control the timing of Settlement, we may delay or withhold it while a dispute is open, and may instruct a reversal where a refund is due under Article 9. Beyond that, we do not compensate either party out of our own funds for a loss caused by the other, and we do not operate a compensation or buyer-protection fund. We say this as a factual description of what we do, not as an attempt to exclude any responsibility the law places on us."
           }
         ]
       },
       {
         "no": "11.3",
-        "title": "No Warranty",
+        "title": "Fraud and Abuse",
         "blocks": [
           {
             "kind": "p",
-            "text": "The Platform is provided on an \"as is\" and \"as available\" basis. While we take reasonable steps to keep the Platform available and secure, we do not warrant that it will be uninterrupted or error-free."
+            "text": "If you report suspected fraud, we will review the available evidence and may pause Settlement while we do. Where we find a User has acted fraudulently — non-delivery, counterfeit or misrepresented goods, false refund claims, payment abuse — we may warn them, remove Listings, restrict or suspend the account, withhold related Settlement, or terminate the account, and we may report the matter to the police or another authority."
+          }
+        ]
+      },
+      {
+        "no": "11.4",
+        "title": "Disputes with Loopy",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "A complaint about our own services — the Platform, our fees, our support, our handling of your data — goes to the grievance officer above. If we cannot resolve it, you keep every remedy available to you under Applicable Law, including approaching a consumer forum."
           }
         ]
       }
@@ -850,39 +857,128 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 12,
-    "id": "grievance-redressal-policy",
-    "title": "Grievance Redressal Policy",
-    "intro": [],
+    "id": "privacy",
+    "title": "Privacy",
+    "intro": [
+      {
+        "kind": "p",
+        "text": "This Article explains what personal data we collect, why, who we share it with and what you can ask us to do about it. It applies to Buyers and Sellers."
+      }
+    ],
     "subs": [
       {
         "no": "12.1",
-        "title": "Grievance Officer",
+        "title": "What We Collect",
         "blocks": [
           {
             "kind": "p",
-            "text": "In accordance with the Information Technology Act, 2000 and the Consumer Protection (E-Commerce) Rules, 2020, LoopyNow has appointed a Grievance Officer to address complaints from Users:"
+            "text": "From Buyers: name, phone number, delivery address, email address, Order and tracking history, messages you send us, and payment confirmation data from the Payment Provider. We do not receive or store your full card number, CVV or UPI PIN."
           },
           {
-            "kind": "li",
-            "text": "Name: [Grievance Officer Name]"
+            "kind": "p",
+            "text": "From Sellers: name or business name, business address, email address, phone number, PAN and GSTIN where applicable, settlement details (UPI ID or bank account number, IFSC and account holder name), Listing content and Order records."
           },
           {
-            "kind": "li",
-            "text": "Email: support.loopynow.shop@gmail.com"
-          },
-          {
-            "kind": "li",
-            "text": "Address: [Registered Office Address, to be inserted upon business registration]"
+            "kind": "p",
+            "text": "From everyone, automatically: IP address, device and browser type, pages visited and similar usage data, through cookies and our hosting and analytics providers. If you sign in through Google, we receive the name, email address and profile information you authorise it to share."
           }
         ]
       },
       {
         "no": "12.2",
-        "title": "Process",
+        "title": "Why We Use It",
+        "blocks": [
+          {
+            "kind": "li",
+            "text": "to create and verify accounts, and to display the Seller information the law requires;"
+          },
+          {
+            "kind": "li",
+            "text": "to process Orders, payments, Settlements and refunds;"
+          },
+          {
+            "kind": "li",
+            "text": "to let Buyers and Sellers arrange delivery and communicate about an Order;"
+          },
+          {
+            "kind": "li",
+            "text": "to send Order updates, tracking and support replies;"
+          },
+          {
+            "kind": "li",
+            "text": "to look into complaints, disputes, fraud and breaches of these terms;"
+          },
+          {
+            "kind": "li",
+            "text": "to keep the Platform working, secure and improving;"
+          },
+          {
+            "kind": "li",
+            "text": "to meet our own legal, tax and accounting obligations."
+          },
+          {
+            "kind": "p",
+            "text": "We do not sell your personal data. We do not use it for advertising profiling."
+          }
+        ]
+      },
+      {
+        "no": "12.3",
+        "title": "Who We Share It With",
+        "blocks": [
+          {
+            "kind": "li",
+            "text": "the Seller fulfilling your Order — your name, phone number and delivery address, so it can be delivered;"
+          },
+          {
+            "kind": "li",
+            "text": "the courier the Seller engages, for the same purpose;"
+          },
+          {
+            "kind": "li",
+            "text": "FamGateway, our payment gateway, to process payments, refunds and Settlements;"
+          },
+          {
+            "kind": "li",
+            "text": "an authority, court or regulator, where the law requires it."
+          },
+          {
+            "kind": "p",
+            "text": "These providers may process your data only to do the job we engage them for. We remain answerable for how we handle your data, including where a provider handles it for us."
+          }
+        ]
+      },
+      {
+        "no": "12.4",
+        "title": "How Long We Keep It",
         "blocks": [
           {
             "kind": "p",
-            "text": "A User may submit a grievance relating to a Listing, an Order, a Payout, or any breach of these policies by emailing support.loopynow.shop@gmail.com with the Order or Account details concerned. LoopyNow will acknowledge the grievance and aim to resolve it within the timelines prescribed by Applicable Law."
+            "text": "Account and Order records are kept for as long as your account is open and for [N] years afterwards, so that we can meet tax, accounting and legal obligations and deal with any later dispute. Support messages are kept for [N] years. Where we no longer need something, we delete or anonymise it."
+          }
+        ]
+      },
+      {
+        "no": "12.5",
+        "title": "Your Rights",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "You can ask us to give you a copy of the personal data we hold about you, correct it or complete it, delete it, or stop a particular use of it, and you can withdraw consent to anything you have consented to. Write to loopynowshopsupport@gmail.com and we will respond within 7–14 business days. Some records we must keep even after you close your account, and we will tell you if that applies. If you are not happy with our response, you can escalate under Article 11 or to the authority with jurisdiction under the Digital Personal Data Protection Act, 2023."
+          }
+        ]
+      },
+      {
+        "no": "12.6",
+        "title": "Security, and Children",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "We use reasonable technical and organisational measures to protect personal data, including restricted internal access and encryption in transit, and we apply tighter controls to Seller PAN and settlement details. No system is completely secure, so please protect your own login. If a breach affects your data, we will notify you and the authority as the law requires."
+          },
+          {
+            "kind": "p",
+            "text": "The Platform is not for use by anyone under 18. We do not knowingly collect data from children or track them, and if we learn we have, we will delete it. See Article 3."
           }
         ]
       }
@@ -890,160 +986,244 @@ export const LEGAL_SECTIONS: LegalSection[] = [
   },
   {
     "n": 13,
-    "id": "prohibited-products-policy",
-    "title": "Prohibited Products Policy",
-    "intro": [],
-    "subs": [
-      {
-        "no": "13.1",
-        "title": "General Prohibition",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Sellers must not list or sell products that are illegal, counterfeit, unsafe, or otherwise prohibited under Applicable Law, including but not limited to:"
-          },
-          {
-            "kind": "li",
-            "text": "Narcotics, controlled substances, and drug paraphernalia;"
-          },
-          {
-            "kind": "li",
-            "text": "Firearms, ammunition, and weapons regulated under Indian law;"
-          },
-          {
-            "kind": "li",
-            "text": "Counterfeit or unauthorised replicas of branded goods;"
-          },
-          {
-            "kind": "li",
-            "text": "Products that infringe a third party's intellectual property rights;"
-          },
-          {
-            "kind": "li",
-            "text": "Hazardous, restricted, or banned chemicals and substances;"
-          },
-          {
-            "kind": "li",
-            "text": "Products regulated by law that require a licence the Seller does not hold, such as certain pharmaceuticals;"
-          },
-          {
-            "kind": "li",
-            "text": "Any product the sale of which is otherwise prohibited or restricted under Indian law."
-          }
-        ]
-      },
-      {
-        "no": "13.2",
-        "title": "Enforcement",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "LoopyNow may remove a Listing that appears to breach this policy without prior notice and may suspend the Seller's Account for repeated or serious breaches, in accordance with Section 2.5."
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "n": 14,
-    "id": "community-guidelines",
-    "title": "Community Guidelines",
-    "intro": [],
-    "subs": [
-      {
-        "no": "14.1",
-        "title": "Respectful Conduct",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "All Users are expected to communicate respectfully with one another, whether resolving an Order query, leaving a review, or raising a dispute. Harassment, threats, discriminatory remarks, or abusive language directed at another User or at LoopyNow staff will not be tolerated."
-          }
-        ]
-      },
-      {
-        "no": "14.2",
-        "title": "Honest Reviews",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Reviews and ratings must reflect a genuine experience with a product or Seller. Fake reviews, incentivised reviews that are not disclosed as such, and review manipulation are prohibited."
-          }
-        ]
-      },
-      {
-        "no": "14.3",
-        "title": "Reporting",
-        "blocks": [
-          {
-            "kind": "p",
-            "text": "Users who witness a breach of these Community Guidelines may report it to support.loopynow.shop@gmail.com. LoopyNow will review reports and may take action ranging from a warning to Account suspension, in accordance with Section 2.5."
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "n": 15,
-    "id": "fraud-prevention-and-enforcement-policy",
-    "title": "Fraud Prevention and Enforcement Policy",
+    "id": "cookies",
+    "title": "Cookies",
     "intro": [
       {
         "kind": "p",
-        "text": "LoopyNow operates purely as a bridge connecting Buyers and Sellers, as described in Section 1.2. This section explains how LoopyNow handles fraud committed by a Buyer or a Seller against the other party."
+        "text": "We use a small number of cookies and similar technologies:"
+      },
+      {
+        "kind": "li",
+        "text": "Essential — to sign you in, keep your session, remember your cart and run checkout. The Platform will not work without these."
+      },
+      {
+        "kind": "li",
+        "text": "Analytics — to understand how the Platform is used so we can improve it."
+      },
+      {
+        "kind": "p",
+        "text": "Drafting note: if you set analytics cookies only after consent, say so; if you have no analytics, delete this line."
+      },
+      {
+        "kind": "p",
+        "text": "Your browser settings let you block or delete cookies. Blocking essential cookies will break sign-in and checkout."
       }
     ],
+    "subs": []
+  },
+  {
+    "n": 14,
+    "id": "prohibited-products",
+    "title": "Prohibited Products",
+    "intro": [
+      {
+        "kind": "p",
+        "text": "Sellers must not list anything that is illegal, counterfeit, unsafe or restricted, including:"
+      },
+      {
+        "kind": "li",
+        "text": "narcotics, controlled substances and drug paraphernalia;"
+      },
+      {
+        "kind": "li",
+        "text": "firearms, ammunition, explosives and regulated weapons;"
+      },
+      {
+        "kind": "li",
+        "text": "counterfeit goods, unauthorised replicas, and anything that infringes someone else's intellectual property;"
+      },
+      {
+        "kind": "li",
+        "text": "prescription medicines, medical devices and anything else needing a licence the Seller does not hold;"
+      },
+      {
+        "kind": "li",
+        "text": "hazardous or banned chemicals and substances;"
+      },
+      {
+        "kind": "li",
+        "text": "tobacco, alcohol and other age-restricted goods, unless we have expressly allowed the category and the Seller holds the required licence;"
+      },
+      {
+        "kind": "li",
+        "text": "live animals, human remains or tissue;"
+      },
+      {
+        "kind": "li",
+        "text": "stolen goods, and anything else whose sale is prohibited or restricted in India."
+      },
+      {
+        "kind": "p",
+        "text": "We may remove a Listing that appears to breach this Article without prior notice, and may suspend or terminate a Seller's account for repeated or serious breaches. We keep a record of Listings removed for counterfeiting or intellectual property infringement."
+      }
+    ],
+    "subs": []
+  },
+  {
+    "n": 15,
+    "id": "conduct-and-reviews",
+    "title": "Conduct and Reviews",
+    "intro": [],
     "subs": [
       {
         "no": "15.1",
-        "title": "No Liability for Fraud Between Users",
+        "title": "General Conduct",
         "blocks": [
           {
             "kind": "p",
-            "text": "LoopyNow is not accountable for fraudulent conduct committed by a Buyer against a Seller, or by a Seller against a Buyer, including but not limited to non-delivery, delivery of counterfeit, wrong, or misrepresented products, fraudulent refund or return claims, fraudulent payment disputes, or any other attempt by one User to scam another. As an intermediary, LoopyNow does not guarantee, insure, or itself compensate either party for losses arising from another User's fraudulent conduct, including any consequent refund or shipping loss. This is without prejudice to any liability that cannot lawfully be excluded under Applicable Law."
+            "text": "Be civil. Harassment, threats, discriminatory abuse or intimidation of another User or of our team is not tolerated and may cost you your account."
           }
         ]
       },
       {
         "no": "15.2",
-        "title": "Investigation and Determination of Responsibility",
+        "title": "Reviews and Ratings",
         "blocks": [
           {
             "kind": "p",
-            "text": "Where a User reports suspected fraud, LoopyNow will review the available evidence, including Order details, tracking information, and communication between the parties, to determine which party appears responsible. Where the evidence indicates the Seller is responsible, LoopyNow will direct the Seller to return the payment to the Buyer. Where the Seller does so, the matter is treated as resolved under the Refund & Return Policy. Where the evidence indicates the Buyer is responsible, for example through a false or abusive fraud claim, LoopyNow will treat this as a breach of these Terms by the Buyer."
-          },
-          {
-            "kind": "p",
-            "text": "LoopyNow's role in this process is limited to investigation, direction, and enforcement as set out below. LoopyNow does not itself refund, reimburse, or otherwise make either party financially whole for losses caused by the other party's fraud."
+            "text": "Reviews and ratings must come from a real experience of the product or Seller. Fake reviews, reviews written by a Seller about its own products or a competitor's, undisclosed paid reviews and any other manipulation are prohibited. We may remove a review that breaches this Article and act against the account behind it."
           }
         ]
       },
       {
         "no": "15.3",
-        "title": "Enforcement Action",
+        "title": "Platform Integrity",
         "blocks": [
           {
             "kind": "p",
-            "text": "Regardless of whether the responsible party is a Buyer or a Seller, LoopyNow will take strict action against whichever User is found responsible for the fraud, which may include a formal warning, removal of the relevant Listing, restriction of Account features, withholding of pending Payouts related to the matter, temporary suspension, or permanent termination of the Account under Section 2.5. LoopyNow may also report confirmed fraud to law enforcement or other competent authorities where appropriate."
-          }
-        ]
-      },
-      {
-        "no": "15.4",
-        "title": "No Fund Guarantee",
-        "blocks": [
+            "text": "Do not interfere with the Platform: no scraping beyond what our terms allow, no attempts to break security, no automated Order creation, no reverse engineering."
+          },
           {
             "kind": "p",
-            "text": "Users acknowledge that LoopyNow does not maintain a compensation fund for losses caused by another User's fraud. LoopyNow's commitment is to investigate reported fraud promptly, direct the responsible party to correct the situation where appropriate, and take enforcement action against that party — not to personally guarantee or fund the outcome of a dispute between Users."
+            "text": "Report a breach to loopynowshopsupport@gmail.com."
           }
         ]
       }
     ]
+  },
+  {
+    "n": 16,
+    "id": "liability",
+    "title": "Liability",
+    "intro": [],
+    "subs": [
+      {
+        "no": "16.1",
+        "title": "Platform Provided As Is",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "The Platform is provided as it is and as available. We work to keep it running and secure, but we do not promise that it will be uninterrupted or free of errors, and we do not warrant the accuracy of a Listing, the quality, safety or authenticity of a product, or the conduct of any Buyer or Seller."
+          }
+        ]
+      },
+      {
+        "no": "16.2",
+        "title": "Scope of Our Responsibility",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "We are responsible for our own services and our own acts and omissions, including how we operate the Platform and handle your data. We are not responsible for the products themselves, for a Seller's or Buyer's performance, or for loss arising in transit, except where Applicable Law makes us responsible."
+          }
+        ]
+      },
+      {
+        "no": "16.3",
+        "title": "Limitation of Liability",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "To the extent the law allows, we are not liable for indirect or consequential loss — lost profit, lost business, lost data or reputational harm — arising from your use of the Platform, and our total liability for any claim relating to an Order is limited to the amount you paid for that Order together with the platform fee on it."
+          },
+          {
+            "kind": "p",
+            "text": "Nothing in this document excludes or limits any liability that cannot lawfully be excluded, including under the Consumer Protection Act, 2019, and nothing in it removes a consumer's statutory rights."
+          }
+        ]
+      },
+      {
+        "no": "16.4",
+        "title": "Events Outside Our Control",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "Neither we nor a Seller is in breach for a delay or failure caused by something genuinely outside reasonable control — natural disaster, fire, flood, epidemic, strike, riot, war, failure of a public network or utility, courier shutdown, or action by a government or regulator. Where that happens you are still entitled to a refund for an Order that cannot be delivered."
+          }
+        ]
+      },
+      {
+        "no": "16.5",
+        "title": "Indemnity",
+        "blocks": [
+          {
+            "kind": "p",
+            "text": "If a claim is brought against us because of what you listed, sold, said or did on the Platform — an unsafe or infringing product, a misleading Listing, a breach of these terms or of the law — you agree to cover the loss and reasonable legal costs we incur as a result. This does not cover loss caused by our own breach or negligence."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 17,
+    "id": "governing-law",
+    "title": "Governing Law",
+    "intro": [
+      {
+        "kind": "p",
+        "text": "This document and your use of the Platform are governed by the laws of India. Subject to Article 11, the courts at Mumbai, Maharashtra have jurisdiction over any dispute arising from it."
+      },
+      {
+        "kind": "p",
+        "text": "This does not affect any right you have as a consumer to approach a consumer commission or other statutory forum where you live or where the cause of action arose."
+      }
+    ],
+    "subs": []
+  },
+  {
+    "n": 18,
+    "id": "contact",
+    "title": "Contact",
+    "intro": [
+      {
+        "kind": "p",
+        "text": "Support: loopynowshopsupport@gmail.com response time — 7–14 business days used elsewhere; confirm if support replies should be faster"
+      },
+      {
+        "kind": "p",
+        "text": "Grievances: loopynowshopsupport@gmail.com, attention Ankit Sah, Co-Founder"
+      },
+      {
+        "kind": "p",
+        "text": "Privacy requests: loopynowshopsupport@gmail.com"
+      },
+      {
+        "kind": "p",
+        "text": "Correspondence address Mumbai, Maharashtra given; street address and PIN code"
+      },
+      {
+        "kind": "p",
+        "text": "Payment queries: handled with our payment gateway, FamGateway; its own information is at [famgateway.in — confirm the exact policy/terms page]"
+      },
+      {
+        "kind": "p",
+        "text": "Loopy operated by Zohan Alam, Mumbai, India. Not yet incorporated; see Article 1."
+      },
+      {
+        "kind": "p",
+        "text": "Last updated 18 September 2026. This document is a draft prepared for review and is not legal advice."
+      }
+    ],
+    "subs": []
   }
 ];
 
-/** Look one section up by its slug. */
-export const legalSection = (id: string) => LEGAL_SECTIONS.find((s) => s.id === id);
+/** One Article by its id, for a page that renders a single policy. */
+export function legalSection(id: string): LegalSection | undefined {
+  return LEGAL_SECTIONS.find((s) => s.id === id);
+}
 
-/** Several sections at once, in the order given. */
-export const legalSections = (...ids: string[]) =>
-  ids.map((id) => legalSection(id)).filter(Boolean) as LegalSection[];
+/** Several Articles in the order given — how each policy page is composed. */
+export function legalSections(...ids: string[]): LegalSection[] {
+  return ids.map((id) => legalSection(id)).filter(Boolean) as LegalSection[];
+}

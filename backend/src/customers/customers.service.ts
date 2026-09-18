@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { verifyGoogleIdToken } from '../auth/google-verify';
-import { cancelRequestEmail, sendMail, verificationEmail } from '../mail/mailer';
+import { cancelRequestEmail, orderReceiptEmail, sendMail, verificationEmail } from '../mail/mailer';
 import { computeAmounts } from '../common/money';
 import { describeCoupon, discountFor, normalizeCode } from '../common/coupons';
 import { PaymentsService } from '../payments/payments.service';
@@ -459,6 +459,27 @@ export class CustomersService {
         link: '/seller/orders',
       },
     }).catch(() => { /* never fail a placed order over a notification */ });
+
+    /*
+     * The buyer's copy of a cash-on-delivery order: the same itemised bill as
+     * a paid receipt, but headed with what is still owed rather than what was
+     * charged. Online orders get theirs from payments.service, once the money
+     * is confirmed.
+     */
+    if (customer?.email) {
+      const store = await this.prisma.seller.findUnique({
+        where: { id: sellerId },
+        select: { storeName: true, username: true, contactEmail: true, user: { select: { email: true } } },
+      });
+      const base = (process.env.PUBLIC_WEB_URL || '').replace(/\/$/, '');
+      const mail = orderReceiptEmail(order, {
+        storeName: store?.storeName,
+        storeContact: store?.contactEmail || store?.user?.email || null,
+        ordersUrl: base && store?.username ? `${base}/s/${store.username}/orders` : null,
+      });
+      await sendMail(customer.email, mail.subject, mail.html, mail.text)
+        .catch(() => { /* a receipt must never undo a placed order */ });
+    }
 
     return order;
   }

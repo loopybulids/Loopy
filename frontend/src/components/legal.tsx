@@ -123,8 +123,8 @@ export function LegalShell({
               {LEGAL_META.contact}
             </a>
           </div>
-          {LEGAL_META.effectiveDate && (
-            <div className="mt-0.5">Effective {LEGAL_META.effectiveDate}.</div>
+          {LEGAL_META.lastUpdated && (
+            <div className="mt-0.5">Last updated {LEGAL_META.lastUpdated}.</div>
           )}
         </div>
 

@@ -13,7 +13,7 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('seller-agreement', 'seller-payout-policy', 'prohibited-products-policy', 'community-guidelines', 'fraud-prevention-and-enforcement-policy');
+  const sections = legalSections('seller-terms', 'payments-and-settlement', 'prohibited-products', 'conduct-and-reviews');
   return (
     <LegalShell
       title="Selling on Loopy"

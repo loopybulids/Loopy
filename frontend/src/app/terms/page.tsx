@@ -13,7 +13,7 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('definitions-and-interpretation', 'terms-of-service', 'buyer-terms', 'disclaimer-and-limitation-of-liability', 'grievance-redressal-policy');
+  const sections = legalSections('who-operates-loopy', 'terms-of-use', 'definitions', 'buyer-terms', 'who-is-responsible-for-what', 'complaints-and-disputes', 'liability', 'governing-law', 'contact');
   return (
     <LegalShell
       title="Terms of Service"

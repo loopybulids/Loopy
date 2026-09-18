@@ -13,7 +13,7 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('shipping-policy');
+  const sections = legalSections('shipping-and-delivery');
   return (
     <LegalShell
       title="Shipping Policy"

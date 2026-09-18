@@ -347,7 +347,7 @@ export default function Landing() {
                 { l: 'Shipping', href: '/shipping' },
                 { l: 'Selling on Loopy', href: '/sellers-terms' },
                 { l: 'All policies', href: '/legal' },
-                { l: 'Contact', href: '/legal#grievance-redressal-policy' },
+                { l: 'Contact', href: '/legal#contact' },
               ].map((x) => (
                 <li key={x.l}>
                   <Link href={x.href} className="transition-colors hover:text-navy">{x.l}</Link>

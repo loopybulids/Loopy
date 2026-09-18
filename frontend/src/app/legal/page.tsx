@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LegalShell, Policy } from '@/components/legal';
-import { LEGAL_SECTIONS } from '@/lib/legal-content';
+import { LEGAL_GLANCE, LEGAL_SECTIONS } from '@/lib/legal-content';
 
 export const metadata = {
   title: 'Loopy — Legal Policies',
@@ -20,6 +20,29 @@ export default function LegalPage() {
       sub="Every policy governing Loopy, in one document."
       active="/legal"
     >
+      {/*
+        The document's own summary for buyers. Presented as a summary and
+        labelled as one — it says itself that it does not replace the terms
+        below, and a page that quietly dropped that caveat would be making a
+        promise the policy does not.
+      */}
+      {LEGAL_GLANCE.length > 0 && (
+        <section className="mt-8 rounded-xl border border-green/25 bg-green-soft/40 p-5">
+          <h2 className="font-display text-[15px] font-bold text-navy">Important terms — at a glance</h2>
+          <p className="mt-0.5 text-[12.5px] text-muted">
+            A plain-language summary for convenience. It is not a substitute for the full Articles below, which govern.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {LEGAL_GLANCE.map((g) => (
+              <li key={g} className="flex gap-2 text-[13.5px] leading-relaxed text-navy/85">
+                <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-green" />
+                <span>{g}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <nav className="mt-8 rounded-xl border border-line bg-white p-4">
         <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-faint">Contents</div>
         <ol className="mt-2.5 grid gap-x-6 gap-y-1 sm:grid-cols-2">

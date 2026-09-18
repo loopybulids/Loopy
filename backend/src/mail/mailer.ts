@@ -72,6 +72,125 @@ const summary = (order: any) => {
 
 const ref = (order: any) => String(order?.id || '').slice(-6).toUpperCase();
 
+/** Escape anything a person typed before it goes into HTML mail. */
+function esc(v: string) {
+  return String(v ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
+  )[c]);
+}
+
+/**
+ * The buyer's receipt, sent the moment an order is confirmed.
+ *
+ * Every figure the buyer was charged, in the order they were charged it, so
+ * the total in the email can be checked against the total on the screen and
+ * the one on their bank statement. The platform fee is itemised rather than
+ * folded into the goods: they paid it, so hiding it would leave the lines not
+ * adding up.
+ *
+ * Sent when the money is real — after the gateway confirms an online payment,
+ * or at checkout for cash on delivery, where the label says plainly that
+ * nothing has been charged yet.
+ */
+export function orderReceiptEmail(
+  order: any,
+  opts: { storeName?: string | null; storeContact?: string | null; ordersUrl?: string | null } = {},
+) {
+  const paymentId = String(order?.paymentId || '');
+  const cod = paymentId === 'cod';
+  // Only a confirmed payment carries the gateway's transaction id; a bare
+  // `online:upi` is just the method the buyer picked.
+  const confirmed = /^online:[^:]+:.+/.test(paymentId);
+  const method = cod
+    ? 'Cash on delivery'
+    : confirmed
+      ? `Paid online · ${(paymentId.split(':')[1] || 'UPI').toUpperCase()}`
+      : 'Paid online';
+  const reference = paymentId.split(':').slice(2).join(' · ');
+
+  const items = order?.itemsAmount ?? 0;
+  const discount = order?.discountAmount ?? 0;
+  const shipping = order?.shippingCharge ?? 0;
+  const fee = order?.commissionAmount ?? 0;
+  const total = order?.totalAmount ?? 0;
+  const inr = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
+  const store = opts.storeName || 'the store';
+
+  const line = (label: string, value: string, strong = false) => `
+    <tr>
+      <td style="padding:5px 0;font-size:13px;color:${strong ? '#0E2A47' : '#5B6B80'};font-weight:${strong ? 700 : 400}">${label}</td>
+      <td style="padding:5px 0;font-size:${strong ? '15px' : '13px'};text-align:right;color:${strong ? '#15784A' : '#0E2A47'};font-weight:${strong ? 800 : 600}">${value}</td>
+    </tr>`;
+
+  const itemRows = (order?.items || [])
+    .map((i: any) => `
+      <tr>
+        <td style="padding:5px 0;font-size:13px;color:#0E2A47">${esc(i.title)} <span style="color:#8A98AD">× ${i.quantity}</span></td>
+        <td style="padding:5px 0;font-size:13px;text-align:right;color:#0E2A47">${inr(i.unitPrice * i.quantity)}</td>
+      </tr>`)
+    .join('');
+
+  const bill = `
+    <div style="background:#F6F5F0;border-radius:12px;padding:14px 16px">
+      <table style="width:100%;border-collapse:collapse">${itemRows}</table>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;padding-top:8px;border-top:1px solid #E8E6DE">
+        ${line('Items total', inr(items))}
+        ${discount > 0 ? line(order?.couponCode ? `Discount · ${esc(order.couponCode)}` : 'Discount', `−${inr(discount)}`) : ''}
+        ${line('Shipping', shipping ? inr(shipping) : 'Free')}
+        ${fee > 0 ? line('Platform fee', inr(fee)) : ''}
+        ${line(cod ? 'Amount due on delivery' : 'Total paid', inr(total), true)}
+      </table>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #E8E6DE;font-size:12px;color:#5B6B80">
+        <b style="color:#0E2A47">${method}</b>${reference ? ` · ${esc(reference)}` : ''}
+      </div>
+    </div>`;
+
+  const where = order?.address
+    ? `<div style="margin-top:14px;font-size:12px;color:#5B6B80">
+         <div style="text-transform:uppercase;letter-spacing:.08em;font-size:10.5px;color:#8A98AD">Delivering to</div>
+         <div style="margin-top:3px;color:#0E2A47">${esc(order.address)}</div>
+       </div>`
+    : '';
+
+  const track = opts.ordersUrl
+    ? `<div style="text-align:center;margin:18px 0 4px">
+         <a href="${opts.ordersUrl}" style="display:inline-block;background:#15784A;color:#fff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 20px;border-radius:999px">Track this order</a>
+       </div>`
+    : '';
+
+  const help = opts.storeContact
+    ? `<p style="margin:14px 0 0;font-size:12px;color:#5B6B80">Questions about this order? Contact ${esc(store)} at
+         <a href="mailto:${esc(opts.storeContact)}?subject=${encodeURIComponent(`Order #${ref(order)}`)}" style="color:#15784A">${esc(opts.storeContact)}</a>.</p>`
+    : '';
+
+  const plain = [
+    `Order #${ref(order)} — ${store}`,
+    '',
+    ...(order?.items || []).map((i: any) => `${i.title} x ${i.quantity}  ${inr(i.unitPrice * i.quantity)}`),
+    '',
+    `Items total: ${inr(items)}`,
+    ...(discount > 0 ? [`Discount${order?.couponCode ? ` (${order.couponCode})` : ''}: -${inr(discount)}`] : []),
+    `Shipping: ${shipping ? inr(shipping) : 'Free'}`,
+    ...(fee > 0 ? [`Platform fee: ${inr(fee)}`] : []),
+    `${cod ? 'Amount due on delivery' : 'Total paid'}: ${inr(total)}`,
+    `Payment: ${method}${reference ? ` (${reference})` : ''}`,
+    ...(order?.address ? ['', `Delivering to: ${order.address}`] : []),
+    ...(opts.ordersUrl ? ['', `Track it: ${opts.ordersUrl}`] : []),
+  ].join('\n');
+
+  return {
+    subject: `${cod ? 'Order' : 'Receipt for order'} #${ref(order)} — ${inr(total)}${opts.storeName ? ` · ${opts.storeName}` : ''}`,
+    text: plain,
+    html: shell(
+      cod ? 'Order confirmed 🎉' : 'Payment received 🎉',
+      cod
+        ? `Your order <b>#${ref(order)}</b> with ${esc(store)} is confirmed. Pay <b>${inr(total)}</b> in cash when it arrives.`
+        : `Thank you — we have your payment of <b>${inr(total)}</b> for order <b>#${ref(order)}</b> with ${esc(store)}. This email is your receipt.`,
+      bill + where + track + help,
+    ),
+  };
+}
+
 /** Seller accepted — the order is confirmed and will be fulfilled. */
 export function orderAcceptedEmail(order: any, storeName?: string) {
   const who = storeName ? ` by ${storeName}` : '';
@@ -151,13 +270,6 @@ export function orderRejectedEmail(order: any, storeName?: string, reason?: stri
       summary(order),
     ),
   };
-}
-
-/** Escape anything a person typed before it goes into HTML mail. */
-function esc(v: string) {
-  return String(v).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
-  )[c]);
 }
 
 /**

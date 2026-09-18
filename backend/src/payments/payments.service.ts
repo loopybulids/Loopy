@@ -3,6 +3,7 @@ import {
   ServiceUnavailableException, UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { orderReceiptEmail, sendMail } from '../mail/mailer';
 import {
   createGatewayOrder, famGatewayConfigured, GatewayStatus, PaymentGatewayError,
   validWebhookSignature, verifyGatewayOrder,
@@ -241,6 +242,10 @@ export class PaymentsService {
 
       if (result.recorded) {
         await this.audit(order.id, 'payment.received', receipt);
+        // The buyer's receipt: what they ordered, what it cost, where it is
+        // going. Sent here rather than at checkout, because until the gateway
+        // confirms the money there is nothing to be a receipt for.
+        await this.emailReceipt({ ...order, paymentId }).catch(() => undefined);
         // The seller hears about an online order once it is paid, not when it is merely started.
         await this.prisma.notification
           .create({
@@ -261,6 +266,28 @@ export class PaymentsService {
     }
     if (timedOut) return { status: 'cancelled', order };
     return { status: g.status === 'expired' ? 'expired' : 'pending', order };
+  }
+
+  /** Email the buyer their receipt. Never allowed to fail a settled payment. */
+  private async emailReceipt(order: any) {
+    const [store, customer] = await Promise.all([
+      this.prisma.seller.findUnique({
+        where: { id: order.sellerId },
+        select: { storeName: true, username: true, contactEmail: true, user: { select: { email: true } } },
+      }),
+      order.customerId
+        ? this.prisma.customer.findUnique({ where: { id: order.customerId }, select: { email: true } })
+        : null,
+    ]);
+    if (!customer?.email) return;
+
+    const base = (process.env.PUBLIC_WEB_URL || '').replace(/\/$/, '');
+    const mail = orderReceiptEmail(order, {
+      storeName: store?.storeName,
+      storeContact: store?.contactEmail || store?.user?.email || null,
+      ordersUrl: base && store?.username ? `${base}/s/${store.username}/orders` : null,
+    });
+    await sendMail(customer.email, mail.subject, mail.html, mail.text);
   }
 
   /**
