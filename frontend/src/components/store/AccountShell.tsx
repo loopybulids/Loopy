@@ -6,6 +6,7 @@ import { getCust, cartCount, type Cust } from '@/lib/customer';
 import StoreAccountBar from './StoreAccountBar';
 import CustomerAuth from './CustomerAuth';
 import { Bag, Heart, Users, Back, Truck, ShieldLock } from '@/components/icons';
+import { storeHref } from '@/lib/store-url';
 
 /**
  * Shared chrome for every customer account page — heading, greeting and the tab
@@ -46,7 +47,7 @@ export default function AccountShell({ username, title, children, requireAuth = 
     return () => { window.removeEventListener('cust-change', sync); window.removeEventListener('cart-change', sync); };
   }, [username]);
 
-  const active = (seg: string) => pathname === `/s/${username}/${seg}`;
+  const active = (seg: string) => pathname === storeHref(username, `/${seg}`);
   const firstName = (cust?.customer?.name || '').trim().split(' ')[0];
 
   return (
@@ -55,7 +56,7 @@ export default function AccountShell({ username, title, children, requireAuth = 
 
       <div className="border-b border-line bg-white">
         <div className="mx-auto max-w-4xl px-5 pt-6 sm:px-8">
-          <Link href={`/s/${username}`} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">
+          <Link href={storeHref(username)} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">
             <Back size={13} /> Back to {username}
           </Link>
 
@@ -71,7 +72,7 @@ export default function AccountShell({ username, title, children, requireAuth = 
               return (
                 <Link
                   key={t.seg}
-                  href={`/s/${username}/${t.seg}`}
+                  href={storeHref(username, `/${t.seg}`)}
                   className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
                     on ? 'bg-green text-white shadow-card' : 'text-muted hover:bg-paper hover:text-navy'
                   }`}

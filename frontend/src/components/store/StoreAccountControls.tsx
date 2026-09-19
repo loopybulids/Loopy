@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getCust, clearCust, cartCount, custApi, type Cust } from '@/lib/customer';
 import CustomerAuth from './CustomerAuth';
 import { Heart, Bag, Users, LogOut } from '@/components/icons';
+import { storeHref } from '@/lib/store-url';
 
 /**
  * Wishlist / account / cart controls for the storefront header.
@@ -68,7 +69,7 @@ export default function StoreAccountControls({ username, storeName, accent }: {
   return (
     <>
       <div className="flex items-center gap-0.5">
-        <Link href={username ? `/s/${username}/wishlist` : '#'} title="Wishlist" aria-label={wish ? `Wishlist, ${wish} items` : 'Wishlist'} className={pill}>
+        <Link href={username ? storeHref(username, '/wishlist') : '#'} title="Wishlist" aria-label={wish ? `Wishlist, ${wish} items` : 'Wishlist'} className={pill}>
           <Heart size={18} />
           {wish > 0 && <span className={badge} style={{ background: dot }}>{wish > 99 ? '99+' : wish}</span>}
         </Link>
@@ -93,7 +94,7 @@ export default function StoreAccountControls({ username, storeName, accent }: {
               </div>
               <div className="h-px bg-line" />
               <Link
-                href={username ? `/s/${username}/account` : '#'}
+                href={username ? storeHref(username, '/account') : '#'}
                 onClick={() => setMenu(false)}
                 className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-navy transition-colors hover:bg-paper"
               >
@@ -109,7 +110,7 @@ export default function StoreAccountControls({ username, storeName, accent }: {
           )}
         </div>
 
-        <Link href={username ? `/s/${username}/cart` : '#'} title="Cart" aria-label={cart ? `Cart, ${cart} items` : 'Cart'} className={pill}>
+        <Link href={username ? storeHref(username, '/cart') : '#'} title="Cart" aria-label={cart ? `Cart, ${cart} items` : 'Cart'} className={pill}>
           <Bag size={18} />
           {cart > 0 && <span className={badge} style={{ background: dot }}>{cart > 99 ? '99+' : cart}</span>}
         </Link>

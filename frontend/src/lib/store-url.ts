@@ -5,8 +5,8 @@
  *
  * Two addressing schemes are supported and both must keep working:
  *
- *   subdomain  cpaybara.loopynow.shop/orders     ← what sellers share
- *   path       loopynow.shop/s/cpaybara/orders   ← localhost, previews, *.vercel.app
+ *   subdomain  cpaybara.loopynow.shop/orders   ← when a wildcard domain is set
+ *   root path  loopynow.shop/cpaybara/orders    ← everywhere else
  *
  * `middleware.ts` rewrites the first into the second, so the app only ever
  * renders `/s/<username>/…` routes. This module is the other half: it decides
@@ -50,10 +50,14 @@ export function storeUrl(username: string, path?: string): string {
   const suffix = clean(path);
   if (root) return `https://${username}.${root}${suffix}`;
 
-  // No wildcard domain configured (localhost, preview deploys) — fall back to
-  // the path form against whatever origin we're actually served from.
+  /*
+   * No wildcard domain configured (localhost, preview deploys, or the Hobby
+   * plan) — use the root path against whatever origin we are served from.
+   * `/s/` stays as the internal route the middleware rewrites to; it is not
+   * something a seller should ever have to paste into their bio.
+   */
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
-  return `${origin}/s/${username}${suffix}`;
+  return `${origin}/${username}${suffix}`;
 }
 
 /** The same thing without a scheme, for display: `cpaybara.loopynow.shop`. */
@@ -66,10 +70,11 @@ export function storeUrlLabel(username: string, path?: string): string {
  *
  * On a store's own subdomain this returns a bare path (`/orders`), so links
  * stay on that host and the address bar doesn't show `/s/cpaybara/orders`
- * next to `cpaybara.loopynow.shop`. Everywhere else it returns the path form.
+ * next to `cpaybara.loopynow.shop`. Everywhere else it returns the root-path
+ * form, which the middleware rewrites to the real route.
  */
 export function storeHref(username: string, path?: string): string {
   const suffix = clean(path);
   if (onStoreSubdomain(username)) return suffix || '/';
-  return `/s/${username}${suffix}`;
+  return `/${username}${suffix}`;
 }

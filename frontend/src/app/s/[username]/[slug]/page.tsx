@@ -4,6 +4,7 @@ import StorePreview from '@/components/StorePreview';
 import VisitPing from '@/components/VisitPing';
 import { withDefaults } from '@/lib/store-config';
 import Link from 'next/link';
+import { storeHref } from '@/lib/store-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function StoreCustomPage({ params }: { params: Promise<{ us
         <div>
           <h1 className="font-display text-[24px] font-bold text-navy">Page not found</h1>
           <p className="mt-2 text-muted">This page doesn’t exist on {store.storeName}.</p>
-          <Link href={`/s/${username}`} className="btn-green mt-5 inline-flex">Back to store</Link>
+          <Link href={storeHref(username)} className="btn-green mt-5 inline-flex">Back to store</Link>
         </div>
       </main>
     );

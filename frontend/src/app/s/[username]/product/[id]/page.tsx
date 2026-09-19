@@ -10,6 +10,7 @@ import CustomerAuth from '@/components/store/CustomerAuth';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
 import ImageCarousel from '@/components/ImageCarousel';
 import { Heart, ShieldLock, Truck, ArrowRight } from '@/components/icons';
+import { storeHref } from '@/lib/store-url';
 
 export default function ProductPage() {
   const { username, id } = useParams<{ username: string; id: string }>();
@@ -28,7 +29,7 @@ export default function ProductPage() {
     if (getCust(username)) custApi.wishlistIds(username).then((ids: string[]) => setWished(ids.includes(id))).catch(() => {});
   }, [id, username]);
 
-  if (err) return <main className="grid min-h-screen place-items-center bg-paper text-center"><div><p className="text-rose">{err}</p><Link href={`/s/${username}`} className="btn-green mt-4 inline-flex">Back to store</Link></div></main>;
+  if (err) return <main className="grid min-h-screen place-items-center bg-paper text-center"><div><p className="text-rose">{err}</p><Link href={storeHref(username)} className="btn-green mt-4 inline-flex">Back to store</Link></div></main>;
   if (!p) return <main className="grid min-h-screen place-items-center bg-paper text-muted">Loading…</main>;
 
   const images: string[] = p.images || [];
@@ -44,7 +45,7 @@ export default function ProductPage() {
     if (buyNow) {
       // Buy now: don't stack a duplicate if it's already in the cart — just go there.
       if (!alreadyIn) addToCart(username, { productId: p.id, title: p.title, price: p.price, image: images[0], size: sz, qty });
-      router.push(`/s/${username}/cart`);
+      router.push(storeHref(username, '/cart'));
     } else {
       addToCart(username, { productId: p.id, title: p.title, price: p.price, image: images[0], size: sz, qty });
       notify('Added to cart ✓');
@@ -63,7 +64,7 @@ export default function ProductPage() {
     <main className="min-h-screen bg-paper">
       <StoreAccountBar username={username} storeName={p.seller?.storeName} />
       <div className="mx-auto max-w-5xl px-5 py-6 sm:px-8">
-        <Link href={`/s/${username}`} className="text-[13px] font-semibold text-muted hover:text-navy">← {p.seller?.storeName || 'Store'}</Link>
+        <Link href={storeHref(username)} className="text-[13px] font-semibold text-muted hover:text-navy">← {p.seller?.storeName || 'Store'}</Link>
 
         <div className="mt-4 grid gap-8 md:grid-cols-2">
           {/* gallery */}

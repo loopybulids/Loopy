@@ -6,6 +6,7 @@ import { SizeStrip } from '@/components/sizes';
 import AutoImages from '@/components/AutoImages';
 import StoreAccountControls from '@/components/store/StoreAccountControls';
 import { Search, ShieldLock, Truck, Star } from '@/components/icons';
+import { storeHref } from '@/lib/store-url';
 
 const rupees = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
 
@@ -72,14 +73,14 @@ export default function StorePreview({
 
   const c = overrideConfig || config;
   const accent = c.theme.accent;
-  const home = username ? `/s/${username}` : '#';
-  const pageLinks = (c.pages || []).filter((p) => p.showInNav).map((p) => ({ label: p.title, href: username ? `/s/${username}/${p.slug}` : '#' }));
+  const home = username ? storeHref(username) : '#';
+  const pageLinks = (c.pages || []).filter((p) => p.showInNav).map((p) => ({ label: p.title, href: username ? storeHref(username, `/${p.slug}`) : '#' }));
   const navLinks = [
     ...c.header.nav.map((n) => {
       let href = n.href;
       if (username && (href === '#' || href === '')) href = home;
       // "Track Order" (legacy default href) → the store's real order-tracking page
-      else if (href === '/orders') href = username ? `/s/${username}/orders` : '#';
+      else if (href === '/orders') href = username ? storeHref(username, '/orders') : '#';
       return { label: n.label, href };
     }),
     ...pageLinks,
@@ -375,7 +376,7 @@ function PageBody({ page, accent }: { page: StorePage; accent: string }) {
 function ProductCard({ p, username, accent }: { p: any; username?: string; accent: string }) {
   return (
     <Link
-      href={username ? `/s/${username}/product/${p.id}` : '#'}
+      href={username ? storeHref(username, `/product/${p.id}`) : '#'}
       className="block overflow-hidden rounded-lg border border-line bg-white transition hover:shadow-card"
     >
       <div className="relative aspect-square overflow-hidden bg-green-soft">

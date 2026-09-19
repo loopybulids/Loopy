@@ -6,6 +6,7 @@ import { api, rupees } from '@/lib/api';
 import { getCart, updateQty, applyLinkItems, parseLinkItems, type CartItem } from '@/lib/customer';
 import AccountShell from '@/components/store/AccountShell';
 import { Bag, ArrowRight } from '@/components/icons';
+import { storeHref } from '@/lib/store-url';
 
 export default function CartPage() {
   const { username } = useParams<{ username: string }>();
@@ -44,7 +45,7 @@ export default function CartPage() {
       .finally(() => {
         if (cancelled) return;
         setFilling(false);
-        window.history.replaceState({}, '', `/s/${username}/cart`);
+        window.history.replaceState({}, '', storeHref(username, '/cart'));
       });
 
     return () => { cancelled = true; };
@@ -61,7 +62,7 @@ export default function CartPage() {
           <div className="rounded-2xl border border-dashed border-line bg-white py-16 text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-soft text-green-600"><Bag size={24} /></span>
             <p className="mt-3 font-display text-[16px] font-bold text-navy">Your cart is empty</p>
-            <Link href={`/s/${username}`} className="btn-green mt-4 inline-flex">Browse products</Link>
+            <Link href={storeHref(username)} className="btn-green mt-4 inline-flex">Browse products</Link>
           </div>
         ) : (
           <>
@@ -99,7 +100,7 @@ export default function CartPage() {
             <div className="mt-6 rounded-2xl border border-line bg-white p-5">
               <div className="flex items-center justify-between text-[14px]"><span className="text-muted">Subtotal</span><span className="font-bold text-navy">{rupees(subtotal)}</span></div>
               <p className="mt-1 text-[12px] text-faint">Shipping calculated at checkout.</p>
-              <Link href={`/s/${username}/checkout`} className="btn-green mt-4 w-full justify-center">Checkout <ArrowRight size={16} /></Link>
+              <Link href={storeHref(username, '/checkout')} className="btn-green mt-4 w-full justify-center">Checkout <ArrowRight size={16} /></Link>
             </div>
           </>
         )}

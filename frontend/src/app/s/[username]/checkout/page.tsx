@@ -8,6 +8,7 @@ import StoreAccountBar from '@/components/store/StoreAccountBar';
 import CustomerAuth from '@/components/store/CustomerAuth';
 import OrderDetail from '@/components/store/OrderDetail';
 import { Bag, Check, ShieldLock } from '@/components/icons';
+import { storeHref } from '@/lib/store-url';
 
 const BLANK = { name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' };
 
@@ -235,8 +236,8 @@ export default function CheckoutPage() {
             <OrderDetail order={placed} />
           </div>
           <div className="mt-5 flex justify-center gap-3">
-            <Link href={`/s/${username}/orders`} className="btn-ghost">Track this order</Link>
-            <Link href={`/s/${username}`} className="btn-green">Continue shopping</Link>
+            <Link href={storeHref(username, '/orders')} className="btn-ghost">Track this order</Link>
+            <Link href={storeHref(username)} className="btn-green">Continue shopping</Link>
           </div>
         </div>
       </main>
@@ -281,7 +282,7 @@ export default function CheckoutPage() {
             {status === 'expired' && (
               <button onClick={() => retryPayment(orderId)} className="btn-green">Try the payment again</button>
             )}
-            <Link href={`/s/${username}/orders`} className="btn-ghost">My orders</Link>
+            <Link href={storeHref(username, '/orders')} className="btn-ghost">My orders</Link>
           </div>
           <p className="mt-4 font-num text-[11px] text-faint">Order #{orderId.slice(-6).toUpperCase()}</p>
         </div>
@@ -303,7 +304,7 @@ export default function CheckoutPage() {
         ) : cart.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-line bg-white py-16 text-center">
             <p className="font-display text-[16px] font-bold text-navy">Your cart is empty</p>
-            <Link href={`/s/${username}`} className="btn-green mt-4 inline-flex">Browse products</Link>
+            <Link href={storeHref(username)} className="btn-green mt-4 inline-flex">Browse products</Link>
           </div>
         ) : (
           <div className="mt-5 grid gap-6 md:grid-cols-[1.4fr_1fr]">

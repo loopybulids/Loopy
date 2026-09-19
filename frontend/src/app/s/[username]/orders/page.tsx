@@ -6,6 +6,7 @@ import { rupees } from '@/lib/api';
 import { custApi, getCust } from '@/lib/customer';
 import AccountShell from '@/components/store/AccountShell';
 import OrderDetail from '@/components/store/OrderDetail';
+import { storeHref } from '@/lib/store-url';
 
 /**
  * Where asking the store to cancel still makes sense — anything that has not
@@ -100,7 +101,7 @@ export default function TrackOrders() {
         <div className="rounded-2xl border border-dashed border-line bg-white py-16 text-center">
           <p className="font-display text-[16px] font-bold text-navy">No orders yet</p>
           <p className="mt-1 text-[13px] text-muted">When you place an order, it&apos;ll show up here.</p>
-          <Link href={`/s/${username}`} className="btn-green mt-4 inline-flex">Browse products</Link>
+          <Link href={storeHref(username)} className="btn-green mt-4 inline-flex">Browse products</Link>
         </div>
       ) : (
         <div className="space-y-4">
