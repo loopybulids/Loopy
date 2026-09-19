@@ -8,6 +8,7 @@ import MediaGallery from '@/components/MediaGallery';
 import MediaInput from '@/components/MediaInput';
 import { VariantsEditor, cleanVariants, toEditorVariants, type Variant } from '@/components/VariantsEditor';
 import { Plus, Tag, Heart, ShieldLock, Check } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 function firstImage(p: any): string | null {
   try {
@@ -22,6 +23,7 @@ function toArray(p: any): string[] {
 }
 
 export default function Catalog() {
+  const chref = useConsoleHref();
   // Painted from the last visit on the first frame, then refreshed. Mirrored
   // into local state so the row toggles can still update optimistically.
   const { data, loading } = useApiData<any[]>('seller:products', () => api.myProducts());
@@ -46,14 +48,14 @@ export default function Catalog() {
       <PageHead
         title="Products"
         sub="Your catalog — click a product to manage everything."
-        action={<Link href="/seller/products/new" className="btn-green"><Plus size={15} /> Add product</Link>}
+        action={<Link href={chref('/seller/products/new')} className="btn-green"><Plus size={15} /> Add product</Link>}
       />
       <Panel>
         {loading ? (
           <p className="py-8 text-center text-[13px] text-faint">Loading…</p>
         ) : products.length === 0 ? (
           <Empty icon={<Tag size={24} />} title="No products yet" hint="Add your first product and it goes live on your storefront instantly."
-            action={<Link href="/seller/products/new" className="btn-green"><Plus size={15} /> Add your first product</Link>} />
+            action={<Link href={chref('/seller/products/new')} className="btn-green"><Plus size={15} /> Add your first product</Link>} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[14px]">

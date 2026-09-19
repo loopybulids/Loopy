@@ -7,8 +7,10 @@ import { BuyerAvatar, StatCard, StatStrip, Panel, Empty, money, sellerEarns } fr
 import { AreaTrend } from '@/components/admin/AdminKit';
 import SellerExport from '@/components/SellerExport';
 import { Bag, Check, Eye, Plus, Share, Star, Users, Wallet } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 export default function Dashboard() {
+  const chref = useConsoleHref();
   /**
    * One request, and one cached bundle.
    *
@@ -93,9 +95,9 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:grid-cols-3">
         {/* All-time earnings first: it's the number sellers actually look for.
             Same formula as the wallet — delivered orders, net of discounts. */}
-        <StatCard label="All-time earnings" value={money(lifetime)} delta={lifetime ? 'Delivered orders · goods only' : 'Nothing delivered yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
-        <StatCard label="Revenue" value={money(revenue)} delta={revenue ? `${an?.paidOrders ?? 0} paid orders` : 'No sales yet'} icon={<Wallet size={18} />} href="/seller/payments" />
-        <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} href="/seller/orders" />
+        <StatCard label="All-time earnings" value={money(lifetime)} delta={lifetime ? 'Delivered orders · goods only' : 'Nothing delivered yet'} icon={<Wallet size={18} />} accent href={chref('/seller/payments')} />
+        <StatCard label="Revenue" value={money(revenue)} delta={revenue ? `${an?.paidOrders ?? 0} paid orders` : 'No sales yet'} icon={<Wallet size={18} />} href={chref('/seller/payments')} />
+        <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} href={chref('/seller/orders')} />
       </div>
 
       {/*
@@ -107,10 +109,10 @@ export default function Dashboard() {
       <StatStrip
         cols={4}
         items={[
-          { label: 'Customers', value: an?.customers ?? 0, hint: 'Unique buyers', href: '/seller/customers' },
+          { label: 'Customers', value: an?.customers ?? 0, hint: 'Unique buyers', href: chref('/seller/customers') },
           { label: 'Store visits', value: an?.totalVisits ?? 0, hint: `${an?.visitsToday ?? 0} today` },
           { label: 'Live now', value: an?.liveUsers ?? 0, hint: `${an?.conversion ?? 0}% visit→order`, live: true },
-          { label: 'Rating', value: an?.avgRating ? `${an.avgRating}★` : '—', hint: `${an?.reviewCount ?? 0} reviews`, href: '/seller/reviews' },
+          { label: 'Rating', value: an?.avgRating ? `${an.avgRating}★` : '—', hint: `${an?.reviewCount ?? 0} reviews`, href: chref('/seller/reviews') },
         ]}
       />
       </>
@@ -162,15 +164,15 @@ export default function Dashboard() {
           <Row label="Paid out" value={money(wallet?.settled ?? 0)} />
           <Row label="Lifetime earnings" value={money(wallet?.lifetime ?? 0)} />
         </div>
-        <Link href="/seller/payments" className="btn-green mt-5 w-fit">Go to payouts</Link>
+        <Link href={chref('/seller/payments')} className="btn-green mt-5 w-fit">Go to payouts</Link>
       </Panel>
 
       {/* recent orders */}
-      <Panel title="Recent orders" action={<Link href="/seller/orders" className="text-[13px] font-bold text-green-600 hover:underline">View all</Link>}>
+      <Panel title="Recent orders" action={<Link href={chref('/seller/orders')} className="text-[13px] font-bold text-green-600 hover:underline">View all</Link>}>
         {loading ? <p className="py-8 text-center text-[13px] text-faint">Loading…</p>
           : orders.length === 0 ? (
             <Empty icon={<Share size={24} />} title="No orders yet" hint="Generate your first checkout link, share it in a DM, and orders will land right here."
-              action={<Link href="/seller/links" className="btn-green"><Plus size={15} /> Create a checkout link</Link>} />
+              action={<Link href={chref('/seller/links')} className="btn-green"><Plus size={15} /> Create a checkout link</Link>} />
           ) : (
             <div className="divide-y divide-line">
               {orders.slice(0, 6).map((o) => (

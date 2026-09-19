@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { storeUrl } from '@/lib/store-url';
 import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, TEMPLATES, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
+import { useConsoleHref } from '@/lib/console-url';
 
 const ACCENT_PRESETS = ['#15784A', '#0E2A47', '#7C3AED', '#DB2777', '#EA580C', '#0891B2', '#CA8A04', '#E11D48'];
 import StorePreview from '@/components/StorePreview';
@@ -14,6 +15,7 @@ type SectionKey = (typeof SECTION_ORDER)[number]['key'];
 type LeftTab = 'themes' | 'sections' | 'styles';
 
 export default function StoreEditor() {
+  const chref = useConsoleHref();
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [storeName, setStoreName] = useState('Your Store');
@@ -221,7 +223,7 @@ export default function StoreEditor() {
         </div>
         {username
           ? <button onClick={handlePreview} className="flex items-center gap-1 text-[12.5px] font-semibold text-muted transition-colors hover:text-navy">Preview <IExternal /></button>
-          : <Link href="/seller/settings" className="flex items-center gap-1 text-[12.5px] font-semibold text-amber transition-colors hover:text-navy">Set a handle to preview <IExternal /></Link>}
+          : <Link href={chref('/seller/settings')} className="flex items-center gap-1 text-[12.5px] font-semibold text-amber transition-colors hover:text-navy">Set a handle to preview <IExternal /></Link>}
         <div className="flex items-center gap-0.5">
           <button onClick={undo} disabled={!hist.current.past.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Undo"><IUndo /></button>
           <button onClick={redo} disabled={!hist.current.future.length} className="grid h-7 w-7 place-items-center rounded-md text-faint transition-colors hover:bg-paper hover:text-navy disabled:opacity-25" title="Redo"><IRedo /></button>
@@ -242,8 +244,8 @@ export default function StoreEditor() {
       {publishErr && (
         <div className="flex items-center gap-2 border-b border-amber/30 bg-amber-soft px-4 py-2 text-[12.5px] font-semibold text-navy/80 sm:px-6">
           ⚠️ {publishErr}
-          <Link href="/seller/shipping" className="ml-auto rounded-md bg-white px-2.5 py-1 text-[11.5px] font-bold text-navy hover:bg-paper">Shipping</Link>
-          <Link href="/seller/payments" className="rounded-md bg-white px-2.5 py-1 text-[11.5px] font-bold text-navy hover:bg-paper">Payments</Link>
+          <Link href={chref('/seller/shipping')} className="ml-auto rounded-md bg-white px-2.5 py-1 text-[11.5px] font-bold text-navy hover:bg-paper">Shipping</Link>
+          <Link href={chref('/seller/payments')} className="rounded-md bg-white px-2.5 py-1 text-[11.5px] font-bold text-navy hover:bg-paper">Payments</Link>
         </div>
       )}
 
@@ -400,6 +402,7 @@ function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }
   pageId: string | null;
   setPageId: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
+  const chref = useConsoleHref();
   const label = SECTION_ORDER.find((s) => s.key === active)?.label;
   return (
     <div>
@@ -519,7 +522,7 @@ function Fields({ active, config, set, setConfig, storeName, pageId, setPageId }
               only controls how they're presented. */}
           <p className="mt-3 rounded-lg border border-line bg-paper/60 p-3 text-[12.5px] leading-relaxed text-muted">
             Build your collections in{' '}
-            <a href="/seller/collections" className="font-semibold text-green-600 underline decoration-line">Collections</a>
+            <a href={chref('/seller/collections')} className="font-semibold text-green-600 underline decoration-line">Collections</a>
             . Every published one appears here, in the order you arranged them.
           </p>
         </>

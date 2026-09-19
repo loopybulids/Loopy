@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto } from './dto';
 import { orderAcceptedEmail, orderRejectedEmail, orderShippedEmail, reviewRequestEmail, sendMail } from '../mail/mailer';
 import { computeAmounts } from '../common/money';
+import { storeUrl } from '../common/store-url';
 
 @Injectable()
 export class OrdersService {
@@ -338,9 +339,8 @@ export class OrdersService {
     const { storeName, username, email } = await this.notifyTargets(order);
     if (!email) return;
 
-    const base = (process.env.PUBLIC_WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
     // The buyer's orders tab, with this order opened on its rating form.
-    const url = username ? `${base}/s/${username}/orders?review=${order.id}` : undefined;
+    const url = storeUrl(username, `/orders?review=${order.id}`) || undefined;
 
     const m = reviewRequestEmail(order, storeName, url);
     return sendMail(email, m.subject, m.html, m.text);

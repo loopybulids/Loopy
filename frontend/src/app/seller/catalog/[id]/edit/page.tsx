@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { PageHead, Panel } from '@/components/seller-ui';
 import MediaGallery from '@/components/MediaGallery';
+import { useConsoleHref } from '@/lib/console-url';
 
 const CONDITIONS = ['Brand New', 'Like new', 'Good', 'Fair'];
 
@@ -17,6 +18,7 @@ function allImages(p: any): string[] {
 }
 
 export default function EditProduct() {
+  const chref = useConsoleHref();
   const id = useParams().id as string;
   const router = useRouter();
   const [f, setF] = useState({ title: '', price: '', condition: 'Good', category: '', description: '', quantity: '1' });
@@ -47,7 +49,7 @@ export default function EditProduct() {
         title: f.title, price: Number(f.price), condition: f.condition, category: f.category,
         description: f.description, images: media, quantity: Number(f.quantity),
       });
-      router.push('/seller/catalog');
+      router.push(chref('/seller/catalog'));
     } catch (e: any) { setErr(e?.message || 'Could not save.'); setBusy(false); }
   };
 
@@ -55,7 +57,7 @@ export default function EditProduct() {
 
   return (
     <div className="max-w-xl">
-      <PageHead title="Edit product" sub="Update details, price and stock." action={<Link href="/seller/catalog" className="btn-ghost px-3 py-2 text-[13px]">← Back</Link>} />
+      <PageHead title="Edit product" sub="Update details, price and stock." action={<Link href={chref('/seller/catalog')} className="btn-ghost px-3 py-2 text-[13px]">← Back</Link>} />
       <Panel>
         <Field label="Product title" value={f.title} onChange={(v) => set('title', v)} />
         <div className="mt-4 grid grid-cols-2 gap-3">

@@ -4,6 +4,7 @@ import { api, rupees } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
 import { PageHead, Panel, Empty, StatStrip } from '@/components/seller-ui';
 import { Plus, Tag, Check, Store } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 /**
  * The first image of a product, whichever shape it arrived in.
@@ -59,6 +60,7 @@ type Draft = {
 const BLANK: Draft = { id: '', title: '', description: '', imageUrl: '', published: true, productIds: [] };
 
 export default function Collections() {
+  const chref = useConsoleHref();
   const { data, loading, reload } = useApiData<any[]>('seller:collections', () => api.myCollections());
   const collections = data ?? [];
 
@@ -207,7 +209,7 @@ export default function Collections() {
 
       <p className="mt-4 text-[12.5px] text-muted">
         Collections appear on your storefront once you add a <b className="text-navy">Collections</b> section in the{' '}
-        <a href="/seller/store-editor" className="font-semibold text-green-600 underline decoration-line">Store Editor</a>.
+        <a href={chref('/seller/store-editor')} className="font-semibold text-green-600 underline decoration-line">Store Editor</a>.
       </p>
     </div>
   );

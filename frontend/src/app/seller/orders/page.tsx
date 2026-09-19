@@ -6,6 +6,7 @@ import { useApiData } from '@/lib/use-api-data';
 import { BuyerAvatar, PageHead, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import OrderDetail, { paymentState, statusLabel, statusChip } from '@/components/store/OrderDetail';
 import { Share, Plus } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 /**
  * Buyer cancellations and seller rejections both store status='Cancelled', so
@@ -23,6 +24,7 @@ const FILTERS: { key: string; label: string; match: (o: any) => boolean }[] = [
 ];
 
 export default function Orders() {
+  const chref = useConsoleHref();
   // Painted from the last visit on the first frame, then refreshed. Mirrored
   // into local state so accept/ship/reject can update a row optimistically.
   const { data: fetched, loading } = useApiData<any[]>('seller:orders', () => api.myOrders());
@@ -66,7 +68,7 @@ export default function Orders() {
 
   return (
     <div>
-      <PageHead title="Orders" sub="Every order in one queue." action={<Link href="/seller/orders/new" className="btn-green"><Plus size={15} /> New order</Link>} />
+      <PageHead title="Orders" sub="Every order in one queue." action={<Link href={chref('/seller/orders/new')} className="btn-green"><Plus size={15} /> New order</Link>} />
 
       <div className="mb-5 flex flex-wrap gap-2">
         {FILTERS.map((f) => {
@@ -94,7 +96,7 @@ export default function Orders() {
             icon={<Share size={24} />}
             title={orders.length === 0 ? 'No orders yet' : `No ${active.label.toLowerCase()} orders`}
             hint="Share a checkout link in a chat and paid orders will appear here automatically."
-            action={<Link href="/seller/links" className="btn-green"><Plus size={15} /> Create a checkout link</Link>}
+            action={<Link href={chref('/seller/links')} className="btn-green"><Plus size={15} /> Create a checkout link</Link>}
           />
         ) : (
           <div className="divide-y divide-line">

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { PageHead, StatStrip, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import { Truck, Check } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 const STATUS_CHIP: Record<string, string> = {
   Paid: 'chip-amber',
@@ -12,6 +13,7 @@ const STATUS_CHIP: Record<string, string> = {
 };
 
 export default function Shipping() {
+  const chref = useConsoleHref();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
@@ -103,7 +105,7 @@ export default function Shipping() {
 
       <StatStrip
         items={[
-          { label: 'Orders to ship', value: toShip.length, href: '/seller/orders' },
+          { label: 'Orders to ship', value: toShip.length, href: chref('/seller/orders') },
           { label: 'In transit', value: inTransit },
           { label: 'Delivered', value: delivered },
         ]}

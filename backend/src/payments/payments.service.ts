@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { orderReceiptEmail, sendMail } from '../mail/mailer';
+import { storeUrl } from '../common/store-url';
 import {
   createGatewayOrder, famGatewayConfigured, GatewayStatus, PaymentGatewayError,
   validWebhookSignature, verifyGatewayOrder,
@@ -286,11 +287,10 @@ export class PaymentsService {
     ]);
     if (!customer?.email) return;
 
-    const base = (process.env.PUBLIC_WEB_URL || '').replace(/\/$/, '');
     const mail = orderReceiptEmail(order, {
       storeName: store?.storeName,
       storeContact: store?.contactEmail || store?.user?.email || null,
-      ordersUrl: base && store?.username ? `${base}/s/${store.username}/orders` : null,
+      ordersUrl: storeUrl(store?.username, '/orders'),
     });
     await sendMail(customer.email, mail.subject, mail.html, mail.text);
   }

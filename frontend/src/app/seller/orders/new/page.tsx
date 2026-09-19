@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageHead, Panel, money } from '@/components/seller-ui';
 import { Plus } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 type Line = { productId: string; quantity: number };
 
 export default function ManualOrder() {
+  const chref = useConsoleHref();
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
@@ -37,7 +39,7 @@ export default function ManualOrder() {
     setBusy(true);
     try {
       await api.createManualOrder({ items: lines, ...cust });
-      router.push('/seller/orders');
+      router.push(chref('/seller/orders'));
     } catch (e: any) { setErr(e?.message || 'Could not create order.'); setBusy(false); }
   };
 
@@ -45,14 +47,14 @@ export default function ManualOrder() {
     return (
       <div>
         <PageHead title="New order" sub="Record a sale manually." />
-        <Panel><p className="py-8 text-center text-[13px] text-muted">Add a product first — <Link href="/seller/products/new" className="font-bold text-green-600 hover:underline">add product</Link>.</p></Panel>
+        <Panel><p className="py-8 text-center text-[13px] text-muted">Add a product first — <Link href={chref('/seller/products/new')} className="font-bold text-green-600 hover:underline">add product</Link>.</p></Panel>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl">
-      <PageHead title="New order" sub="Record a sale (e.g. from a DM). Stock updates automatically." action={<Link href="/seller/orders" className="btn-ghost px-3 py-2 text-[13px]">← Back</Link>} />
+      <PageHead title="New order" sub="Record a sale (e.g. from a DM). Stock updates automatically." action={<Link href={chref('/seller/orders')} className="btn-ghost px-3 py-2 text-[13px]">← Back</Link>} />
 
       <Panel title="Items" className="mb-6">
         <div className="space-y-3">

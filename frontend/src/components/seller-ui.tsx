@@ -2,6 +2,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { motion } from '@/components/motion';
+import { useConsoleHref } from '@/lib/console-url';
 
 /* Metric card for the dashboard grid. Pass `href` to make it navigate. */
 export function StatCard({
@@ -166,6 +167,7 @@ export function StatStrip({
  * going back to the sidebar to find the other half.
  */
 export function AccountTabs({ active }: { active: '/seller/profile' | '/seller/settings' }) {
+  const chref = useConsoleHref();
   const tabs = [
     { href: '/seller/profile', label: 'Profile', hint: 'Public store identity' },
     { href: '/seller/settings', label: 'Settings', hint: 'Account & store preferences' },
@@ -178,7 +180,7 @@ export function AccountTabs({ active }: { active: '/seller/profile' | '/seller/s
         return (
           <Link
             key={t.href}
-            href={t.href}
+            href={chref(t.href)}
             aria-current={on ? 'page' : undefined}
             className={`flex-1 rounded-xl border px-4 py-2.5 transition-colors ${
               on ? 'border-green bg-green-soft/50' : 'border-line bg-white hover:border-green/40'

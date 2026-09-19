@@ -1,60 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { HANDLE, RESERVED_PATHS } from '@/lib/reserved-paths';
 
 /**
- * Where a storefront lives in the URL.
+ * Who owns which URL.
  *
- * Two rewrites, both landing on the same `/s/<handle>/…` routes so the app
- * only ever renders one storefront tree:
+ * Loopy serves two audiences from one deployment, and they are split by host
+ * rather than by path prefix:
  *
- *   1. Subdomain — cpaybara.loopynow.shop/orders. The nicest form, but it
- *      needs a wildcard domain (*.loopynow.shop) pointed at this project,
- *      which is a paid Vercel feature. Off unless NEXT_PUBLIC_ROOT_DOMAIN is
- *      set.
- *   2. Root path — loopynow.shop/cpaybara/orders. Works everywhere, including
- *      localhost and preview deploys, with no DNS at all.
+ *   cpaybara.loopynow.shop        the shop      → /s/cpaybara/…
+ *   www.loopynow.shop/cpaybara    its console   → /seller/…
  *
- * The second is why RESERVED_PATHS exists: at the root of the site a handle
- * competes with every real page, so anything the app owns — now or later — is
- * claimed here and can never be rewritten to a store. Next matches static
- * segments before dynamic ones, so /admin would win regardless; the list also
- * stops a seller taking a handle that is unreachable as a result.
+ * Both rewrite onto routes that already exist, so the app renders one
+ * storefront tree and one console tree and neither knows how it was reached.
+ *
+ * The split is deliberate. A seller's shop is the thing they hand to
+ * customers, so it gets the short, memorable address; their own back office
+ * is a private tool and lives inside ours. Putting both under the same host
+ * would mean one path serving two different pages depending on who is looking,
+ * which is not something a URL should ever do.
+ *
+ * Without a wildcard domain — localhost, preview deploys — shops are reached
+ * at their real route, /s/cpaybara. The console still answers on /cpaybara
+ * everywhere, so what a seller sees locally matches production.
+ *
+ * What keeps this safe is RESERVED_PATHS — see lib/reserved-paths.
  */
 
-/** Top-level paths that belong to the app, not to a store. */
-const RESERVED_PATHS = new Set([
-  's', 'admin', 'seller', 'sellers', 'api', 'login', 'signup', 'logout',
-  'legal', 'privacy', 'terms', 'refunds', 'shipping', 'sellers-terms',
-  'cart', 'checkout', 'orders', 'order', 'product', 'products', 'store', 'stores',
-  'about', 'help', 'support', 'contact', 'pricing', 'blog', 'docs', 'status', 'app',
-  'www', 'assets', 'static', 'cdn', 'icon', 'favicon', 'robots', 'sitemap', 'sw',
-]);
-
-/** A plausible store handle: what updateProfile() slugifies a name down to. */
-const HANDLE = /^[a-z0-9][a-z0-9-]{1,38}$/;
 export const config = {
   matcher: ['/((?!_next/|api/|favicon.ico|.*\\.).*)'],
 };
 
-/** loopynow.shop/cpaybara/orders → /s/cpaybara/orders */
-function rewriteRootPath(req: NextRequest) {
+/**
+ * www.loopynow.shop/cpaybara/orders → /seller/orders
+ *
+ * The handle is decorative here — the console shows whatever the session says,
+ * never what the URL claims. It is in the address so a seller sees their own
+ * shop's name while they work, instead of the word "seller". SellerLayout
+ * corrects the handle if it does not match who is signed in.
+ */
+function rewriteConsolePath(req: NextRequest) {
   const segments = req.nextUrl.pathname.split('/').filter(Boolean);
   const first = (segments[0] || '').toLowerCase();
   if (!first || RESERVED_PATHS.has(first) || !HANDLE.test(first)) return null;
 
+  const rest = segments.slice(1);
   const url = req.nextUrl.clone();
-  url.pathname = `/s/${segments.join('/')}`;
+  url.pathname = `/seller${rest.length ? `/${rest.join('/')}` : ''}`;
   return NextResponse.rewrite(url);
 }
 
 export function middleware(req: NextRequest) {
   const roots = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (!roots.length) return rewriteRootPath(req) || NextResponse.next();
+  if (!roots.length) return rewriteConsolePath(req) || NextResponse.next();
 
   const hostname = (req.headers.get('host') || '').split(':')[0].toLowerCase();
   const root = roots.find((d) => hostname === d || hostname.endsWith('.' + d));
-  // The apex and www are the site itself — a handle there is a root path.
+  // The apex and www are the site itself, so a handle there is a console path.
   if (!root || hostname === root || hostname === `www.${root}`) {
-    return rewriteRootPath(req) || NextResponse.next();
+    return rewriteConsolePath(req) || NextResponse.next();
   }
 
   const sub = hostname.slice(0, hostname.length - root.length - 1);

@@ -6,7 +6,11 @@
  * Two addressing schemes are supported and both must keep working:
  *
  *   subdomain  cpaybara.loopynow.shop/orders   ← when a wildcard domain is set
- *   root path  loopynow.shop/cpaybara/orders    ← everywhere else
+ *   route      loopynow.shop/s/cpaybara/orders ← localhost and preview deploys
+ *
+ * The root path is NOT one of them: loopynow.shop/cpaybara is the seller's
+ * console, not their shop. See middleware.ts for why the two audiences are
+ * split by host rather than by path.
  *
  * `middleware.ts` rewrites the first into the second, so the app only ever
  * renders `/s/<username>/…` routes. This module is the other half: it decides
@@ -23,6 +27,18 @@ export function rootDomain(): string | null {
   const raw = process.env.NEXT_PUBLIC_ROOT_DOMAIN || '';
   const first = raw.split(',')[0].trim();
   return first || null;
+}
+
+/**
+ * True when the browser is on some store's subdomain rather than the main
+ * site. Browser-only — there is no host to read during a server render.
+ */
+export function onAnyStoreSubdomain(): boolean {
+  const root = rootDomain();
+  if (!root || typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  if (host === root || host === `www.${root}`) return false;
+  return host.endsWith(`.${root}`);
 }
 
 /** True when the browser is already on this store's own subdomain. */
@@ -51,13 +67,12 @@ export function storeUrl(username: string, path?: string): string {
   if (root) return `https://${username}.${root}${suffix}`;
 
   /*
-   * No wildcard domain configured (localhost, preview deploys, or the Hobby
-   * plan) — use the root path against whatever origin we are served from.
-   * `/s/` stays as the internal route the middleware rewrites to; it is not
-   * something a seller should ever have to paste into their bio.
+   * No wildcard domain configured — localhost or a preview deploy. Fall back
+   * to the real route against whatever origin we are served from. This form
+   * is for development; what a seller shares is the subdomain above.
    */
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
-  return `${origin}/${username}${suffix}`;
+  return `${origin}/s/${username}${suffix}`;
 }
 
 /** The same thing without a scheme, for display: `cpaybara.loopynow.shop`. */
@@ -70,11 +85,10 @@ export function storeUrlLabel(username: string, path?: string): string {
  *
  * On a store's own subdomain this returns a bare path (`/orders`), so links
  * stay on that host and the address bar doesn't show `/s/cpaybara/orders`
- * next to `cpaybara.loopynow.shop`. Everywhere else it returns the root-path
- * form, which the middleware rewrites to the real route.
+ * next to `cpaybara.loopynow.shop`. Everywhere else it returns the real route.
  */
 export function storeHref(username: string, path?: string): string {
   const suffix = clean(path);
   if (onStoreSubdomain(username)) return suffix || '/';
-  return `/${username}${suffix}`;
+  return `/s/${username}${suffix}`;
 }

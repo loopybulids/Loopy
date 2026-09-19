@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
 import { storeUrl, storeUrlLabel } from '@/lib/store-url';
+import { canonicalPath, consoleBase, ConsoleBaseProvider, consoleHref } from '@/lib/console-url';
 import { exitImpersonation } from '@/lib/impersonate';
 import NotificationsBell from '@/components/NotificationsBell';
 import Logo from '@/components/Logo';
@@ -50,7 +51,10 @@ const CONSOLE = new Set([...ALL_NAV.map((n) => n.href), '/seller/products/new'])
 const CONSOLE_PREFIXES = ['/seller/catalog/', '/seller/orders/'];
 
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  // The browser may be on /cpaybara/orders. Everything below matches against
+  // the canonical /seller/orders that middleware rewrote it to, so the route
+  // tables above stay written in one form.
+  const pathname = canonicalPath(usePathname());
   const isConsole = CONSOLE.has(pathname) || CONSOLE_PREFIXES.some((p) => pathname.startsWith(p));
 
   // Login + any legacy seller pages render without the console chrome.
@@ -91,19 +95,39 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
-   * Put the store's name in the browser tab.
-   *
-   * The console's address is /seller and cannot be the store's own — that path
-   * belongs to the storefront. So the tab is where a seller's shop gets named:
-   * with three Loopy tabs open, "Loopy" on all of them says nothing, and a
-   * seller looking at the address bar for their shop's name found the word
-   * "seller" instead.
+   * The prefix every link in the console is built from, and the browser tab's
+   * name. Both come from the session rather than from the URL — see
+   * lib/console-url for why that distinction matters.
    */
+  const base = username ? `/${username}` : '/seller';
+  const href = (path: string) => consoleHref(base, path);
   const storeLabel = (name || username || '').trim();
   useEffect(() => {
     const page = ALL_NAV.find((n) => n.href === pathname)?.label || 'Dashboard';
     document.title = storeLabel ? `${storeLabel} · ${page} · Loopy` : `Seller Console · ${page} · Loopy`;
   }, [storeLabel, pathname]);
+
+  /*
+   * Put the shop's handle in the address bar, and keep it honest.
+   *
+   * Two cases land here. A seller arriving at /seller — from login, a
+   * bookmark, or an admin impersonating them — is moved to /cpaybara. And
+   * anyone who edits the handle in the URL is moved back to their own: the
+   * console renders from the session either way, so a mismatched handle left
+   * showing would imply it had done something.
+   *
+   * history.replaceState, not router.replace. The URL is the only thing that
+   * needs to change — middleware rewrites both spellings onto this same page,
+   * so asking the router to navigate would refetch the route we are already
+   * looking at. It also cannot loop, which a navigation triggered by reading
+   * the path could: nothing here re-renders as a result.
+   */
+  useEffect(() => {
+    if (!username) return;
+    const here = window.location.pathname;
+    if (consoleBase(here) === base) return;
+    window.history.replaceState(null, '', consoleHref(base, canonicalPath(here)) + window.location.search);
+  }, [username, base, pathname]);
 
   if (!ready) {
     return (
@@ -118,6 +142,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
   const out = () => { signOut(); router.replace('/seller/login'); };
 
   return (
+    <ConsoleBaseProvider value={base}>
     <div className="min-h-screen bg-paper text-navy">
       {/* ───── sidebar ───── */}
       {/*
@@ -154,7 +179,7 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
             return (
               <Link
                 key={n.href}
-                href={n.href}
+                href={href(n.href)}
                 onClick={() => setOpen(false)}
                 className={`c-nav ${on ? 'c-nav-on' : 'c-nav-off'}`}
               >
@@ -220,22 +245,23 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
                 {storeUrlLabel(username)}
               </a>
             ) : (
-              <Link href="/seller/profile" className="block truncate text-[11.5px] leading-tight text-faint transition-colors hover:text-green-600">
+              <Link href={href('/seller/profile')} className="block truncate text-[11.5px] leading-tight text-faint transition-colors hover:text-green-600">
                 Choose your store handle →
               </Link>
             )}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/seller/links" className="btn-green hidden px-3.5 py-2 text-[12.5px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
+            <Link href={href('/seller/links')} className="btn-green hidden px-3.5 py-2 text-[12.5px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
             <NotificationsBell />
             {username
               ? <a href={storeUrl(username)} target="_blank" rel="noreferrer" title="View storefront" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></a>
-              : <Link href="/seller/profile" title="Set a store handle" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>}
+              : <Link href={href('/seller/profile')} title="Set a store handle" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white"><Store size={18} /></Link>}
           </div>
         </header>
 
         <main className="px-5 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
     </div>
+    </ConsoleBaseProvider>
   );
 }

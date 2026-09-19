@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { storeUrl, storeUrlLabel } from '@/lib/store-url';
+import { useConsoleHref } from '@/lib/console-url';
 import Link from 'next/link';
 import { Store, Check, Share, Cog, Verified } from '@/components/icons';
 
@@ -31,6 +32,7 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published,
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const chref = useConsoleHref();
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
@@ -119,12 +121,12 @@ export default function StoreSwitcher({ storeName, username, logoUrl, published,
               </button>
             </>
           ) : (
-            <Link href="/seller/profile" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-semibold text-navy hover:bg-paper">
+            <Link href={chref('/seller/profile')} onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-semibold text-navy hover:bg-paper">
               <Verified size={15} /> Set your store handle
             </Link>
           )}
           <Link
-            href="/seller/settings"
+            href={chref('/seller/settings')}
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 border-t border-line px-3 py-2.5 text-[13px] font-semibold text-navy hover:bg-paper"
           >

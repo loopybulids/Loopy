@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { storeUrl } from '@/lib/store-url';
 import { PageHead, Panel, Empty, money } from '@/components/seller-ui';
 import { Check, Plus, Share, Tag } from '@/components/icons';
+import { useConsoleHref } from '@/lib/console-url';
 
 /**
  * Checkout-link generator — the core DM2Order differentiator.
@@ -20,6 +21,7 @@ import { Check, Plus, Share, Tag } from '@/components/icons';
 type Row = { pid: string; qty: number };
 
 export default function CheckoutLinks() {
+  const chref = useConsoleHref();
   const [products, setProducts] = useState<any[]>([]);
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
@@ -94,7 +96,7 @@ export default function CheckoutLinks() {
             icon={<Tag size={24} />}
             title="Add a product first"
             hint="You need at least one product to generate a checkout link."
-            action={<Link href="/seller/products/new" className="btn-green"><Plus size={15} /> Add a product</Link>}
+            action={<Link href={chref('/seller/products/new')} className="btn-green"><Plus size={15} /> Add a product</Link>}
           />
         </Panel>
       ) : (
@@ -194,7 +196,7 @@ export default function CheckoutLinks() {
           <Panel title="Shareable link">
             {!username ? (
               <div className="rounded-xl border border-dashed border-line bg-paper p-4 text-[13px] text-muted">
-                Set a store handle in <Link href="/seller/profile" className="font-bold text-green-600 hover:underline">Profile</Link> to generate checkout links.
+                Set a store handle in <Link href={chref('/seller/profile')} className="font-bold text-green-600 hover:underline">Profile</Link> to generate checkout links.
               </div>
             ) : (
               <>

@@ -12,12 +12,13 @@ const SELLER_EXPORTS = ['orders', 'summary', 'payouts', 'products'] as const;
 /**
  * Handles the app needs for itself.
  *
- * A storefront is addressed at the root of the site (loopynow.shop/cpaybara),
- * so a handle competes with every real page. Next.js matches its own routes
- * first, which means a seller who took "admin" would simply be unreachable —
- * refusing the handle is kinder than handing out a URL that never resolves.
+ * A handle is used in two places that both collide with names we own: the
+ * store's subdomain (cpaybara.loopynow.shop) and the seller's console at the
+ * root of the site (loopynow.shop/cpaybara). Next.js matches its own routes
+ * first, so a seller who took "admin" would simply be unreachable — refusing
+ * the handle is kinder than handing out a URL that never resolves.
  *
- * Mirrors RESERVED_PATHS in frontend/src/middleware.ts; keep the two in step.
+ * Mirrors RESERVED_PATHS in frontend/src/lib/reserved-paths.ts; keep in step.
  */
 const RESERVED_HANDLES = new Set([
   's', 'admin', 'seller', 'sellers', 'api', 'login', 'signup', 'logout',
@@ -232,7 +233,7 @@ export class SellersService {
 
   async updateProfile(sellerId: string, data: any) {
     const upd: any = {};
-    // Store handle (username) → the public loopynow.shop/<handle> URL. Slugified, unique, not reserved.
+    // Store handle (username) → the public <handle>.loopynow.shop address. Slugified, unique, not reserved.
     if (typeof data?.username === 'string') {
       const slug = data.username.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
       if (slug.length < 3) throw new BadRequestException('Handle must be at least 3 characters (letters, numbers or hyphens).');

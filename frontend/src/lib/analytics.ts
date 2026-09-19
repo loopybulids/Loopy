@@ -1,4 +1,6 @@
 'use client';
+import { RESERVED_PATHS } from './reserved-paths';
+import { onAnyStoreSubdomain } from './store-url';
 
 /**
  * Google Analytics, for the parts of Loopy that shoppers see.
@@ -14,8 +16,44 @@
 
 export const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
 
-/** The seller console and the admin are ours, not the shop. */
-export const isConsolePath = (path: string) => path.startsWith('/admin') || path.startsWith('/seller');
+/**
+ * The seller console and the admin are ours, not the shop.
+ *
+ * Telling them apart is a little subtle since sellers' consoles moved to
+ * www.loopynow.shop/cpaybara. A path whose first segment isn't one of ours is
+ * a store handle — and on the main site that means a console. On a store's own
+ * subdomain the same shape is a collection page, which is shop traffic and
+ * very much worth counting.
+ *
+ * Reads the host, so it is browser-only and must not be called during render.
+ * See components/Analytics.
+ */
+export function isConsolePath(path: string): boolean {
+  if (path.startsWith('/admin') || path.startsWith('/seller')) return true;
+  if (onAnyStoreSubdomain()) return false;
+  const first = (path.split('/')[1] || '').toLowerCase();
+  return !!first && !RESERVED_PATHS.has(first);
+}
+
+/**
+ * Start GA for this visitor. Safe to call repeatedly; only the first does
+ * anything, and it works before gtag.js has loaded because everything queues
+ * on dataLayer.
+ *
+ * Nothing is sent to Google until this runs, which is what keeps the console
+ * out of the numbers: on those pages it is simply never called.
+ */
+let started = false;
+export function startAnalytics() {
+  if (started || !GA_ID || typeof window === 'undefined') return;
+  const w = window as unknown as { dataLayer?: unknown[]; gtag?: Gtag };
+  w.dataLayer = w.dataLayer || [];
+  // eslint-disable-next-line prefer-rest-params
+  if (!w.gtag) w.gtag = function () { w.dataLayer!.push(arguments); } as unknown as Gtag;
+  w.gtag('js', new Date());
+  w.gtag('config', GA_ID, { send_page_view: false });
+  started = true;
+}
 
 type Gtag = (...args: unknown[]) => void;
 
