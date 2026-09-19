@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useApiData } from '@/lib/use-api-data';
-import { BuyerAvatar, PageHead, Panel, Empty, money } from '@/components/seller-ui';
+import { BuyerAvatar, PageHead, Panel, Empty, money, sellerEarns } from '@/components/seller-ui';
 import OrderDetail, { paymentState, statusLabel, statusChip } from '@/components/store/OrderDetail';
 import { Share, Plus } from '@/components/icons';
 
@@ -121,7 +121,9 @@ export default function Orders() {
                     >
                       {pay.short}{pay.paid ? '' : ' · due'}
                     </span>
-                    <span className="text-[14px] font-bold text-navy">{money(o.totalAmount ?? o.total ?? o.amount ?? 0)}</span>
+                    {/* The seller's share. `totalAmount` is what the customer
+                        paid, which includes Loopy's fee. */}
+                    <span className="text-[14px] font-bold text-navy">{money(sellerEarns(o))}</span>
                     <span className={`${statusChip(o.status)} ml-1`}>{statusLabel(o.status, o.cancelledBy)}</span>
                     <span className={`ml-1 shrink-0 text-faint transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
                   </button>

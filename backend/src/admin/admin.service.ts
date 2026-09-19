@@ -122,8 +122,21 @@ export class AdminService {
       }),
     ]);
 
-    const orders = spanOrders.filter((o) => inRange(o.createdAt, range));
-    const prevOrders = prev ? spanOrders.filter((o) => inRange(o.createdAt, prev)) : [];
+    /*
+     * A checkout nobody paid for is not an order.
+     *
+     * These sit at PendingPayment until they are swept, and counting them made
+     * every figure on this screen wrong in the same direction: order counts,
+     * customer counts, the volume chart and the conversion rate all included
+     * abandoned baskets. The money figures were always right — they have only
+     * ever summed PAID — which is why the totals and the counts disagreed.
+     *
+     * They stay visible in the orders list, where an admin may need to rescue
+     * a payment that arrived without being recorded.
+     */
+    const counted = (o: { status: string }) => o.status !== 'PendingPayment';
+    const orders = spanOrders.filter((o) => inRange(o.createdAt, range) && counted(o));
+    const prevOrders = prev ? spanOrders.filter((o) => inRange(o.createdAt, prev) && counted(o)) : [];
 
     const paid = orders.filter((o) => PAID.includes(o.status));
     // All three come from common/money so the dashboard can never disagree with
@@ -221,7 +234,7 @@ export class AdminService {
       orderMix: {
         delivered: cnt((o) => DELIVERED.includes(o.status)),
         processing: cnt((o) => PROCESSING.includes(o.status)),
-        pending: cnt((o) => o.status === 'PendingPayment' || o.status === 'Paid'),
+        pending: cnt((o) => o.status === 'Paid'),
         cancelled: cnt((o) => o.status === 'Cancelled'),
         returned: periodDisputes + refunded.length,
       },
@@ -1177,9 +1190,12 @@ export class AdminService {
       }),
     ]);
     const paid = orders.filter((o) => PAID.includes(o.status));
+    // Same rule as the dashboard: an abandoned checkout is not an order, so it
+    // is not the top of the funnel either.
+    const placed = orders.filter((o) => o.status !== 'PendingPayment');
 
     // funnel
-    const created = orders.length;
+    const created = placed.length;
     const paidCount = paid.length;
     const delivered = orders.filter((o) => DELIVERED.includes(o.status)).length;
 
@@ -1211,7 +1227,7 @@ export class AdminService {
         { stage: 'Repeat Buyers', value: repeat },
       ],
       revenueSeries: seriesOver(paid, range, (o) => o.itemsAmount),
-      ordersSeries: seriesOver(orders, range, () => 1),
+      ordersSeries: seriesOver(placed, range, () => 1),
       categories: [...catMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       forecast: this.forecast(seriesOver(recentPaid, lastWeek, (o) => o.itemsAmount)),
     };

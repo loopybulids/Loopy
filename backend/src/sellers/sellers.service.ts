@@ -10,6 +10,27 @@ const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 const SELLER_EXPORTS = ['orders', 'summary', 'payouts', 'products'] as const;
 
 /**
+ * An order as a seller may see it.
+ *
+ * `commissionAmount` is stripped rather than merely hidden by the UI: the
+ * platform fee is charged to the buyer on top and never reaches the seller,
+ * and a figure that is not theirs has no business in a payload they can read.
+ * `sellerAmount` is added in its place — goods less their own discounts, plus
+ * shipping — which is the number every seller screen should be showing.
+ *
+ * `totalAmount` stays, because on a cash-on-delivery order it is the cash the
+ * seller physically collects at the door.
+ */
+function shapeForSeller(order: any, customer: any) {
+  const { commissionAmount, ...rest } = order;
+  return {
+    ...rest,
+    customer,
+    sellerAmount: Math.max(0, (order.itemsAmount || 0) - (order.discountAmount || 0)) + (order.shippingCharge || 0),
+  };
+}
+
+/**
  * How a stored `paymentId` reads in a spreadsheet.
  *
  * `online:<method>` on its own is the method the buyer chose, written when the
@@ -822,14 +843,14 @@ export class SellersService {
     // Order stores a customerId but has no declared relation to Customer, so
     // attach the shopper's contact details in one extra query rather than N.
     const ids = [...new Set(orders.map((o) => o.customerId).filter(Boolean))] as string[];
-    if (!ids.length) return orders.map((o) => ({ ...o, customer: null }));
+    if (!ids.length) return orders.map((o) => shapeForSeller(o, null));
 
     const customers = await this.prisma.customer.findMany({
       where: { id: { in: ids } },
       select: { id: true, name: true, email: true, phone: true },
     });
     const byId = new Map(customers.map((c) => [c.id, c]));
-    return orders.map((o) => ({ ...o, customer: (o.customerId && byId.get(o.customerId)) || null }));
+    return orders.map((o) => shapeForSeller(o, (o.customerId && byId.get(o.customerId)) || null));
   }
 
   /**
