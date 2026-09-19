@@ -10,6 +10,24 @@ const PAID = ['Paid', 'Accepted', 'Shipped', 'Delivered', 'Completed'];
 const SELLER_EXPORTS = ['orders', 'summary', 'payouts', 'products'] as const;
 
 /**
+ * Handles the app needs for itself.
+ *
+ * A storefront is addressed at the root of the site (loopynow.shop/cpaybara),
+ * so a handle competes with every real page. Next.js matches its own routes
+ * first, which means a seller who took "admin" would simply be unreachable —
+ * refusing the handle is kinder than handing out a URL that never resolves.
+ *
+ * Mirrors RESERVED_PATHS in frontend/src/middleware.ts; keep the two in step.
+ */
+const RESERVED_HANDLES = new Set([
+  's', 'admin', 'seller', 'sellers', 'api', 'login', 'signup', 'logout',
+  'legal', 'privacy', 'terms', 'refunds', 'shipping', 'sellers-terms',
+  'cart', 'checkout', 'orders', 'order', 'product', 'products', 'store', 'stores',
+  'about', 'help', 'support', 'contact', 'pricing', 'blog', 'docs', 'status', 'app',
+  'www', 'assets', 'static', 'cdn', 'icon', 'favicon', 'robots', 'sitemap', 'sw',
+]);
+
+/**
  * An order as a seller may see it.
  *
  * `commissionAmount` is stripped rather than merely hidden by the UI: the
@@ -214,10 +232,11 @@ export class SellersService {
 
   async updateProfile(sellerId: string, data: any) {
     const upd: any = {};
-    // Store handle (username) → your public /s/<handle> URL. Slugified + unique.
+    // Store handle (username) → the public loopynow.shop/<handle> URL. Slugified, unique, not reserved.
     if (typeof data?.username === 'string') {
       const slug = data.username.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
       if (slug.length < 3) throw new BadRequestException('Handle must be at least 3 characters (letters, numbers or hyphens).');
+      if (RESERVED_HANDLES.has(slug)) throw new BadRequestException(`"${slug}" is reserved by Loopy — please choose another handle.`);
       const taken = await this.prisma.seller.findFirst({ where: { username: slug, NOT: { id: sellerId } }, select: { id: true } });
       if (taken) throw new BadRequestException('That handle is already taken — try another.');
       upd.username = slug;
