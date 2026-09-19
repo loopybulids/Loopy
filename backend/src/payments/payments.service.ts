@@ -251,7 +251,12 @@ export class PaymentsService {
           .create({
             data: {
               sellerId: order.sellerId, type: 'new_order', title: 'New order 🎉',
-              body: `${order.buyerName || 'A customer'} paid ₹${order.totalAmount.toLocaleString('en-IN')} for an order.`,
+              // What this order is worth to the seller. `totalAmount` includes
+              // the platform fee, which is not theirs and which they are not
+              // shown anywhere else.
+              body: `${order.buyerName || 'A customer'} placed an order worth ₹${(
+                Math.max(0, (order.itemsAmount || 0) - (order.discountAmount || 0)) + (order.shippingCharge || 0)
+              ).toLocaleString('en-IN')}.`,
               link: '/seller/orders',
             },
           })

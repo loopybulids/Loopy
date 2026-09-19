@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { sellerReceivableOf } from '../common/money';
+import { COMMISSION_PCT, FEE_FLAT, FEE_FLAT_BELOW, sellerReceivableOf } from '../common/money';
 import { releasedOrderIds } from '../common/funds';
 import { toCsv } from '../common/csv';
 import { groupByBucket, istDateTime, parseRange, rangeSlug } from '../common/date-range';
@@ -169,7 +169,13 @@ export class SellersService {
       })),
       // Platform fee rate, so checkout can show the real total before payment.
       // The server recomputes it on checkout — this is display only.
-      platformFeePct: Number(process.env.COMMISSION_PERCENT || 5),
+      platformFeePct: COMMISSION_PCT,
+      /*
+       * The whole fee rule, not just the rate. Checkout has to show the total
+       * it will actually be charged, and a client that knew only the
+       * percentage would quote a rupee on a small order and then charge five.
+       */
+      platformFee: { pct: COMMISSION_PCT, flat: FEE_FLAT, flatBelow: FEE_FLAT_BELOW },
       // What buyers said, newest first. Hidden ones are excluded here — this
       // is the public list, and that is the whole point of hiding.
       reviews: reviews.map((r) => ({
@@ -938,7 +944,17 @@ export class SellersService {
     const pending = sellerReceivableOf(earning.filter((o) => !released.has(o.id)));
     const releasedTotal = sellerReceivableOf(earning.filter((o) => released.has(o.id)));
     // Earned either way — what this seller has actually sold and delivered.
-    const lifetime = sellerReceivableOf(orders.filter((o) => ['Delivered', 'Completed'].includes(o.status)));
+    const delivered = orders.filter((o) => ['Delivered', 'Completed'].includes(o.status));
+    const lifetime = sellerReceivableOf(delivered);
+    /*
+     * The value of the goods alone, net of the seller's own coupons.
+     *
+     * `lifetime` is what reaches their wallet, which includes the shipping
+     * they collect and hand to a courier — so it reads higher than what they
+     * sold. The dashboard's headline answers "how much have I sold", and that
+     * is this figure.
+     */
+    const goods = delivered.reduce((t, o) => t + Math.max(0, (o.itemsAmount || 0) - (o.discountAmount || 0)), 0);
 
     const settled = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
     const requested = payouts.filter((p) => p.status === 'requested').reduce((s, p) => s + p.amount, 0);
@@ -952,6 +968,8 @@ export class SellersService {
       /** Released by Loopy, before payouts are taken off. */
       released: releasedTotal,
       lifetime,
+      /** Goods value of everything delivered, excluding shipping. */
+      goods,
       pending,
       settled,
       requested,

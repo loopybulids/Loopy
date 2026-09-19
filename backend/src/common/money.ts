@@ -13,18 +13,40 @@
  *   net goods          = items - discount
  *   customer pays      = net goods + shipping + platform fee
  *   seller receives    = net goods + shipping
- *   Loopy keeps        = platform fee   (a flat 5% of the LIST price)
+ *   Loopy keeps        = platform fee   (see platformFee below)
  *
  * which always satisfies:  customerTotal === sellerReceivable + fee
  *
  * A seller's coupon is the seller's own promotion, so the discount comes out
- * of their share alone. The fee is a flat percentage of the list price and is
- * deliberately unaffected by it — running a discount does not reduce what
- * Loopy charges, so the rate is predictable for both sides at 5% of the
- * ticket price regardless of promotions.
+ * of their share alone. The fee is charged on the list price and is
+ * deliberately unaffected by the discount — running a promotion does not
+ * reduce what Loopy charges, so the rate is predictable for both sides
+ * regardless of promotions.
  */
 
 export const COMMISSION_PCT = Number(process.env.COMMISSION_PERCENT || 5);
+
+/** Goods value below which the fee is a flat amount rather than a percentage. */
+export const FEE_FLAT_BELOW = Number(process.env.COMMISSION_FLAT_BELOW || 100);
+/** The flat fee on those small orders. */
+export const FEE_FLAT = Number(process.env.COMMISSION_FLAT || 5);
+
+/**
+ * Loopy's fee on a goods value, at list price.
+ *
+ * A percentage alone does not pay for a small order: the payment, the support
+ * and the bookkeeping cost the same whatever the ticket, so below
+ * FEE_FLAT_BELOW the fee is a flat FEE_FLAT instead. The two meet exactly at
+ * the boundary with the default numbers (5% of 100 is 5), so there is no step
+ * where the rules change — move either constant and that stops being true.
+ *
+ * One function, because the buyer's checkout total, the seller's receivable
+ * and the platform's revenue all have to agree about it.
+ */
+export function platformFee(itemsAmount: number, pct = COMMISSION_PCT): number {
+  const items = Math.round(itemsAmount);
+  return items < FEE_FLAT_BELOW ? Math.round(FEE_FLAT) : Math.round((items * pct) / 100);
+}
 
 export interface OrderAmounts {
   /** Goods value at list price, before any discount, shipping or fee. */
@@ -65,7 +87,7 @@ export function computeAmounts(
   const netItems = items - discount;
   // Charged on `items`, the list price — not on `netItems`. A seller's coupon
   // is their promotion to fund; it does not discount Loopy's fee.
-  const fee = r((items * pct) / 100);
+  const fee = platformFee(items, pct);
   return {
     items,
     discount,

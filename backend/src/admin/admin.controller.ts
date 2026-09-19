@@ -87,6 +87,17 @@ export class AdminController {
   }
 
   // Every review, hidden ones included — see reviews().
+  /** Contact-form messages and seller reports. */
+  @Get('support/inbox')
+  supportInbox(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.admin.supportInbox(req.user, from, to);
+  }
+
+  @Post('support/:id/:action')
+  supportDecide(@Req() req: any, @Param('id') id: string, @Param('action') action: 'resolve' | 'reopen') {
+    return this.admin.setSupportResolved(req.user, id, action);
+  }
+
   @Get('reviews')
   reviews(@Req() req: any, @Query('filter') filter?: string) {
     return this.admin.reviews(req.user, filter);

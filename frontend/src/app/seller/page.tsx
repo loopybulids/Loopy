@@ -33,9 +33,14 @@ export default function Dashboard() {
   const ob = data?.ob ?? null;
 
   const revenue = an?.revenue ?? 0;
-  // Earned across the store's whole history, straight from the wallet so the
-  // dashboard and the payments page can never disagree.
-  const lifetime = wallet?.lifetime ?? 0;
+  /*
+   * Sold across the store's whole history, straight from the wallet so the
+   * dashboard and the payments page cannot disagree.
+   *
+   * The goods figure, not the wallet total: that one adds the shipping the
+   * seller collects for a courier, which is not money they earned.
+   */
+  const lifetime = wallet?.goods ?? wallet?.lifetime ?? 0;
   const showChecklist = ob && ob.done < ob.total;
 
   return (
@@ -88,7 +93,7 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:grid-cols-3">
         {/* All-time earnings first: it's the number sellers actually look for.
             Same formula as the wallet — delivered orders, net of discounts. */}
-        <StatCard label="All-time earnings" value={money(lifetime)} delta={lifetime ? 'Delivered orders' : 'Nothing delivered yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
+        <StatCard label="All-time earnings" value={money(lifetime)} delta={lifetime ? 'Delivered orders · goods only' : 'Nothing delivered yet'} icon={<Wallet size={18} />} accent href="/seller/payments" />
         <StatCard label="Revenue" value={money(revenue)} delta={revenue ? `${an?.paidOrders ?? 0} paid orders` : 'No sales yet'} icon={<Wallet size={18} />} href="/seller/payments" />
         <StatCard label="Orders" value={an?.orders ?? orders.length} delta={`${an?.paidOrders ?? 0} paid`} icon={<Bag size={18} />} href="/seller/orders" />
       </div>

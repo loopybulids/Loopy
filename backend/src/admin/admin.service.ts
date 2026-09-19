@@ -4,6 +4,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { amountsOf, discountOf, gmvOf, platformFeeOf, reconcile, sellerReceivableOf } from '../common/money';
 import { toCsv } from '../common/csv';
 import { FUNDS_HOLD, FUNDS_RELEASE, fundsDecision, releasedOrderIds } from '../common/funds';
+import {
+  listSupport, SUPPORT_ENTITY, SUPPORT_REOPENED, SUPPORT_RESOLVED, type SupportMessage,
+} from '../common/support';
 import { groupByBucket, inRange, istDateTime, parseRange, previousRange, rangeSlug, seriesOver } from '../common/date-range';
 import type { DateRange } from '../common/date-range';
 import {
@@ -37,7 +40,7 @@ function paymentLabel(paymentId: string | null) {
 
 type Notice = {
   id: string;
-  kind: 'payout' | 'dispute' | 'refund' | 'kyc' | 'review' | 'order';
+  kind: 'payout' | 'dispute' | 'refund' | 'kyc' | 'review' | 'order' | 'support';
   tone: 'alert' | 'warn' | 'info';
   title: string;
   body: string;
@@ -739,6 +742,48 @@ export class AdminService {
    * looking at, an idempotency key so a retry is not a second decision, and an
    * audit entry — which is also where the state itself is kept.
    */
+  /**
+   * Everything people have written in: the public contact form and sellers
+   * reporting problems (see common/support).
+   *
+   * Ninety days by default rather than thirty: a question nobody answered does
+   * not stop mattering at the end of the month, and this is the only place
+   * these messages exist in the product.
+   */
+  async supportInbox(user: any, from?: string, to?: string) {
+    this.assertAdmin(user);
+    const range = await this.rangeFor(from, to, 90);
+    const items = await listSupport(this.prisma, { from: range.start, to: range.end });
+    return {
+      range: { from: range.fromKey, to: range.toKey, days: range.days },
+      items,
+      counts: {
+        open: items.filter((i) => !i.resolved).length,
+        sellers: items.filter((i) => i.kind === 'seller').length,
+        total: items.length,
+      },
+    };
+  }
+
+  /** Mark one message dealt with, or put it back in the queue. */
+  async setSupportResolved(user: any, id: string, action: 'resolve' | 'reopen') {
+    this.assertAdmin(user);
+    if (action !== 'resolve' && action !== 'reopen') {
+      throw new BadRequestException(`Unknown action "${action}".`);
+    }
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: String(user.userId || user.sub || user.id || 'unknown'),
+        actorEmail: user.email || null,
+        action: action === 'resolve' ? SUPPORT_RESOLVED : SUPPORT_REOPENED,
+        entity: SUPPORT_ENTITY,
+        entityId: id,
+        after: JSON.stringify({ resolved: action === 'resolve' }),
+      },
+    });
+    return { id, resolved: action === 'resolve' };
+  }
+
   async setFundsRelease(
     user: any,
     id: string,
@@ -1325,7 +1370,7 @@ export class AdminService {
     this.assertAdmin(user);
     const since = new Date(Date.now() - 7 * 86_400_000);
 
-    const [payouts, disputes, kyc, refunds, reviews, orders] = await Promise.all([
+    const [payouts, disputes, kyc, refunds, reviews, orders, messages] = await Promise.all([
       this.prisma.payout.findMany({ where: { status: 'requested' }, orderBy: { createdAt: 'desc' }, take: 50 }),
       this.prisma.dispute.findMany({ where: { status: 'open' }, orderBy: { createdAt: 'desc' }, take: 50 }),
       this.prisma.seller.findMany({
@@ -1344,7 +1389,11 @@ export class AdminService {
         where: { createdAt: { gte: since }, status: { in: PAID } }, orderBy: { createdAt: 'desc' }, take: 15,
         select: { id: true, sellerId: true, totalAmount: true, buyerName: true, createdAt: true },
       }),
+      // Contact-form messages and seller reports, unresolved ones of which
+      // need someone — the same as a dispute or a payout request.
+      listSupport(this.prisma, { from: since }),
     ]);
+    const openMessages = (messages as SupportMessage[]).filter((m) => !m.resolved);
 
     const ids = [...new Set([...payouts, ...disputes, ...refunds, ...reviews, ...orders].map((x) => x.sellerId))];
     const sellers = new Map(
@@ -1356,7 +1405,7 @@ export class AdminService {
     const store = (id: string) => sellers.get(id)?.storeName || 'Unknown store';
     const ref = (id: string) => `#${id.slice(-6).toUpperCase()}`;
     const inr = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`;
-    const clip = (t: string | null) => (t && t.length > 90 ? `${t.slice(0, 89)}…` : t || '');
+    const clip = (t: string | null, n = 90) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t || '');
 
     const items: Notice[] = [
       ...payouts.map((p): Notice => {
@@ -1386,11 +1435,21 @@ export class AdminService {
         id: `order:${o.id}`, kind: 'order', tone: 'info', title: `New order · ${inr(o.totalAmount)}`,
         body: `${o.buyerName || 'Customer'} · ${store(o.sellerId)}`, href: `/admin/orders/${o.id}`, at: o.createdAt, important: false,
       })),
+      ...openMessages.map((m): Notice => ({
+        id: `support:${m.id}`,
+        kind: 'support',
+        tone: 'warn',
+        title: m.kind === 'seller' ? `Seller report · ${m.topic || 'Issue'}` : 'New message from the website',
+        body: `${m.from}: ${clip(m.subject, 70)}`,
+        href: '/admin/support',
+        at: m.at,
+        important: true,
+      })),
     ].sort((a, b) => +b.at - +a.at);
 
     return {
       items,
-      counts: { attention: items.filter((i) => i.important).length },
+      counts: { attention: items.filter((i) => i.important).length, messages: openMessages.length },
       at: new Date(),
     };
   }

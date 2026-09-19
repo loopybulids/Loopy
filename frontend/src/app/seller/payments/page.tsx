@@ -131,7 +131,7 @@ export default function Payments() {
       </div>
 
       <p className="mt-3 text-[12px] text-faint">
-        Lifetime earnings {money(wallet?.lifetime ?? 0)} · money moves left to right as Loopy releases delivered orders and approves payouts.
+        Lifetime {money(wallet?.lifetime ?? 0)} paid to you — goods plus the shipping you collect. Money moves left to right as Loopy releases delivered orders and approves payouts.
       </p>
 
       {wallet?.requested > 0 && (

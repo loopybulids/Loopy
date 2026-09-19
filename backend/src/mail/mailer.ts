@@ -31,10 +31,25 @@ function get(): nodemailer.Transporter | null {
   return transport;
 }
 
+let warnedUnconfigured = false;
+
 /** Returns true if the mail actually went out. Never throws. */
 export async function sendMail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
   const t = get();
-  if (!t) return false;
+  if (!t) {
+    /*
+     * Returning false silently is how "the buyer never got their receipt"
+     * becomes invisible: every caller treats mail as best-effort, so nothing
+     * complains. Say it once per process — enough to see in the logs, not
+     * enough to bury them.
+     */
+    if (!warnedUnconfigured) {
+      warnedUnconfigured = true;
+      log.warn('SMTP_USER / SMTP_PASS are not set — no email will be sent from this deployment.');
+    }
+    log.warn(`Not sent (mail not configured): "${subject}" to ${to}`);
+    return false;
+  }
   try {
     await t.sendMail({
       from: process.env.MAIL_FROM || `Loopy <${process.env.SMTP_USER}>`,
@@ -305,6 +320,52 @@ export function cancelRequestEmail(
        <br><br>Reply to ${reply} to sort it out. If you agree, reject the order in your Loopy console so the
        money goes back to them.`,
       summary(order),
+    ),
+  };
+}
+
+/**
+ * A message from the public contact form, forwarded to support.
+ *
+ * The sender's address is quoted in the body and used as a reply link rather
+ * than set as From: mail sent as a stranger fails this domain's SPF. Their
+ * words are escaped — this is public input arriving as HTML mail.
+ */
+export function contactMessageEmail(m: { name: string; email: string; subject: string; message: string }) {
+  return {
+    subject: `Contact form: ${m.subject}`,
+    text: `${m.name} <${m.email}> wrote:\n\n${m.message}\n\nReply to ${m.email}.`,
+    html: shell(
+      esc(m.subject),
+      `<b>${esc(m.name)}</b> &lt;<a href="mailto:${esc(m.email)}?subject=${encodeURIComponent(`Re: ${m.subject}`)}" style="color:#15784A">${esc(m.email)}</a>&gt; sent this through the contact form on loopynow.shop.`,
+      `<div style="background:#F6F5F0;border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.7;color:#0E2A47;white-space:pre-wrap">${esc(m.message)}</div>`,
+    ),
+  };
+}
+
+/**
+ * A seller reporting a problem with the platform, forwarded to support.
+ *
+ * Carries the store and its handle, so an operator can open the account
+ * without writing back to ask who it was.
+ */
+export function sellerReportEmail(m: {
+  storeName: string;
+  username?: string | null;
+  email?: string | null;
+  topic: string;
+  subject: string;
+  message: string;
+}) {
+  const who = `${m.storeName}${m.username ? ` (@${m.username})` : ''}`;
+  return {
+    subject: `Seller report · ${m.topic}: ${m.subject}`,
+    text: `${who} reported a problem.\n\nTopic: ${m.topic}\nSubject: ${m.subject}\n\n${m.message}\n\n${m.email ? `Reply to ${m.email}.` : 'No contact email on file for this seller.'}`,
+    html: shell(
+      `${esc(m.topic)} · ${esc(m.subject)}`,
+      `<b>${esc(who)}</b> reported this from their seller console.` +
+        (m.email ? ` Reply to <a href="mailto:${esc(m.email)}?subject=${encodeURIComponent(`Re: ${m.subject}`)}" style="color:#15784A">${esc(m.email)}</a>.` : ''),
+      `<div style="background:#F6F5F0;border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.7;color:#0E2A47;white-space:pre-wrap">${esc(m.message)}</div>`,
     ),
   };
 }

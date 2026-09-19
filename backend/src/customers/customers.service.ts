@@ -455,7 +455,10 @@ export class CustomersService {
     await this.prisma.notification.create({
       data: {
         sellerId, type: 'new_order', title: 'New order 🎉',
-        body: `${customer?.name || 'A customer'} placed an order worth ₹${totalAmount.toLocaleString('en-IN')}.`,
+        // The seller's share, not the customer's total: the platform fee is
+        // charged on top and never reaches them, so quoting the total here
+        // showed them a figure they will not be paid.
+        body: `${customer?.name || 'A customer'} placed an order worth ₹${amounts.sellerReceivable.toLocaleString('en-IN')}.`,
         link: '/seller/orders',
       },
     }).catch(() => { /* never fail a placed order over a notification */ });
