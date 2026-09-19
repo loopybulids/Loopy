@@ -300,6 +300,8 @@ export const api = {
   adminCustomerDetail: (key: string) => req<any>(`/admin/customers/${encodeURIComponent(key)}`),
   adminFinance: (range?: string) => req<any>(`/admin/finance${range ? `?${range}` : ''}`),
   adminAnalytics: (range?: string) => req<any>(`/admin/analytics${range ? `?${range}` : ''}`),
+  /** Site traffic from Google Analytics. Answers `{ configured: false }` when it isn't set up. */
+  adminTraffic: (range?: string) => req<any>(`/admin/traffic${range ? `?${range}` : ''}`),
   /** The bell — derived from live admin state, see AdminService.notifications. */
   adminNotifications: () => req<any>(`/admin/notifications`),
   /** A CSV export for a period (`range` from lib/admin-range), as a Blob. */

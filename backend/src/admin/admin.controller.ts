@@ -171,6 +171,12 @@ export class AdminController {
     return this.admin.analytics(req.user, from, to);
   }
 
+  /** Site traffic, read back from Google Analytics — see common/ga. */
+  @Get('traffic')
+  traffic(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.admin.traffic(req.user, from, to);
+  }
+
   @Get('sellers/:id/detail')
   sellerDetail(@Req() req: any, @Param('id') id: string) {
     return this.admin.sellerDetail(req.user, id);

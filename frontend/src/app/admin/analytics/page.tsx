@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { AreaTrend, Bars, Card, Chip, Donut, money, num, SectionTitle, StatCard } from '@/components/admin/AdminKit';
 import ExportMenu from '@/components/admin/ExportMenu';
 import RangePicker from '@/components/admin/RangePicker';
+import SiteTraffic from '@/components/admin/SiteTraffic';
 import { rangeDates, rangeLabel, rangeQuery, useAdminRange } from '@/lib/admin-range';
 
 export default function AnalyticsCenter() {
@@ -67,6 +68,11 @@ export default function AnalyticsCenter() {
           <Bars data={d.forecast} color="#1EA75B" money height={190} />
           <p className="mt-2 text-[11px] text-dim">Projected from the last 7 days, whichever range is selected. Indicative only.</p>
         </Card>
+      </div>
+
+      {/* Everything above comes from our own orders; below is what Google saw. */}
+      <div className="border-t border-hair pt-6">
+        <SiteTraffic query={query} label={rangeLabel(range)} />
       </div>
     </div>
   );

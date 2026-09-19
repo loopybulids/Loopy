@@ -6,7 +6,7 @@
  * from this file; to change a policy, change the document and regenerate
  * (scratchpad/gen_legal.py) rather than editing a page.
  *
- * 18 Articles, 51 Sections, 178 paragraphs.
+ * 18 Articles, 51 Sections, 176 paragraphs.
  */
 
 export type LegalBlock = { kind: 'p' | 'li'; text: string };
@@ -634,10 +634,6 @@ export const LEGAL_SECTIONS: LegalSection[] = [
           {
             "kind": "p",
             "text": "This is separate from any right you have against your bank or card network: if a transaction was genuinely unauthorised, you may still be able to have it reversed directly with them, independently of anything in this document."
-          },
-          {
-            "kind": "p",
-            "text": "Drafting note: a minor's contract is void under the Indian Contract Act, 1872, and treating an unauthorised order as non-refundable by default, purely at the Seller's discretion, carries real legal risk if challenged — this is one of the weaker points in this document as currently drafted."
           }
         ]
       }
@@ -1000,10 +996,6 @@ export const LEGAL_SECTIONS: LegalSection[] = [
       {
         "kind": "li",
         "text": "Analytics — to understand how the Platform is used so we can improve it."
-      },
-      {
-        "kind": "p",
-        "text": "Drafting note: if you set analytics cookies only after consent, say so; if you have no analytics, delete this line."
       },
       {
         "kind": "p",

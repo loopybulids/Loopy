@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { amountsOf, discountOf, gmvOf, platformFeeOf, reconcile, sellerReceivableOf } from '../common/money';
 import { toCsv } from '../common/csv';
 import { FUNDS_HOLD, FUNDS_RELEASE, fundsDecision, releasedOrderIds } from '../common/funds';
+import { fetchTraffic, gaConfigured } from '../common/ga';
 import {
   listSupport, SUPPORT_ENTITY, SUPPORT_REOPENED, SUPPORT_RESOLVED, type SupportMessage,
 } from '../common/support';
@@ -1231,6 +1232,27 @@ export class AdminService {
       categories: [...catMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       forecast: this.forecast(seriesOver(recentPaid, lastWeek, (o) => o.itemsAmount)),
     };
+  }
+
+  /**
+   * Site traffic from Google Analytics, over the same period as the rest of
+   * this screen.
+   *
+   * Deliberately never throws. Traffic sits beside the order figures as
+   * context, so a key that was never set, a service account someone revoked or
+   * an outage at Google's end returns a message for the card to show — it does
+   * not take the Business Intelligence screen down with it.
+   */
+  async traffic(user: any, from?: string, to?: string) {
+    this.assertAdmin(user);
+    const range = await this.rangeFor(from, to, 30);
+    const meta = { range: { from: range.fromKey, to: range.toKey, days: range.days, bucket: range.bucket } };
+    if (!gaConfigured()) return { ...meta, configured: false };
+    try {
+      return { ...meta, ...(await fetchTraffic(range)) };
+    } catch (e: any) {
+      return { ...meta, configured: true, error: e?.message || 'Google Analytics could not be reached.' };
+    }
   }
 
   // naive linear forecast for the next 7 days from the trailing average

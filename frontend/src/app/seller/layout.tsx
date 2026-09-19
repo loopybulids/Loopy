@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
-import { storeUrl } from '@/lib/store-url';
+import { storeUrl, storeUrlLabel } from '@/lib/store-url';
 import { exitImpersonation } from '@/lib/impersonate';
 import NotificationsBell from '@/components/NotificationsBell';
 import Logo from '@/components/Logo';
@@ -89,6 +89,21 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
       setEmail(p?.email || null);
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /*
+   * Put the store's name in the browser tab.
+   *
+   * The console's address is /seller and cannot be the store's own — that path
+   * belongs to the storefront. So the tab is where a seller's shop gets named:
+   * with three Loopy tabs open, "Loopy" on all of them says nothing, and a
+   * seller looking at the address bar for their shop's name found the word
+   * "seller" instead.
+   */
+  const storeLabel = (name || username || '').trim();
+  useEffect(() => {
+    const page = ALL_NAV.find((n) => n.href === pathname)?.label || 'Dashboard';
+    document.title = storeLabel ? `${storeLabel} · ${page} · Loopy` : `Seller Console · ${page} · Loopy`;
+  }, [storeLabel, pathname]);
 
   if (!ready) {
     return (
@@ -184,12 +199,32 @@ function Console({ pathname, children }: { pathname: string; children: React.Rea
           <button onClick={() => setOpen(true)} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-white lg:hidden">
             <Grid size={18} />
           </button>
-          {/* The only place the page name appears. The greeting used to sit
-              under it on every screen, which said nothing and often read
-              "Welcome back, seller" when no name was loaded yet. */}
-          <h1 className="font-display text-[19px] font-bold tracking-[-0.01em] text-navy">
-            {active?.label || 'Dashboard'}
-          </h1>
+          {/* The page name, and under it the shop's own public address.
+              The greeting that used to sit here said nothing — often
+              "Welcome back, seller" before a name had loaded. This line
+              answers what a seller actually wonders on this screen: the
+              browser says /seller, so where is *my* store? It is a link, so
+              the answer is one click rather than a guess. */}
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-[19px] font-bold tracking-[-0.01em] text-navy">
+              {active?.label || 'Dashboard'}
+            </h1>
+            {username ? (
+              <a
+                href={storeUrl(username)}
+                target="_blank"
+                rel="noreferrer"
+                title="Open your storefront"
+                className="block truncate text-[11.5px] leading-tight text-faint transition-colors hover:text-green-600"
+              >
+                {storeUrlLabel(username)}
+              </a>
+            ) : (
+              <Link href="/seller/profile" className="block truncate text-[11.5px] leading-tight text-faint transition-colors hover:text-green-600">
+                Choose your store handle →
+              </Link>
+            )}
+          </div>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/seller/links" className="btn-green hidden px-3.5 py-2 text-[12.5px] sm:inline-flex"><Plus size={15} /> New checkout link</Link>
             <NotificationsBell />

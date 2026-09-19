@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api, rupees } from '@/lib/api';
 import { custApi, getCart, getCust, clearCart, type CartItem } from '@/lib/customer';
+import { trackPurchase } from '@/lib/analytics';
 import StoreAccountBar from '@/components/store/StoreAccountBar';
 import CustomerAuth from '@/components/store/CustomerAuth';
 import OrderDetail from '@/components/store/OrderDetail';
@@ -143,6 +144,7 @@ export default function CheckoutPage() {
         const r = await custApi.verifyPayment(username, id);
         if (stop) return;
         if (r?.status === 'paid') {
+          trackPurchase(r.order);
           clearCart(username);
           window.history.replaceState(null, '', window.location.pathname);
           setPayState(null);
@@ -218,6 +220,7 @@ export default function CheckoutPage() {
         setPayState({ orderId: order.id, status: 'error', message: order.paymentError || 'We could not start the payment. Your order is saved — try again.' });
         return;
       }
+      trackPurchase(order);
       clearCart(username);
       setPlaced(order);
     } catch (e: any) { setErr(e?.message || 'Could not place order.'); } finally { setBusy(false); }
