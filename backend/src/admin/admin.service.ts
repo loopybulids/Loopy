@@ -5,6 +5,7 @@ import { amountsOf, discountOf, gmvOf, platformFeeOf, reconcile, sellerReceivabl
 import { toCsv } from '../common/csv';
 import { FUNDS_HOLD, FUNDS_RELEASE, fundsDecision, releasedOrderIds } from '../common/funds';
 import { fetchTraffic, gaConfigured } from '../common/ga';
+import { statusChangesSince, type StatusChange } from '../common/order-events';
 import {
   listSupport, SUPPORT_ENTITY, SUPPORT_REOPENED, SUPPORT_RESOLVED, type SupportMessage,
 } from '../common/support';
@@ -38,6 +39,23 @@ function paymentLabel(paymentId: string | null) {
   }
   return p;
 }
+
+/**
+ * How each status change reads in the notification bell.
+ *
+ * Tone is not decoration: anything that isn't `info` counts towards the
+ * "needs attention" badge. A delivery is news; a cancellation or a dispute is
+ * work, and should still be visible after the admin has skimmed the list.
+ */
+const STATUS_NOTICE: Record<string, { tone: 'alert' | 'warn' | 'info'; title: string }> = {
+  Accepted: { tone: 'info', title: 'Order accepted' },
+  Shipped: { tone: 'info', title: 'Order shipped' },
+  Delivered: { tone: 'info', title: 'Order delivered' },
+  Completed: { tone: 'info', title: 'Order completed' },
+  Cancelled: { tone: 'warn', title: 'Order cancelled' },
+  Disputed: { tone: 'alert', title: 'Dispute opened' },
+  Refunded: { tone: 'warn', title: 'Order refunded' },
+};
 
 type Notice = {
   id: string;
@@ -226,11 +244,24 @@ export class AdminService {
         refundRate: paid.length ? Math.round((refunded.length / (paid.length + refunded.length)) * 1000) / 10 : 0,
         conversion: orders.length ? Math.round((paid.length / orders.length) * 1000) / 10 : 0,
       },
+      /*
+       * Money series, named for what they actually are.
+       *
+       * The dashboard plotted `itemsAmount` under a legend reading "Revenue"
+       * while the Revenue card beside it showed the commission — one word,
+       * two figures, orders of magnitude apart, and neither series added up
+       * to any card on the screen. `itemsAmount` was also list price, so a
+       * coupon made it disagree with every other total as well.
+       *
+       * Each series now sums to a figure shown on the same screen: gmv → the
+       * GMV card, commission → Revenue (commission), netSales → seller
+       * payouts.
+       */
       charts: {
-        revenue: seriesOver(paid, range, (o) => o.itemsAmount),
-        orders: seriesOver(orders, range, () => 1),
-        profit: seriesOver(paid, range, (o) => o.commissionAmount),
         gmv: seriesOver(paid, range, (o) => o.totalAmount),
+        netSales: seriesOver(paid, range, (o) => sellerReceivableOf([o])),
+        commission: seriesOver(paid, range, (o) => o.commissionAmount),
+        orders: seriesOver(orders, range, () => 1),
       },
       orderMix: {
         delivered: cnt((o) => DELIVERED.includes(o.status)),
@@ -1408,7 +1439,7 @@ export class AdminService {
     this.assertAdmin(user);
     const since = new Date(Date.now() - 7 * 86_400_000);
 
-    const [payouts, disputes, kyc, refunds, reviews, orders, messages] = await Promise.all([
+    const [payouts, disputes, kyc, refunds, reviews, orders, messages, changes] = await Promise.all([
       this.prisma.payout.findMany({ where: { status: 'requested' }, orderBy: { createdAt: 'desc' }, take: 50 }),
       this.prisma.dispute.findMany({ where: { status: 'open' }, orderBy: { createdAt: 'desc' }, take: 50 }),
       this.prisma.seller.findMany({
@@ -1423,17 +1454,41 @@ export class AdminService {
         where: { rating: { lte: 2 }, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: 20,
         select: { id: true, sellerId: true, rating: true, comment: true, buyerName: true, createdAt: true },
       }),
+      /*
+       * Every order placed, not the latest fifteen paid ones. An admin asked
+       * to be told about each sale, and a cap that low silently dropped the
+       * rest on any decent day. Abandoned checkouts are still excluded —
+       * nobody paid for those, and they are swept rather than fulfilled.
+       */
       this.prisma.order.findMany({
-        where: { createdAt: { gte: since }, status: { in: PAID } }, orderBy: { createdAt: 'desc' }, take: 15,
+        where: { createdAt: { gte: since }, status: { not: 'PendingPayment' } },
+        orderBy: { createdAt: 'desc' }, take: 100,
         select: { id: true, sellerId: true, totalAmount: true, buyerName: true, createdAt: true },
       }),
       // Contact-form messages and seller reports, unresolved ones of which
       // need someone — the same as a dispute or a payout request.
       listSupport(this.prisma, { from: since }),
+      // Everything that moved: accepted, shipped, delivered, cancelled.
+      statusChangesSince(this.prisma, since),
     ]);
     const openMessages = (messages as SupportMessage[]).filter((m) => !m.resolved);
 
-    const ids = [...new Set([...payouts, ...disputes, ...refunds, ...reviews, ...orders].map((x) => x.sellerId))];
+    /*
+     * A status change can belong to an order older than the "new orders"
+     * window, so the ones we don't already have are looked up rather than
+     * rendered as "Unknown store".
+     */
+    const known = new Map(orders.map((o) => [o.id, o]));
+    const missing = [...new Set((changes as StatusChange[]).map((c) => c.orderId))].filter((id) => !known.has(id));
+    const extraOrders = missing.length
+      ? await this.prisma.order.findMany({
+          where: { id: { in: missing } },
+          select: { id: true, sellerId: true, totalAmount: true, buyerName: true, createdAt: true },
+        })
+      : [];
+    const orderById = new Map([...orders, ...extraOrders].map((o) => [o.id, o]));
+
+    const ids = [...new Set([...payouts, ...disputes, ...refunds, ...reviews, ...orders, ...extraOrders].map((x) => x.sellerId))];
     const sellers = new Map(
       (await this.prisma.seller.findMany({
         where: { id: { in: ids } },
@@ -1471,8 +1526,23 @@ export class AdminService {
       })),
       ...orders.map((o): Notice => ({
         id: `order:${o.id}`, kind: 'order', tone: 'info', title: `New order · ${inr(o.totalAmount)}`,
-        body: `${o.buyerName || 'Customer'} · ${store(o.sellerId)}`, href: `/admin/orders/${o.id}`, at: o.createdAt, important: false,
+        body: `${o.buyerName || 'Customer'} · ${store(o.sellerId)}`, href: `/admin/orders/${o.id}`, at: o.createdAt, important: true,
       })),
+      ...(changes as StatusChange[]).map((c): Notice => {
+        const step = STATUS_NOTICE[c.to] || { tone: 'info' as const, title: `Moved to ${c.to}` };
+        const o = orderById.get(c.orderId);
+        return {
+          id: `status:${c.orderId}:${c.to}:${+c.at}`,
+          kind: 'order',
+          tone: step.tone,
+          title: `${step.title} · ${ref(c.orderId)}`,
+          body: [o ? store(o.sellerId) : null, c.from ? `${c.from} → ${c.to}` : null, c.amount ? inr(c.amount) : null]
+            .filter(Boolean).join(' · '),
+          href: `/admin/orders/${c.orderId}`,
+          at: c.at,
+          important: step.tone !== 'info',
+        };
+      }),
       ...openMessages.map((m): Notice => ({
         id: `support:${m.id}`,
         kind: 'support',

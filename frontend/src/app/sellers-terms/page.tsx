@@ -1,5 +1,5 @@
 import { LegalShell, Policy } from '@/components/legal';
-import { legalSections } from '@/lib/legal-content';
+import { legalPolicy } from '@/lib/legal-content';
 
 export const metadata = {
   title: 'Loopy — Selling on Loopy',
@@ -13,14 +13,14 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('seller-terms', 'payments-and-settlement', 'prohibited-products', 'conduct-and-reviews');
+  const policy = legalPolicy('/sellers-terms');
   return (
     <LegalShell
       title="Selling on Loopy"
       sub="What is expected of a seller, how and when you are paid, and what you may not list."
       active="/sellers-terms"
     >
-      {sections.map((s) => <Policy key={s.id} section={s} />)}
+      {policy && <Policy policy={policy} />}
     </LegalShell>
   );
 }

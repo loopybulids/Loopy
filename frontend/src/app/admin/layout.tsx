@@ -60,7 +60,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <button
-          onClick={() => { ['loopy_token', 'loopy_role', 'loopy_user', 'loopy_name', 'loopy_admin_command'].forEach((k) => localStorage.removeItem(k)); clearApiDataCache(); router.push('/seller/login'); }}
+          onClick={() => { ['loopy_token', 'loopy_role', 'loopy_user', 'loopy_name', 'loopy_admin_command'].forEach((k) => localStorage.removeItem(k)); clearApiDataCache(); router.push('/admin/login'); }}
           className="m-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium text-dim transition-colors hover:bg-cool hover:text-slate"
         >
           <Icon name="logout" size={18} /> Sign out

@@ -48,12 +48,38 @@ function read<T>(key: string): T | null {
   }
 }
 
-function write(key: string, data: unknown) {
+/**
+ * Drop payloads belonging to other sessions.
+ *
+ * The cache is namespaced by token, and every sign-in mints a new one — so
+ * each session's payloads are orphaned rather than overwritten by the next.
+ * They accumulate until localStorage is full, at which point writes start
+ * failing silently and pages stop painting from cache: "the data disappears
+ * after a few refreshes". Nothing ever collected them, because the only
+ * cleanup ran on an explicit sign-out.
+ */
+function pruneOtherSessions() {
+  if (typeof window === 'undefined') return;
+  const mine = `${NS}:${scope()}:`;
   try {
-    localStorage.setItem(keyFor(key), JSON.stringify({ at: Date.now(), data }));
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(`${NS}:`) && !k.startsWith(mine)) localStorage.removeItem(k);
+    }
+  } catch { /* nothing we can do */ }
+}
+
+function write(key: string, data: unknown) {
+  const payload = JSON.stringify({ at: Date.now(), data });
+  try {
+    localStorage.setItem(keyFor(key), payload);
   } catch {
-    // Quota or a browser blocking storage — the page still works, it just
-    // won't paint instantly next time.
+    // Almost always the quota. Clear out the dead sessions and try once more;
+    // if it still won't fit, the page works, it just won't paint instantly
+    // next time.
+    pruneOtherSessions();
+    try {
+      localStorage.setItem(keyFor(key), payload);
+    } catch { /* storage blocked, or this payload alone is too big */ }
   }
 }
 
@@ -77,7 +103,12 @@ export interface ApiData<T> {
   reload: () => Promise<void>;
 }
 
+/** Once per page load, before anything caches against the current session. */
+let pruned = false;
+
 export function useApiData<T>(key: string, fetcher: () => Promise<T>): ApiData<T> {
+  if (!pruned) { pruned = true; pruneOtherSessions(); }
+
   const cached = useRef<T | null>(null);
   if (cached.current === null) cached.current = read<T>(key);
 

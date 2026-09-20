@@ -1,5 +1,5 @@
 import { LegalShell, Policy } from '@/components/legal';
-import { legalSections } from '@/lib/legal-content';
+import { legalPolicy } from '@/lib/legal-content';
 
 export const metadata = {
   title: 'Loopy — Terms of Service',
@@ -13,14 +13,14 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('who-operates-loopy', 'terms-of-use', 'definitions', 'buyer-terms', 'who-is-responsible-for-what', 'complaints-and-disputes', 'liability', 'governing-law', 'contact');
+  const policy = legalPolicy('/terms');
   return (
     <LegalShell
       title="Terms of Service"
       sub="The agreement between you and Loopy — who may use the platform, what we charge, and how disputes are handled."
       active="/terms"
     >
-      {sections.map((s) => <Policy key={s.id} section={s} />)}
+      {policy && <Policy policy={policy} />}
     </LegalShell>
   );
 }

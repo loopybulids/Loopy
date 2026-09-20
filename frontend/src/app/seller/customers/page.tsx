@@ -29,7 +29,8 @@ export default function Customers() {
                   <th className="pb-3 font-bold">Customer</th>
                   <th className="pb-3 font-bold">Contact</th>
                   <th className="pb-3 font-bold">Orders</th>
-                  <th className="pb-3 font-bold">Total spent</th>
+                  {/* Not "total spent": this is the seller's share, without Loopy's fee. */}
+                  <th className="pb-3 font-bold">Order value</th>
                   <th className="pb-3 font-bold">Avg order</th>
                 </tr>
               </thead>

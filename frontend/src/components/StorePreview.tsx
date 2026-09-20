@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { StoreConfig, StorePage, HERO_BG, FONT_CLASS, isVideo, safeHref } from '@/lib/store-config';
 import { SizeStrip } from '@/components/sizes';
@@ -36,6 +36,7 @@ const POLICY_ICONS = [<ShieldLock key="0" size={20} />, <Truck key="1" size={20}
  */
 export default function StorePreview({
   config, products = [], storeName, mobile = false, username, page, reviews = [], collections = [],
+  catalog = false, children,
 }: {
   config: StoreConfig;
   products?: any[];
@@ -43,6 +44,16 @@ export default function StorePreview({
   mobile?: boolean;
   username?: string;        // when set, nav links point at real storefront routes
   page?: StorePage | null;  // when set, render this custom page instead of the home layout
+  /**
+   * Render `children` between the header and footer instead of the home
+   * layout — how the All Products page borrows this store's design.
+   *
+   * It takes children rather than rendering the catalogue itself so that the
+   * catalogue can reuse ProductCard from this file without the two importing
+   * each other.
+   */
+  catalog?: boolean;
+  children?: ReactNode;
   /**
    * Visible reviews for this store. The API filters hidden ones out before
    * they reach here, so anything in this list is meant to be public.
@@ -79,8 +90,15 @@ export default function StorePreview({
     ...c.header.nav.map((n) => {
       let href = n.href;
       if (username && (href === '#' || href === '')) href = home;
-      // "Track Order" (legacy default href) → the store's real order-tracking page
-      else if (href === '/orders') href = username ? storeHref(username, '/orders') : '#';
+      /*
+       * "All Products" shipped as an anchor to the featured strip, which shows
+       * eight. Every store saved before the catalogue existed still has that
+       * anchor, so it is mapped here rather than migrated: a link promising
+       * all products should not stop at eight.
+       */
+      else if (href === '#products') href = username ? storeHref(username, '/products') : '#';
+      // Internal store routes ("/orders", "/products") → this store's real URL.
+      else if (username && href.startsWith('/')) href = storeHref(username, href);
       return { label: n.label, href };
     }),
     ...pageLinks,
@@ -93,6 +111,10 @@ export default function StorePreview({
     ? { background: `linear-gradient(160deg, ${accent}, ${accent}22)`, color: '#fff' }
     : undefined;
   const [tab, setTab] = useState(c.productTabs.tabs[0] || 'Featured');
+  const [menu, setMenu] = useState(false);
+  // The home layout: everything except a custom page or the catalogue, both of
+  // which keep only this store's header and footer.
+  const showHome = !page && !catalog;
 
   return (
     <div className={`bg-paper text-navy ${fontClass}`}>
@@ -126,15 +148,55 @@ export default function StorePreview({
               <button className="grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy"><Search size={18} /></button>
             )}
             <StoreAccountControls username={username} storeName={storeName} accent={accent} />
+
+            {/*
+              The nav, for narrow screens.
+
+              Below `md` the links were simply hidden and nothing replaced
+              them, so a shop on a phone — which is most of them, since these
+              are shared from Instagram — had no way to reach All Products,
+              Track Order or Contact at all.
+            */}
+            {navLinks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMenu((m) => !m)}
+                aria-label={menu ? 'Close menu' : 'Open menu'}
+                aria-expanded={menu}
+                className={`grid h-9 w-9 place-items-center rounded-full text-navy/65 transition-colors hover:bg-paper hover:text-navy ${mobile ? '' : 'md:hidden'}`}
+              >
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  {menu ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+                </svg>
+              </button>
+            )}
           </div>
+
+          {menu && (
+            <div className={`absolute inset-x-0 top-full border-b border-line bg-white shadow-card ${mobile ? '' : 'md:hidden'}`}>
+              <nav className="flex flex-col px-5 sm:px-8">
+                {navLinks.map((n, i) => (
+                  <Link
+                    key={i}
+                    href={safeHref(n.href)}
+                    onClick={() => setMenu(false)}
+                    className="border-b border-line/70 py-3.5 text-[14.5px] font-semibold text-navy/80 transition-colors last:border-0 hover:text-navy"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          )}
         </header>
       )}
 
       {/* custom page body — replaces the home layout when a page is selected */}
       {page && <PageBody page={page} accent={accent} />}
+      {catalog && children}
 
       {/* hero */}
-      {!page && c.hero.enabled && (
+      {showHome && c.hero.enabled && (
         <section style={heroAccentStyle} className={`relative grid min-h-[420px] place-items-center overflow-hidden px-5 py-16 text-center sm:px-8 ${hasHeroMedia ? 'text-white' : heroAccentStyle ? '' : heroBgClass}`}>
           {hasHeroMedia && (
             <div className="absolute inset-0">
@@ -161,7 +223,7 @@ export default function StorePreview({
       )}
 
       {/* banner images */}
-      {!page && c.banners.enabled && c.banners.images.filter(Boolean).length > 0 && (
+      {showHome && c.banners.enabled && c.banners.images.filter(Boolean).length > 0 && (
         <section className="grid gap-3 px-5 py-6 sm:px-8 md:grid-cols-2">
           {c.banners.images.filter(Boolean).map((src, i) => (
             isVideo(src)
@@ -172,7 +234,7 @@ export default function StorePreview({
       )}
 
       {/* product tabs + grid */}
-      {!page && c.productTabs.enabled && (
+      {showHome && c.productTabs.enabled && (
         <section id="products" className="px-5 py-12 sm:px-8">
           <h2 className="text-center font-display text-[30px] font-bold">{c.productTabs.heading}</h2>
           {c.productTabs.sub && <p className="mt-1 text-center text-[14px] text-muted">{c.productTabs.sub}</p>}
@@ -189,20 +251,43 @@ export default function StorePreview({
             ))}
           </div>
 
-          <div className={`mx-auto mt-8 grid max-w-5xl gap-4 ${mobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}`}>
-            {filterByTab(products, tab).length === 0 ? (
-              <p className="col-span-full py-10 text-center text-[13.5px] text-faint">No products in “{tab}” yet.</p>
-            ) : (
-              filterByTab(products, tab).slice(0, 8).map((p) => (
-                <ProductCard key={p.id} p={p} username={username} accent={accent} />
-              ))
-            )}
-          </div>
+          {/*
+            A teaser, not the catalogue. Eight keeps the home page scannable;
+            the button below is how a shopper reaches the rest — without it,
+            a seller's ninth product onwards was unreachable from here.
+          */}
+          {(() => {
+            const matching = filterByTab(products, tab);
+            return (
+              <>
+                <div className={`mx-auto mt-8 grid max-w-5xl gap-4 ${mobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}`}>
+                  {matching.length === 0 ? (
+                    <p className="col-span-full py-10 text-center text-[13.5px] text-faint">No products in “{tab}” yet.</p>
+                  ) : (
+                    matching.slice(0, 8).map((p) => (
+                      <ProductCard key={p.id} p={p} username={username} accent={accent} />
+                    ))
+                  )}
+                </div>
+                {products.length > 0 && (
+                  <div className="mt-8 text-center">
+                    <Link
+                      href={username ? storeHref(username, '/products') : '#'}
+                      className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-[14px] font-bold transition hover:opacity-80"
+                      style={{ borderColor: accent, color: accent }}
+                    >
+                      {matching.length > 8 ? `View all ${products.length} products` : 'Browse all products'} →
+                    </Link>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </section>
       )}
 
       {/* policies — sliding carousel on mobile, grid on desktop */}
-      {!page && c.policies.enabled && c.policies.items.length > 0 && (
+      {showHome && c.policies.enabled && c.policies.items.length > 0 && (
         <section className="bg-white px-5 py-12 sm:px-8">
           <div className={mobile ? 'block' : 'lg:hidden'}>
             <PolicyCarousel items={c.policies.items} accent={accent} />
@@ -216,7 +301,7 @@ export default function StorePreview({
       )}
 
       {/* collections — curated rows the seller arranged in /seller/collections */}
-      {!page && c.collections?.enabled && collections.length > 0 && (
+      {showHome && c.collections?.enabled && collections.length > 0 && (
         <section className="px-5 py-12 sm:px-8">
           <div className="mx-auto max-w-6xl">
             {c.collections.heading && (
@@ -269,7 +354,7 @@ export default function StorePreview({
       )}
 
       {/* what buyers said — only reviews the seller has left visible reach here */}
-      {!page && reviews.length > 0 && (
+      {showHome && reviews.length > 0 && (
         <section className="bg-white px-5 py-12 sm:px-8">
           <div className="mx-auto max-w-5xl">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -314,7 +399,7 @@ export default function StorePreview({
       )}
 
       {/* contact */}
-      {!page && c.contact.enabled && (c.contact.email || c.contact.phone || c.contact.address) && (
+      {showHome && c.contact.enabled && (c.contact.email || c.contact.phone || c.contact.address) && (
         <section id="contact" className="px-5 py-12 text-center sm:px-8">
           <h2 className="font-display text-[24px] font-bold">Get in touch</h2>
           <div className="mt-3 space-y-1 text-[14px] text-muted">
@@ -326,7 +411,7 @@ export default function StorePreview({
       )}
 
       {/* socials */}
-      {!page && c.socials.enabled && (c.socials.instagram || c.socials.facebook || c.socials.whatsapp) && (
+      {showHome && c.socials.enabled && (c.socials.instagram || c.socials.facebook || c.socials.whatsapp) && (
         <div className="flex justify-center gap-4 pb-6 text-[13px] font-semibold" style={{ color: accent }}>
           {c.socials.instagram && <span>Instagram</span>}
           {c.socials.facebook && <span>Facebook</span>}
@@ -373,7 +458,7 @@ function PageBody({ page, accent }: { page: StorePage; accent: string }) {
  * Extracted so the product tabs and the collection rows render identically —
  * two copies of this markup would drift the moment either was touched.
  */
-function ProductCard({ p, username, accent }: { p: any; username?: string; accent: string }) {
+export function ProductCard({ p, username, accent }: { p: any; username?: string; accent: string }) {
   return (
     <Link
       href={username ? storeHref(username, `/product/${p.id}`) : '#'}

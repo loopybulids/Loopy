@@ -75,6 +75,21 @@ export function storeUrl(username: string, path?: string): string {
   return `${origin}/s/${username}${suffix}`;
 }
 
+/**
+ * Where the Store Editor's "Preview" opens.
+ *
+ * Deliberately the internal route on the *current* origin, not the store's
+ * subdomain. An unpublished draft lives in localStorage, which is per-origin:
+ * opening cpaybara.loopynow.shop from an editor running on www.loopynow.shop
+ * reaches a different storage area, finds no draft, and shows the seller the
+ * published shop while telling them it is a preview of their edits.
+ */
+export function storePreviewUrl(username: string, path?: string): string {
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const suffix = clean(path);
+  return `${origin}/s/${username}${suffix}?preview=1`;
+}
+
 /** The same thing without a scheme, for display: `cpaybara.loopynow.shop`. */
 export function storeUrlLabel(username: string, path?: string): string {
   return storeUrl(username, path).replace(/^https?:\/\//, '');

@@ -1,5 +1,5 @@
 import { LegalShell, Policy } from '@/components/legal';
-import { legalSections } from '@/lib/legal-content';
+import { legalPolicy } from '@/lib/legal-content';
 
 export const metadata = {
   title: 'Loopy — Refunds & Returns',
@@ -13,14 +13,14 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('cancellations', 'returns-and-refunds');
+  const policy = legalPolicy('/refunds');
   return (
     <LegalShell
       title="Refunds & Returns"
       sub="How to raise a request, who decides it, and what happens to your money while it is being decided."
       active="/refunds"
     >
-      {sections.map((s) => <Policy key={s.id} section={s} />)}
+      {policy && <Policy policy={policy} />}
     </LegalShell>
   );
 }

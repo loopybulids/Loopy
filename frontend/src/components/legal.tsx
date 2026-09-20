@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Logo from '@/components/Logo';
-import { LEGAL_META, type LegalSection } from '@/lib/legal-content';
+import { LEGAL_META, type LegalPolicy } from '@/lib/legal-content';
 
 /** The policy pages, in the order they appear in the footer and on /legal. */
 export const LEGAL_NAV = [
@@ -63,22 +63,35 @@ function Blocks({ blocks }: { blocks: { kind: 'p' | 'li'; text: string }[] }) {
   return <>{out}</>;
 }
 
-/** One full section of the policy document, numbered as in the document. */
-export function Policy({ section }: { section: LegalSection }) {
+/**
+ * One policy, numbered as in the document.
+ *
+ * `heading` is for /legal, which stacks all five and needs each one named. On
+ * its own page the policy's name is already the page title, so repeating it
+ * would just be the same words twice.
+ */
+export function Policy({ policy, heading = false }: { policy: LegalPolicy; heading?: boolean }) {
   return (
-    <section id={section.id} className="mt-10 scroll-mt-24 border-t border-line pt-8 first:mt-6 first:border-0 first:pt-0">
-      <h2 className="font-display text-[20px] font-bold tracking-tight text-navy">
-        <span className="text-faint">{section.n}.</span> {section.title}
-      </h2>
+    <section
+      id={policy.id}
+      className={
+        heading
+          ? 'mt-10 scroll-mt-24 border-t border-line pt-8 first:mt-6 first:border-0 first:pt-0'
+          : 'mt-8 scroll-mt-24'
+      }
+    >
+      {heading && (
+        <h2 className="font-display text-[20px] font-bold tracking-tight text-navy">{policy.title}</h2>
+      )}
 
-      <Blocks blocks={section.intro} />
+      <Blocks blocks={policy.intro} />
 
-      {section.subs.map((sub) => (
-        <div key={sub.no} className="mt-5">
+      {policy.sections.map((s) => (
+        <div key={s.no} className="mt-5">
           <h3 className="font-display text-[14.5px] font-bold text-navy">
-            {sub.no} {sub.title}
+            {s.no}. {s.title}
           </h3>
-          <Blocks blocks={sub.blocks} />
+          <Blocks blocks={s.blocks} />
         </div>
       ))}
     </section>

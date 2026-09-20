@@ -10,6 +10,20 @@ function authHeader(): Record<string, string> {
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
+/**
+ * When we last saw a 401 that looked like a rejected token.
+ *
+ * Signing someone out is destructive — a session lasts seven days and the
+ * console is mid-task — so it takes two. One 401 can be a cold start, a
+ * request that raced the token being written, a proxy hiccup or a single
+ * unlucky endpoint, and treating any of those as "your session ended" is what
+ * made a refresh throw people back to the login screen. A token that has
+ * genuinely expired fails every call, so the second 401 arrives immediately
+ * and the sign-out still happens.
+ */
+let lastRejection = 0;
+const REJECTION_WINDOW = 60_000;
+
 async function send<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
@@ -21,16 +35,31 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
     cache: 'no-store',
   });
   if (!res.ok) {
-    // Session expired / invalid token on an authenticated request → send to login.
+    const body = await res.json().catch(() => null);
+
     if (res.status === 401 && typeof window !== 'undefined' && localStorage.getItem('loopy_token')) {
-      const role = localStorage.getItem('loopy_role');
-      localStorage.removeItem('loopy_token');
-      clearApiCache();
-      const dest = role === 'admin' ? '/admin/login' : '/seller/login';
-      if (!location.pathname.includes('/login')) location.href = dest;
-      throw new Error('Your session expired — please sign in again.');
+      /*
+       * Only our own API can end a session. A 401 with no JSON body is the
+       * platform in front of it — Vercel's deployment protection, an edge
+       * error page — and those say nothing about whether the token is good.
+       */
+      const fromApi = !!body;
+      const now = Date.now();
+      const confirmed = fromApi && now - lastRejection < REJECTION_WINDOW;
+      lastRejection = fromApi ? now : lastRejection;
+
+      if (confirmed) {
+        lastRejection = 0;
+        const role = localStorage.getItem('loopy_role');
+        localStorage.removeItem('loopy_token');
+        clearApiCache();
+        const dest = role === 'admin' ? '/admin/login' : '/seller/login';
+        if (!location.pathname.includes('/login')) location.href = dest;
+        throw new Error('Your session expired — please sign in again.');
+      }
+      throw new Error(body?.message || 'That request was refused — please try again.');
     }
-    const body = await res.json().catch(() => ({}));
+
     throw new Error(body?.message || `Request failed (${res.status})`);
   }
   return res.json();

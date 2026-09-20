@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { imageBytes, restoreImages, withImageUrls } from '../common/product-images';
 
 function shape(p: any) {
   return { ...p, images: safeParse(p.images), variants: safeParse(p.variants), sizes: safeParse(p.sizes) };
@@ -24,7 +25,8 @@ export class ProductsService {
     });
     if (!product) throw new NotFoundException('Product not found');
     return {
-      ...shape(product),
+      // Public route: images travel as URLs, not as base64 in the response.
+      ...withImageUrls(shape(product)),
       seller: {
         id: product.seller.id,
         storeName: product.seller.storeName,
@@ -35,6 +37,14 @@ export class ProductsService {
         kycStatus: product.seller.kycStatus,
       },
     };
+  }
+
+  /** One stored image's bytes. Only `images` is read — the row can be large. */
+  async image(id: string, index: number) {
+    if (!Number.isInteger(index) || index < 0) return null;
+    const row = await this.prisma.product.findUnique({ where: { id }, select: { images: true } });
+    if (!row) return null;
+    return imageBytes(safeParse(row.images), index);
   }
 
   async update(sellerId: string, id: string, data: any) {
@@ -49,7 +59,11 @@ export class ProductsService {
         mrp: data.mrp !== undefined ? (data.mrp === null || data.mrp === '' ? null : Number(data.mrp)) : existing.mrp,
         condition: data.condition ?? existing.condition,
         category: data.category ?? existing.category,
-        images: data.images ? JSON.stringify(data.images) : existing.images,
+        // URLs we served are mapped back to the images they stand for — see
+        // common/product-images.restoreImages.
+        images: data.images
+          ? JSON.stringify(restoreImages(data.images, safeParse(existing.images)))
+          : existing.images,
         variants: data.variants !== undefined ? JSON.stringify(data.variants || []) : existing.variants,
         sizes: data.sizes !== undefined ? JSON.stringify(data.sizes || []) : existing.sizes,
         sizeChartUrl: data.sizeChartUrl !== undefined ? (data.sizeChartUrl || null) : existing.sizeChartUrl,

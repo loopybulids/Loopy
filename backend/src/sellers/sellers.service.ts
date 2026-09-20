@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { COMMISSION_PCT, FEE_FLAT, FEE_FLAT_BELOW, sellerReceivableOf } from '../common/money';
+import { withImageUrls } from '../common/product-images';
 import { releasedOrderIds } from '../common/funds';
 import { toCsv } from '../common/csv';
 import { groupByBucket, istDateTime, parseRange, rangeSlug } from '../common/date-range';
@@ -80,8 +81,15 @@ type PrismaClientLike = {
   auditLog: { findMany: (args: any) => Promise<any[]> };
 };
 
+/**
+ * A product as the API sends it, with `images` as URLs rather than base64.
+ *
+ * The storefront payload carries the whole catalogue, so inlining the images
+ * meant a 15-product store sent 4.6 MB inside its HTML on every request, none
+ * of it cacheable. See common/product-images.
+ */
 function shapeProduct(p: any) {
-  return { ...p, images: safeParse(p.images), variants: safeParse(p.variants), sizes: safeParse(p.sizes) };
+  return withImageUrls({ ...p, images: safeParse(p.images), variants: safeParse(p.variants), sizes: safeParse(p.sizes) });
 }
 function safeParse(s: string): any[] {
   try {
@@ -695,7 +703,10 @@ export class SellersService {
   async getCustomers(sellerId: string) {
     const [customers, orders] = await Promise.all([
       this.prisma.customer.findMany({ where: { sellerId }, orderBy: { createdAt: 'desc' } }),
-      this.prisma.order.findMany({ where: { sellerId }, select: { customerId: true, status: true, totalAmount: true } }),
+      this.prisma.order.findMany({
+        where: { sellerId },
+        select: { customerId: true, status: true, itemsAmount: true, shippingCharge: true, discountAmount: true },
+      }),
     ]);
     const paidStatuses = PAID;
     return customers.map((c) => {
@@ -703,7 +714,11 @@ export class SellersService {
       const paid = co.filter((o) => paidStatuses.includes(o.status));
       return {
         id: c.id, name: c.name, email: c.email, phone: c.phone, createdAt: c.createdAt,
-        orders: co.length, spent: paid.reduce((s, o) => s + o.totalAmount, 0),
+        orders: co.length,
+        // What this customer was worth to the seller — goods and delivery, not
+        // the platform fee. `totalAmount` is the customer's bill and includes
+        // Loopy's cut, which is not the seller's money and is not shown to them.
+        spent: sellerReceivableOf(paid),
       };
     });
   }

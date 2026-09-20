@@ -55,7 +55,9 @@ export default function CommandCenter() {
   if (!d) return <div className="animate-pulse space-y-4"><div className="h-8 w-56 rounded bg-hair" /><div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{Array.from({ length: 12 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-hair/60" />)}</div></div>;
 
   const m = d.metrics;
-  const rev = d.charts.revenue;
+  // What customers paid. Adds up to the GMV card beside it — the Revenue card
+  // is the commission, which is a different and much smaller number.
+  const rev = d.charts.gmv;
   // Against the same length of time just before. Absent for "All time", and
   // when the previous period was empty, where a percentage means nothing.
   const deltas = d.deltas || {};
@@ -138,7 +140,7 @@ export default function CommandCenter() {
               action={
                 <div className="flex items-center gap-3 text-[11.5px]">
                   <span className="flex items-center gap-1.5 text-dim">
-                    <span className="h-2 w-2 rounded-full bg-accent" /> Revenue
+                    <span className="h-2 w-2 rounded-full bg-accent" /> GMV
                   </span>
                   <span className="text-pale">{label}{monthly ? ' · monthly' : ''}</span>
                 </div>
@@ -166,7 +168,7 @@ export default function CommandCenter() {
               icon="wallet"
               delta={deltas.revenue ?? undefined}
               deltaSince={vsPrev}
-              series={d.charts.profit}
+              series={d.charts.commission}
               href="/admin/finance"
             />
             <StatTile
@@ -244,7 +246,7 @@ export default function CommandCenter() {
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="p-5">
             <SectionTitle action={<span className="text-[11.5px] text-pale">{monthly ? 'Commission / month' : 'Commission / day'}</span>}>Profit</SectionTitle>
-            <AreaTrend data={d.charts.profit} color="#2A3341" money height={210} />
+            <AreaTrend data={d.charts.commission} color="#2A3341" money height={210} />
           </Card>
           <Card className="p-5">
             <SectionTitle action={<span className="text-[11.5px] text-pale">{monthly ? 'Orders / month' : 'Orders / day'}</span>}>Order volume</SectionTitle>

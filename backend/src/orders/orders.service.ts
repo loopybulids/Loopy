@@ -9,6 +9,7 @@ import { CheckoutDto } from './dto';
 import { orderAcceptedEmail, orderRejectedEmail, orderShippedEmail, reviewRequestEmail, sendMail } from '../mail/mailer';
 import { computeAmounts } from '../common/money';
 import { storeUrl } from '../common/store-url';
+import { recordStatusChange } from '../common/order-events';
 
 @Injectable()
 export class OrdersService {
@@ -227,6 +228,9 @@ export class OrdersService {
       }
     }
     const updated = await this.prisma.order.update({ where: { id }, data, include: { items: true } });
+    // Awaited, not fired and forgotten: this runs as a serverless function, and
+    // the response ending kills anything still in flight.
+    await recordStatusChange(this.prisma, updated, order.status, to, { id: sellerId });
 
     // Fire-and-forget: a mail failure must never fail the status change itself.
     if (to === 'Accepted' || to === 'Shipped') {
@@ -267,7 +271,9 @@ export class OrdersService {
     // Going back before "Shipped" invalidates the tracking number.
     if (order.status === 'Shipped') { data.awbNumber = null; data.courier = null; }
 
-    return this.prisma.order.update({ where: { id }, data, include: { items: true } });
+    const reverted = await this.prisma.order.update({ where: { id }, data, include: { items: true } });
+    await recordStatusChange(this.prisma, reverted, order.status, to, { id: sellerId });
+    return reverted;
   }
 
   /**
@@ -301,6 +307,7 @@ export class OrdersService {
         include: { items: true },
       });
     }, { timeout: 20000, maxWait: 15000 });
+    await recordStatusChange(this.prisma, updated, order.status, 'Cancelled', { id: sellerId });
 
     this.notifyTargets(updated).then(({ storeName, email }) => {
       if (!email) return;
@@ -322,6 +329,7 @@ export class OrdersService {
       data: { status: 'Delivered' },
       include: { items: true },
     });
+    await recordStatusChange(this.prisma, updated, order.status, 'Delivered', { id: sellerId || null });
 
     // Delivery is the moment to ask for a review: the buyer has the goods and
     // an opinion. Sent only if they haven't already reviewed, and
@@ -351,11 +359,13 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({ where: { id } });
     if (!order) throw new NotFoundException('Order not found');
     this.assertBuyer(order, user);
-    return this.prisma.order.update({
+    const done = await this.prisma.order.update({
       where: { id },
       data: { status: 'Completed' },
       include: { items: true },
     });
+    await recordStatusChange(this.prisma, done, order.status, 'Completed', { id: user?.userId || null });
+    return done;
   }
 
   async addReview(orderId: string, rating: number, comment?: string, user?: any) {
@@ -421,6 +431,7 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
     this.assertBuyer(order, user);
     await this.prisma.order.update({ where: { id: orderId }, data: { status: 'Disputed' } });
+    await recordStatusChange(this.prisma, order, order.status, 'Disputed', { id: user?.userId || null });
     return this.prisma.dispute.create({
       data: {
         orderId,

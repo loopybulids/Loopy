@@ -1,5 +1,5 @@
 import { LegalShell, Policy } from '@/components/legal';
-import { legalSections } from '@/lib/legal-content';
+import { legalPolicy } from '@/lib/legal-content';
 
 export const metadata = {
   title: 'Loopy — Shipping Policy',
@@ -13,14 +13,14 @@ export const metadata = {
  * wording here is the wording in that document, not a paraphrase of it.
  */
 export default function Page() {
-  const sections = legalSections('shipping-and-delivery');
+  const policy = legalPolicy('/shipping');
   return (
     <LegalShell
       title="Shipping Policy"
       sub="Sellers arrange and are responsible for shipping. This explains tracking, charges, and what happens when a delivery goes wrong."
       active="/shipping"
     >
-      {sections.map((s) => <Policy key={s.id} section={s} />)}
+      {policy && <Policy policy={policy} />}
     </LegalShell>
   );
 }

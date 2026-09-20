@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { storeUrl } from '@/lib/store-url';
+import { storePreviewUrl, storeUrl } from '@/lib/store-url';
+import ProductCatalog from '@/components/store/ProductCatalog';
 import { StoreConfig, StorePage, PageBlockType, SECTION_ORDER, TEMPLATES, withDefaults, HERO_BG_OPTIONS, FONT_OPTIONS, blankPage, blankBlock, slugify } from '@/lib/store-config';
 import { useConsoleHref } from '@/lib/console-url';
 
@@ -24,6 +25,19 @@ export default function StoreEditor() {
   const [leftTab, setLeftTab] = useState<LeftTab>('sections');
   const [pageId, setPageId] = useState<string | null>(null); // which custom page is open in the Pages editor
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+  /*
+   * Which storefront page the preview is showing, relative to the store root.
+   *
+   * null means "whatever the left panel is editing" — the home layout, or a
+   * custom page while the Pages editor is open. A click inside the preview
+   * sets it, so a seller can follow their own navigation the way a shopper
+   * would, inside the pane. Selecting anything in the panel clears it again,
+   * because that is a request to look at the thing being edited.
+   */
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const previewPane = useRef<HTMLElement>(null);
+  // Picking a section to edit is a request to see it, so it ends the walk.
+  useEffect(() => { setPreviewPath(null); }, [active, pageId]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [publishErr, setPublishErr] = useState('');
@@ -153,7 +167,7 @@ export default function StoreEditor() {
       try { localStorage.setItem(`loopy_draft_${username}`, JSON.stringify(config)); } catch { /* ignore */ }
     }
     // Opens the seller's own address when a wildcard domain is configured.
-    window.open(storeUrl(username, '?preview=1'), '_blank');
+    window.open(storePreviewUrl(username), '_blank');
 
     if (!config) return;
     // Persist in the background so a reload of the preview still shows this design.
@@ -203,7 +217,59 @@ export default function StoreEditor() {
    */
   const frameWidth = device === 'mobile' ? 390 : 1280;
 
+  /**
+   * A clicked link as a path inside this store, or null if it leads elsewhere.
+   *
+   * Storefront links are built by storeHref(), which on the editor's own
+   * origin produces `/s/<handle>/…`. Anything else — an external link a seller
+   * put in their nav, another site — is not ours to render.
+   */
+  const toStorePath = (url: string): string | null => {
+    try {
+      const u = new URL(url, window.location.origin);
+      if (u.origin !== window.location.origin) return null;
+      const base = `/s/${username}`;
+      if (u.pathname === base) return '/';
+      if (username && u.pathname.startsWith(`${base}/`)) return u.pathname.slice(base.length);
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const onPreviewClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const a = (e.target as HTMLElement).closest('a');
+    const href = a?.getAttribute('href');
+    // In-page anchors (#contact) still scroll the preview, as they would live.
+    if (!href || href === '#' || href.startsWith('#')) return;
+
+    e.preventDefault();
+    const path = toStorePath((a as HTMLAnchorElement).href);
+    if (path === null) {
+      window.open((a as HTMLAnchorElement).href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    setPreviewPath(path);
+    previewPane.current?.scrollTo({ top: 0 });
+  };
+
   if (!config) return <p className="py-10 text-center text-[13px] text-faint">Loading store editor…</p>;
+
+  /*
+   * What the preview is showing. Below the guard above, because it reads
+   * `config.pages` and the config arrives a moment after the first render.
+   *
+   * `previewPath` wins while it is set; otherwise the preview follows the left
+   * panel, which is the behaviour while someone is editing a section.
+   */
+  const pages = config.pages || [];
+  const panelPage = active === 'pages' && pageId ? pages.find((p) => p.id === pageId) : null;
+  const walkedPage = previewPath ? pages.find((p) => `/${p.slug}` === previewPath) : null;
+  const previewPage = previewPath ? walkedPage || null : panelPage;
+  const previewCatalog: 'products' | 'live-only' | null =
+    previewPath === '/products' ? 'products'
+      : previewPath && previewPath !== '/' && !walkedPage ? 'live-only'
+        : null;
 
   const tabs: [LeftTab, string, JSX.Element][] = [
     ['themes', 'Themes', <ISparkle key="t" />],
@@ -307,15 +373,43 @@ export default function StoreEditor() {
         </aside>
 
         {/* live preview — rendered at device size, scaled to fit the pane */}
-        <main className="order-3 min-w-0 flex-1 bg-paper p-4 lg:order-2 lg:overflow-y-auto">
+        <main ref={previewPane} className="order-3 min-w-0 flex-1 bg-paper p-4 lg:order-2 lg:overflow-y-auto">
           <DevicePreview width={frameWidth} label={device === 'mobile' ? '390 × mobile' : '1280 × desktop'}>
-            <StorePreview
-              config={config}
-              products={products}
-              storeName={storeName}
-              mobile={device === 'mobile'}
-              page={active === 'pages' && pageId ? (config.pages || []).find((p) => p.id === pageId) : null}
-            />
+            {/*
+              Clicks are routed inside the pane rather than followed.
+
+              Without `username` every link resolved to "#", so the preview
+              looked interactive and did nothing. With it they are real
+              storefront URLs — and following one would navigate the editor
+              itself away, losing unsaved edits. Neither is what a seller
+              wants: they want to walk their own shop while they build it.
+
+              Intercepting here rather than threading a handler through
+              StorePreview catches every link at once — nav, product cards,
+              the account menu, the logo.
+            */}
+            <div onClickCapture={onPreviewClick}>
+              <StorePreview
+                config={config}
+                products={products}
+                storeName={storeName}
+                username={username}
+                mobile={device === 'mobile'}
+                page={previewPage}
+                catalog={!!previewCatalog}
+              >
+                {previewCatalog === 'products' && (
+                  <ProductCatalog products={products} username={username} accent={config.theme.accent} />
+                )}
+                {previewCatalog === 'live-only' && previewPath && (
+                  <LiveOnly
+                    path={previewPath}
+                    href={storeUrl(username, previewPath)}
+                    onBack={() => setPreviewPath('/')}
+                  />
+                )}
+              </StorePreview>
+            </div>
           </DevicePreview>
         </main>
 
@@ -353,6 +447,34 @@ function safeParse(s: string) { try { return JSON.parse(s); } catch { return nul
  * The height has to be measured and scaled too, or the scaled content either
  * leaves a gap beneath it or overflows the scroll container.
  */
+/**
+ * Shown for storefront pages the editor cannot render.
+ *
+ * The cart, an account, a tracked order — these are a shopper's session, not
+ * a design surface, and there is nothing in the editor to fill them with. Far
+ * better to say so and offer the real thing than to render a convincing but
+ * empty version of it.
+ */
+function LiveOnly({ path, href, onBack }: { path: string; href: string; onBack: () => void }) {
+  return (
+    <section className="px-5 py-16 text-center sm:px-8">
+      <p className="font-display text-[17px] font-bold text-navy">This page runs on your live store</p>
+      <p className="mx-auto mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-muted">
+        <code className="rounded bg-paper px-1.5 py-0.5 text-[12.5px]">{path}</code> needs a real shopper — their
+        cart, their account, their orders. The editor previews your design, not their session.
+      </p>
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+        <button onClick={onBack} className="rounded-lg border border-line bg-white px-4 py-2 text-[13px] font-bold text-navy hover:bg-paper">
+          ← Back to your storefront
+        </button>
+        <a href={href} target="_blank" rel="noreferrer" className="rounded-lg border border-line bg-white px-4 py-2 text-[13px] font-bold text-navy hover:bg-paper">
+          Open it live ↗
+        </a>
+      </div>
+    </section>
+  );
+}
+
 function DevicePreview({ width, label, children }: { width: number; label: string; children: React.ReactNode }) {
   const pane = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);

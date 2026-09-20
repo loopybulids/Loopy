@@ -105,7 +105,7 @@ export function defaultConfig(storeName = 'Your Store'): StoreConfig {
       logoUrl: '',
       nav: [
         { label: 'Home', href: '#' },
-        { label: 'All Products', href: '#products' },
+        { label: 'All Products', href: '/products' },
         { label: 'Track Order', href: '/orders' },
         { label: 'Contact', href: '#contact' },
       ],
