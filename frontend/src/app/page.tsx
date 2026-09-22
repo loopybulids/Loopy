@@ -36,7 +36,7 @@ const SOLUTIONS = [
   { icon: <Share size={20} />, t: 'Chat to order', d: 'Turn any DM into a structured order in seconds.' },
   { icon: <Bolt size={20} />, t: 'Instant checkout links', d: 'Pre-filled carts your customer pays in one tap.' },
   { icon: <Store size={20} />, t: 'Your own storefront', d: 'A real shop at your own address, live in minutes.' },
-  { icon: <ShieldLock size={20} />, t: 'Protected payments', d: 'Money held safely until the order is delivered.' },
+  { icon: <ShieldLock size={20} />, t: 'You keep 100%', d: 'Your full earnings reach your UPI or bank within 2–3 hours of an order.' },
   { icon: <Truck size={20} />, t: 'Shipping & tracking', d: 'Add a courier and tracking number; buyers get both.' },
   { icon: <Star size={20} />, t: 'Reviews & analytics', d: 'Revenue, conversion and what buyers actually said.' },
 ];
@@ -52,8 +52,8 @@ const FAQS = [
   { q: 'How does a DM become an order?', a: 'Pick a product, generate a checkout link, paste it in chat. Your customer pays and the order lands in your dashboard.' },
   { q: 'Do I need a website?', a: 'No — you get a hosted storefront at your own address the moment you sign up.' },
   { q: 'Which payments are supported?', a: 'UPI, cards, net banking and wallets.' },
-  { q: 'How do payouts work?', a: 'Funds are held until delivery is confirmed, then settled to your UPI ID or bank account.' },
-  { q: 'What does Loopy charge?', a: 'A flat 5% platform fee, shown to the buyer at checkout. It is not deducted from your payout.' },
+  { q: 'How do payouts work?', a: 'Within 2–3 hours of an order coming in, your earnings are settled to your UPI ID or bank account.' },
+  { q: 'What do I keep from a sale?', a: 'All of it. The product price and the delivery charge are settled to you in full — nothing is deducted from your payout.' },
   { q: 'Can I track inventory?', a: 'Yes — stock updates automatically as orders come in, with low-stock alerts.' },
 ];
 
@@ -186,7 +186,7 @@ export default function Landing() {
               { to: 500, suffix: '+', l: 'Orders processed' },
               { to: 125, suffix: '', l: 'Active sellers' },
               { to: 30, suffix: 's', l: 'Chat to checkout' },
-              { to: 48, suffix: 'h', l: 'Protected payout' },
+              { to: 3, suffix: 'h', l: 'Payout after an order' },
             ].map((s) => (
               <div key={s.l} className="text-center">
                 <CountUp
