@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { COMMISSION_PCT, FEE_FLAT, FEE_FLAT_BELOW, sellerReceivableOf } from '../common/money';
 import { withImageUrls } from '../common/product-images';
+import { mediaByDigest, withMediaUrls } from '../common/seller-media';
 import { releasedOrderIds } from '../common/funds';
 import { toCsv } from '../common/csv';
 import { groupByBucket, istDateTime, parseRange, rangeSlug } from '../common/date-range';
@@ -123,7 +124,8 @@ export class SellersService {
     });
     return sellers.map((s) => ({
       id: s.id, storeName: s.storeName, username: s.username, description: s.description,
-      bannerUrl: s.bannerUrl, logoUrl: s.logoUrl, rating: s.rating, ratingCount: s.ratingCount,
+      bannerUrl: withMediaUrls(s.username, s.bannerUrl), logoUrl: withMediaUrls(s.username, s.logoUrl),
+      rating: s.rating, ratingCount: s.ratingCount,
       city: s.city, productCount: s.products.length,
       preview: s.products.map(shapeProduct),
     }));
@@ -150,11 +152,26 @@ export class SellersService {
       // a fallback when the editor has never set one. An empty string there is
       // a removal and must be honoured, or a logo the seller deleted comes
       // straight back on the storefront.
-      logoUrl: cfg?.header?.logoUrl !== undefined
+      logoUrl: withMediaUrls(username, cfg?.header?.logoUrl !== undefined
         ? (cfg.header.logoUrl || null)
-        : (seller.logoUrl || null),
+        : (seller.logoUrl || null)),
       accent: cfg?.theme?.accent || null,
     };
+  }
+
+  /**
+   * One of a store's own images by its digest.
+   *
+   * Reads only the three columns that can hold one, so this never drags the
+   * product catalogue along with it.
+   */
+  async media(username: string, hash: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { username },
+      select: { logoUrl: true, bannerUrl: true, storeConfig: true },
+    });
+    if (!seller) return null;
+    return mediaByDigest(seller, hash);
   }
 
   async getStore(username: string) {
@@ -186,8 +203,9 @@ export class SellersService {
       storeName: seller.storeName,
       username: seller.username,
       description: seller.description,
-      bannerUrl: seller.bannerUrl,
-      logoUrl: seller.logoUrl,
+      // Brand images travel as URLs, like product images — see common/seller-media.
+      bannerUrl: withMediaUrls(username, seller.bannerUrl),
+      logoUrl: withMediaUrls(username, seller.logoUrl),
       rating: seller.rating,
       ratingCount: seller.ratingCount,
       city: seller.city,
@@ -234,7 +252,9 @@ export class SellersService {
         buyerName: r.buyerName || 'Customer',
         createdAt: r.createdAt,
       })),
-      storeConfig: seller.storeConfig ? safeParseObj(seller.storeConfig) : null,
+      // The hero background, banner strip and custom-page pictures all live in
+      // here as base64; this is the bulk of a storefront's page weight.
+      storeConfig: seller.storeConfig ? withMediaUrls(username, safeParseObj(seller.storeConfig)) : null,
       products: seller.products.map(shapeProduct),
     };
   }

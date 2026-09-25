@@ -39,9 +39,12 @@ export class ProductsService {
     };
   }
 
-  /** One stored image's bytes. Only `images` is read — the row can be large. */
-  async image(id: string, index: number) {
-    if (!Number.isInteger(index) || index < 0) return null;
+  /**
+   * One stored image's bytes. Only `images` is read — the row can be large.
+   * `index` arrives as "0.webp": the extension tells the storefront whether
+   * the entry is a picture or a video, and imageBytes strips it.
+   */
+  async image(id: string, index: string) {
     const row = await this.prisma.product.findUnique({ where: { id }, select: { images: true } });
     if (!row) return null;
     return imageBytes(safeParse(row.images), index);

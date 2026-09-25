@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { SellersService } from './sellers.service';
+import { IMAGE_CACHE_CONTROL } from '../common/product-images';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SellerGuard } from '../auth/seller.guard';
 
@@ -24,6 +26,29 @@ export class SellersController {
   @Get(':username/brand')
   brand(@Param('username') username: string) {
     return this.sellers.getBrand(username);
+  }
+
+  /**
+   * A store's logo, banner or hero image, as bytes.
+   *
+   * Public, like the storefront it serves, and cached forever — the digest in
+   * the URL is of the image itself, so these bytes cannot change. See
+   * common/seller-media.
+   */
+  @Get(':username/media/:hash')
+  async media(
+    @Param('username') username: string,
+    @Param('hash') hash: string,
+    @Res() res: Response,
+  ) {
+    const img = await this.sellers.media(username, hash);
+    if (!img) {
+      res.status(404).json({ message: 'Image not found' });
+      return;
+    }
+    res.setHeader('Content-Type', img.type);
+    res.setHeader('Cache-Control', IMAGE_CACHE_CONTROL);
+    res.send(img.body);
   }
 
   @Post(':username/visit')

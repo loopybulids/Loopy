@@ -29,6 +29,31 @@ export const imagesServedAsFiles = () => !!apiBase();
 
 const DATA_URI = /^data:([a-z]+\/[a-z0-9.+-]+)?;base64,(.+)$/i;
 
+const EXT: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'image/gif': 'gif', 'image/avif': 'avif', 'image/svg+xml': 'svg',
+  'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/ogg': 'ogg',
+};
+
+/**
+ * The file extension a media URL must end with.
+ *
+ * Not decoration. The storefront decides whether to render `<img>` or
+ * `<video>` by looking at the extension (see isVideo in lib/store-config), and
+ * a data URI announced its type in the string itself. Drop the extension and
+ * every seller's video hero or product clip silently renders as a broken
+ * image, because nothing downstream can tell what the bytes are any more.
+ */
+export function extFor(mime: string | undefined): string {
+  const m = (mime || '').toLowerCase();
+  if (EXT[m]) return EXT[m];
+  const sub = m.split('/')[1] || 'bin';
+  return sub.replace(/[^a-z0-9]/g, '') || 'bin';
+}
+
+/** `data:image/webp;base64,…` → `webp`. */
+export const extOfDataUri = (raw: string) => extFor(DATA_URI.exec(raw)?.[1]);
+
 /** True for a stored image that is bytes rather than a link to somewhere else. */
 export const isDataUri = (v: unknown) => typeof v === 'string' && DATA_URI.test(v);
 
@@ -46,7 +71,9 @@ export function withImageUrls<T extends { id: string; images?: unknown }>(produc
   return {
     ...product,
     images: images.map((img, i) =>
-      isDataUri(img) ? `${base}/products/${product.id}/image/${i}?v=${fingerprint(img as string)}` : img,
+      isDataUri(img)
+        ? `${base}/products/${product.id}/image/${i}.${extOfDataUri(img as string)}?v=${fingerprint(img as string)}`
+        : img,
     ),
   };
 }
@@ -69,8 +96,12 @@ const fingerprint = (raw: string) => createHash('sha1').update(raw).digest('hex'
  * than data — both are a 404 rather than an error, since neither is something
  * the caller can fix by retrying.
  */
-export function imageBytes(images: unknown[], index: number): { body: Buffer; type: string } | null {
-  const raw = images[index];
+export function imageBytes(images: unknown[], index: number | string): { body: Buffer; type: string } | null {
+  // The URL ends in an extension so the storefront can tell video from image;
+  // it is not part of the index.
+  const i = typeof index === 'number' ? index : Number(String(index).split('.')[0]);
+  if (!Number.isInteger(i) || i < 0) return null;
+  const raw = images[i];
   if (typeof raw !== 'string') return null;
   const m = DATA_URI.exec(raw);
   if (!m) return null;
@@ -82,7 +113,7 @@ export function imageBytes(images: unknown[], index: number): { body: Buffer; ty
 }
 
 /** One of our own image URLs, capturing the index it points at. */
-const OUR_URL = /\/products\/[^/]+\/image\/(\d+)(?:\?|$)/;
+const OUR_URL = /\/products\/[^/]+\/image\/(\d+)(?:\.[a-z0-9]+)?(?:\?|$)/i;
 
 /**
  * Turn any of our own image URLs back into the bytes they stand for.

@@ -28,7 +28,7 @@ export class ProductsController {
     @Param('index') index: string,
     @Res() res: Response,
   ) {
-    const img = await this.products.image(id, Number(index));
+    const img = await this.products.image(id, index);
     if (!img) {
       res.status(404).json({ message: 'Image not found' });
       return;
